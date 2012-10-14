@@ -94,8 +94,21 @@ describe('Events', function(){
 			expect(spy2.calls.length).toEqual(2);
 		})
 	})
-	//var button=document.createElement('button');
-	//$(button).on()
+	var button=document.createElement('button');
+	$(button).on('click.foo',function(){
+		console.log(133);
+	});
+	$(button).trigger('click.another');
+	
+	var model=new Backbone.Model();
+	model.on('change',function(e){
+		console.log('change');
+	})
+	model.on('change:foo',function(e){
+		console.log('change:foo');
+	})
+	
+	model.set('foo',1);
 	describe('support name spaces', function(){
 		var disp=new Events();
 		it('and should trigger by namespace', function(){
@@ -111,10 +124,10 @@ describe('Events', function(){
 			disp.fire('foo.name');
 			expect(spy1.calls.length).toEqual(1);
 			expect(spy2.calls.length).toEqual(2);
-			return;
+			
 			disp.fire('foo.another');
-			expect(spy1.calls.length).toEqual(2);
-			expect(spy2.calls.length).toEqual(1);
+			expect(spy1.calls.length).toEqual(1);
+			expect(spy2.calls.length).toEqual(2);
 			
 			var spy3=jasmine.createSpy('spy3');
 			disp.on('bar.foo',spy3);
@@ -122,7 +135,7 @@ describe('Events', function(){
 			disp.fire('bar.foo');
 			expect(spy3.calls.length).toEqual(1);
 			disp.fire('foo.name bar.foo');
-			expect(spy1.calls.length).toEqual(4);
+			expect(spy1.calls.length).toEqual(1);
 			expect(spy2.calls.length).toEqual(3);
 			expect(spy3.calls.length).toEqual(2);
 			//*/
@@ -147,6 +160,8 @@ describe('Events', function(){
 			disp.off('.bar');
 			
 		})
+		
+		
 		
 	})
 })

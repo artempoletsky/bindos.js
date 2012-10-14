@@ -24,8 +24,6 @@
 	}
 	function compareBinds(bind1,bind2,nsInvert)
 	{
-		console.log(bind1,bind2);
-		console.log(compareNames(bind1.ns,bind2.ns));
 		if(bind1.n && bind1.n != bind2.n)
 			return false;
 		if(bind1.fn && bind1.fn !== bind2.fn)
