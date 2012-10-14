@@ -94,21 +94,7 @@ describe('Events', function(){
 			expect(spy2.calls.length).toEqual(2);
 		})
 	})
-	var button=document.createElement('button');
-	$(button).on('click.foo',function(){
-		console.log(133);
-	});
-	$(button).trigger('click.another');
 	
-	var model=new Backbone.Model();
-	model.on('change',function(e){
-		console.log('change');
-	})
-	model.on('change:foo',function(e){
-		console.log('change:foo');
-	})
-	
-	model.set('foo',1);
 	describe('support name spaces', function(){
 		var disp=new Events();
 		it('and should trigger by namespace', function(){
@@ -158,7 +144,8 @@ describe('Events', function(){
 			expect(spy3.calls.length).toEqual(1);
 			
 			disp.off('.bar');
-			
+			disp.fire('foo');
+			expect(spy3.calls.length).toEqual(1);
 		})
 		
 		
