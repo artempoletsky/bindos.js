@@ -1,7 +1,5 @@
 (function(){
-	function Events(){
-		
-	}
+	var Events=function(){};
 	var eventSplitter=/\s+/;
 	var namespaceSplitter='.';
 	function parse(event)
@@ -116,15 +114,7 @@
 		}
 	}
 	
-	function keys(obj)
-	{
-		var arr=[];
-		for(var prop in obj)
-		{
-			arr.push(prop);
-		}
-		return arr;
-	}
+	
 	Events.prototype.on=function(events,fn,context){
 		var aEvents=events.split(eventSplitter),i,bind;
 		if(typeof fn != 'function')
@@ -180,5 +170,6 @@
 			return false;
 		return findBinds(this._listeners,event,false,false,'any');
 	}
-	window.Events=Events;
+	this.Events=Events;
+	
 }).call(this);
