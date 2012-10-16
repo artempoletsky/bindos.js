@@ -4,6 +4,9 @@
 		
 	}
 	var eventSplitter=/\s+/;
+	/**
+	 * @return ViewModel
+	 */
 	ViewModel.create=function(obj){
 		var newObj={};
 		$.extend(newObj,ViewModel.prototype,obj);
@@ -59,7 +62,7 @@
 	ViewModel.prototype.initialize=function(){}
 	ViewModel.prototype.delegateEvents=function(events){
 		events||(events=this.events);
-		
+		this.undelegateEvents();
 		var fnName,fn,name,eventsPath,eventName,me=this;
 		for(name in events)
 		{
@@ -84,7 +87,7 @@
 		}
 		return this;
 	}
-	ViewModel.prototype.undelegateEvents=function(events){
+	ViewModel.prototype.undelegateEvents=function(){
 		this.$el.unbind('.'+this._cid);
 		return this;
 	}

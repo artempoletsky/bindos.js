@@ -37,6 +37,23 @@ describe('ViewModel', function(){
 		expect(click).toHaveBeenCalled();
 	})
 	
+	it('context of \'delegateEvents\' handlers must be this ViewModel', function(){
+		var called=false;
+		var vm=ViewModel.create({
+			events: {
+				'click': 'onClick'
+			},
+			onClick: function(){
+				called=true;
+				expect(this).toBe(vm);
+			}
+		});
+		expect(vm.events.click).toEqual('onClick');
+		expect(called).toBe(false);
+		vm.$el.click();
+		expect(called).toBe(true);
+	})
+	
 	it('each method must return this', function(){
 		var vm=new ViewModel();
 		var exclude='on,initialize,hasListener';
