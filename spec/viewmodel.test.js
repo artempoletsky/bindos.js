@@ -74,6 +74,28 @@ describe('ViewModel', function(){
 		vm.$el.find('.child').click();
 		expect(called).toBe(true);
 	})
+	it('can undelegate events', function(){
+		var called=0;
+		var dom=$('<div id="grand"><div class="father"><div class="child"></div></div></div>');
+		var vm=ViewModel.create({
+			el: dom,
+			events: {
+				'click .child': 'onClick'
+			},
+			onClick: function(){
+				called++;
+			}
+		});
+		var $child=vm.$el.find('.child');
+		$child.click();
+		expect(called).toBe(1);
+		vm.undelegateEvents();
+		$child.click();
+		expect(called).toBe(1);
+		vm.delegateEvents();
+		$child.click();
+		expect(called).toBe(2);
+	})
 	
 	it('each method must return this', function(){
 		var vm=new ViewModel();

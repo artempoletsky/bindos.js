@@ -4,6 +4,7 @@
 		
 	}
 	var eventSplitter=/\s+/;
+	var bindSplitter=/\s*;\s*/;
 	/**
 	 * @return ViewModel
 	 */
@@ -54,9 +55,7 @@
 			this.el=document.createElement(this.el);
 		}
 		this.$el=$(this.el);
-		this.parse();
-		this.delegateEvents();
-		this.initialize();
+		this.parse().delegateEvents().initialize();
 		return this;
 	}
 	ViewModel.prototype.initialize=function(){}
