@@ -1,64 +1,61 @@
-describe('Events', function(){
-	var disp=new Events();
-	
-	describe('support one single event',function(){
+describe('ViewModel', function(){
+
+	it('can create VM object', function(){
+		var init=jasmine.createSpy('init');
+		var click=jasmine.createSpy('click');
+		ViewModel.create({
+			el: 'div',
+			initialize: init,
+			events: {
+				'click': 'onClick'
+			},
+			onClick: click
+		});
+		expect(init).toHaveBeenCalled();
+		expect(click).not.toHaveBeenCalled();
 		
 	})
 	
-	describe('support name spaces', function(){
-		var disp=new Events();
-		it('and should trigger by namespace', function(){
-			var spy1=jasmine.createSpy('spy1');
-			var spy2=jasmine.createSpy('spy2');
-			disp.on('foo',spy1);
-			disp.on('foo.name',spy2);
-			
-			disp.fire('foo');
-			expect(spy1.calls.length).toEqual(1);
-			expect(spy2.calls.length).toEqual(1);
-			
-			disp.fire('foo.name');
-			expect(spy1.calls.length).toEqual(1);
-			expect(spy2.calls.length).toEqual(2);
-			
-			disp.fire('foo.another');
-			expect(spy1.calls.length).toEqual(1);
-			expect(spy2.calls.length).toEqual(2);
-			
-			var spy3=jasmine.createSpy('spy3');
-			disp.on('bar.foo',spy3);
-			
-			disp.fire('bar.foo');
-			expect(spy3.calls.length).toEqual(1);
-			disp.fire('foo.name bar.foo');
-			expect(spy1.calls.length).toEqual(1);
-			expect(spy2.calls.length).toEqual(3);
-			expect(spy3.calls.length).toEqual(2);
-			//*/
-		})
+	it('can create VM object with constructor', function(){
+		var init=jasmine.createSpy('init');
+		var click=jasmine.createSpy('click');
 		
-		it('and should unbind by namespace', function(){
-			var spy1=jasmine.createSpy('spy1');
-			var spy2=jasmine.createSpy('spy2');
-			var spy3=jasmine.createSpy('spy2');
-			
-			disp.on('foo.bar',spy3);
-			disp.on('foo.name',spy1);
-			disp.on('foo',spy2);
-			
-			disp.off('foo.name');
-			disp.fire('foo');
-			
-			expect(spy1.calls.length).toEqual(0);
-			expect(spy2.calls.length).toEqual(1);
-			expect(spy3.calls.length).toEqual(1);
-			
-			disp.off('.bar');
-			disp.fire('foo');
-			expect(spy3.calls.length).toEqual(1);
-		})
-		
-		
+		ViewModel.create({
+			el: 'div',
+			initialize: init,
+			events: {
+				'click': 'onClick'
+			},
+			onClick: click
+		});
+		expect(init).toHaveBeenCalled();
+		expect(click).not.toHaveBeenCalled();
 		
 	})
+	
+	it('each method must return this', function(){
+		var vm=new ViewModel();
+		var exclude='on,initialize,hasListener';
+		var me;
+		for(var prop in vm)
+		{
+			if(typeof vm[prop] == 'function'&&!~exclude.indexOf(prop))
+			{
+				try {
+					me=vm[prop].call(vm);
+				} catch (exception) { 
+					throw Error(prop+' throw error '+ exception.message);
+					break;
+				}
+				if(me!==vm)
+					throw Error(prop+'() not return this');
+			}
+		}
+		me=vm.on('click', function(){});
+		expect(me).toBe(vm);
+	})
+	
+	
+	
+	
 })
