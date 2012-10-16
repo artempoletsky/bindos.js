@@ -54,6 +54,27 @@ describe('ViewModel', function(){
 		expect(called).toBe(true);
 	})
 	
+	it('can delegate events', function(){
+		var called=false;
+		var dom=$('<div id="grand"><div class="father"><div class="child"></div></div></div>');
+		var vm=ViewModel.create({
+			el: dom,
+			events: {
+				'click .child': 'onClick'
+			},
+			onClick: function(e){
+				called=true;
+				expect(this).toBe(vm);
+				expect(e.currentTarget).toBe(dom.find('.child')[0]);
+			}
+		});
+		expect(called).toBe(false);
+		vm.$el.click();
+		expect(called).toBe(false);
+		vm.$el.find('.child').click();
+		expect(called).toBe(true);
+	})
+	
 	it('each method must return this', function(){
 		var vm=new ViewModel();
 		var exclude='on,initialize,hasListener';
