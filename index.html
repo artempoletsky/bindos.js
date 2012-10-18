@@ -12,6 +12,7 @@
 		<script type="text/javascript" src="src/js/core.js"></script>
 		<script type="text/javascript" src="src/js/events.js"></script>
 		<!--script type="text/javascript" src="spec/events.test.js"></script-->
+		<script type="text/javascript" src="src/js/observable.js"></script>
 		<script type="text/javascript" src="src/js/viewmodel.js"></script>
 		<script type="text/javascript" src="spec/viewmodel.test.js"></script>
 		
@@ -36,6 +37,10 @@
 		</script>
     </head>
     <body>
-
+		<div id="testvm">
+			<select data-bind="select: variants; value: chosenId"></select> <button data-bind="enabled: chosen">Reset</button>
+			<div data-bind="show_hide:fast chosen" style="display: none;">Your choose is <span data-bind="html: chosen"></span></div>
+			<div data-bind="show_hide:fast chosen" style="display: none;">Your choose is <span data-bind="html: chosen"></span></div>
+		</div>
     </body>
 </html>

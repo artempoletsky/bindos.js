@@ -1,16 +1,19 @@
 (function(){
 	var $=this.$;
-	function parseBind(bind){
-		
+	var refreshAttr=function(vm,attr,element,fn){
+		vm[fn].call(vm,element,attr);
 	}
 	var eventSplitter=/\s+/;
 	var bindSplitter=/\s*;\s*/;
+	var simpleTagRegex=/^[a-z]+$/;
+	
 	/**
 	 * @return ViewModel
 	 */
 	ViewModel.create=function(obj){
 		var newObj={};
 		$.extend(newObj,ViewModel.prototype,obj);
+		//console.log(newObj.initialize);
 		return newObj._construct();
 	}
 	function ViewModel() {
@@ -20,6 +23,7 @@
 			Events.call(this);
 			this._binds={};
 			this.events={};
+			this.attributes={};
 			this._cid='';
 			this.$el=$();
 			this.el=document.createElement('div');
@@ -27,21 +31,48 @@
 		this._construct();
 	}
 	ViewModel.prototype=new Events();
-	ViewModel.prototype.addBind=function(attr,bind){
-		var binds;
+	ViewModel.prototype.addBind=function(attr,element,value){
+		var binds,curBind;
 		binds=this._binds||(this._binds={});
+		curBind=binds[attr]||(binds[attr]=[]);
+		curBind.push({
+			el: element,
+			val: value
+		});
 		return this;
 	}
+	
 	ViewModel.prototype.setElement=function(el){
+		this.undelegateEvents();
 		this.el=el;
 		this.$el=$(el);
-		this.parse();
+		this.parse().delegateEvents();
 		return this;
 	}
 	ViewModel.prototype.parse=function(){
 		delete this._binds;
+		var $el,binds,bind,me=this,i,context=me;
+		me.$el.find('[data-bind]').add(me.$el).filter('[data-bind]').each(function(){
+			$el=$(this);
+			binds=$el.attr('data-bind').split(bindSplitter);
+			for(i=binds.length-1;i>=0;i--){
+				var arr=binds[i].match(/^(\S+)\s*:\s*(\S[\s\S]*)$/)
+				
+				
+				var fn=ViewModel.binds[arr[1]];
+				
+				if(fn)
+				{
+					fn.call(me, this,arr[2], context)	
+				}
+				
+			//bind=parseBind(binds);
+			//me.addBind(bind.a, bind.b);
+			}
+		})
 		return this;
 	}
+	
 	ViewModel.prototype._construct=function(){
 		if(!this._cid)
 		{
@@ -52,12 +83,18 @@
 			this.el='div';
 		if(typeof this.el == 'string')
 		{
-			this.el=document.createElement(this.el);
+			if(simpleTagRegex.test(this.el))
+				this.el=document.createElement(this.el);
+			else
+				this.el=$(this.el)[0];
 		}
 		this.$el=$(this.el);
-		this.parse().delegateEvents().initialize();
+		this.initialize();
+		if(this.autoinit)
+			this.parse().delegateEvents();
 		return this;
 	}
+	ViewModel.prototype.autoinit=true;
 	ViewModel.prototype.initialize=function(){}
 	ViewModel.prototype.delegateEvents=function(events){
 		events||(events=this.events);
@@ -72,9 +109,12 @@
 				throw TypeError(fnName+' is not a function');
 			eventsPath=name.split(eventSplitter);
 			eventName=eventsPath.shift()+'.'+this._cid;
-			var proxy=function(){
-				fn.apply(me,arguments);
-			}
+			
+			var proxy=(function(fn){
+				return function(){
+					fn.apply(me,arguments);
+				}
+			})(fn);
 			if(eventsPath.length)
 			{
 				me.$el.delegate(eventsPath.join(' '),eventName,proxy);

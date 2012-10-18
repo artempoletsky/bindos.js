@@ -3,15 +3,19 @@ describe('ViewModel', function(){
 	it('can create VM object', function(){
 		var init=jasmine.createSpy('init');
 		var click=jasmine.createSpy('click');
-		ViewModel.create({
+		var obj={
 			el: 'div',
-			initialize: init,
+			initialize: function(){
+				expect(this).toBe(vm);
+			},
 			events: {
 				'click': 'onClick'
 			},
 			onClick: click
-		});
-		expect(init).toHaveBeenCalled();
+		}
+		spyOn(obj, 'initialize')
+		var vm=ViewModel.create(obj);
+		expect(obj.initialize).toHaveBeenCalled();
 		expect(click).not.toHaveBeenCalled();
 		
 	})
@@ -97,9 +101,115 @@ describe('ViewModel', function(){
 		expect(called).toBe(2);
 	})
 	
+	ViewModel.binds={
+		html: function(elem,value,context){
+			var fn=function(){
+				$(elem).html(context[value]());
+			}
+			fn();
+			context[value].subscribe(fn);
+		},
+		display: function(elem,value,context){
+			var fn=function(){
+				(context[value]())?$(elem).show():$(elem).hide();
+			}
+			fn();
+			context[value].subscribe(fn);
+		},
+		enabled: function(elem,value,context){
+			//console.log(context[value],context);
+			var fn=function(){
+				(context[value]())?$(elem).prop('disabled', false):$(elem).prop('disabled', true);
+			}
+			fn();
+			context[value].subscribe(fn);
+		},
+		disabled: function(elem,value,context){
+			var fn=function(){
+				(!context[value]())?$(elem).prop('disabled', false):$(elem).prop('disabled', true);
+			}
+			fn();
+			context[value].subscribe(fn);
+		},
+		value: function(elem,value,context){
+			var fn=function(){
+				$(elem).val(context[value]());
+			}
+			fn();
+			context[value].subscribe(fn);
+		},
+		click: function(elem,value,context){
+			$(elem).on('click',function(){
+				context[value].apply(context,arguments);
+			});	
+		},
+		show_hide: function(elem,value,context){
+			value=value.split(/\s+/);
+			var val=value[1];
+			var duration=value[0];
+			
+			var fn=function(){
+				(context[val]())?$(elem).show(duration):$(elem).hide(duration);
+			}
+			fn();
+			context[val].subscribe(fn);
+			
+		},
+		select: function(elem,value,context){
+			var fn=function(){
+				
+				var elems=context[value]();
+				var html='';
+				for(var prop in elems)
+				{
+					if(elems.hasOwnProperty(prop))
+					{
+						html+='<option value="'+prop+'">'+elems[prop]+'</option>'
+					}
+				}
+				$(elem).html(html);
+			}
+			fn();
+			context[value].subscribe(fn);
+			
+		}
+	}
+	
+	it('can parse binds from html', function(){
+		
+		ViewModel.create({
+			el: '#testvm',
+			events: {
+				'change select': 'onChoose',
+				'click button': 'reset'
+			},
+			initialize: function(){
+				console.log(this);
+				this.chosen=Computable(function(){
+					var val=this.chosenId()*1;
+					return val?this.variants()[val]:0;
+				},this);
+			},
+			variants: Observable({
+				0: 'Choose some value...',
+				1: 'Cat',
+				2: 'Dog',
+				3: 'Bird'
+			}),
+			chosenId: Observable(0),
+			reset: function(){
+				this.chosenId(0);
+			},
+			onChoose: function(e){
+				this.chosenId($(e.currentTarget).val());
+			}
+		});
+		
+	})
+	
 	it('each method must return this', function(){
 		var vm=new ViewModel();
-		var exclude='on,initialize,hasListener';
+		var exclude='on,initialize,hasListener,get,set';
 		var me;
 		for(var prop in vm)
 		{
