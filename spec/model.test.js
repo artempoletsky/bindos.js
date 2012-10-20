@@ -6,6 +6,20 @@ describe('Model', function(){
 		});
 		expect(m.get("x")).toBe("10");
 	})
+	it('has id property equal to id attribute', function(){
+		var m=new Model({
+			id: 10
+		});
+		expect(m.id).toBe(10);
+		var Book=Model.extend({
+			idAttribute: 'idBook',
+			mapping: 'book'
+		});
+		var b=new Book({
+			idBook: 5
+		});
+		expect(b.id).toBe(5);
+	})
 	it('can map to global collection', function(){
 		var Book=Model.extend({
 			mapping: 'book',

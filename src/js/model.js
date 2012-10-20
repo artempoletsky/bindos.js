@@ -42,6 +42,9 @@
 	Model.prototype.get=function(name){
 		return this.attributes[name];
 	}
+	Model.prototype.validate=function(){
+		return true;
+	}
 	Model.prototype.set=function(name,value){
 		var attrs={},prop;
 		if(arguments.length>1)
