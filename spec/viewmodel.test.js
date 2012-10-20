@@ -1,7 +1,6 @@
 describe('ViewModel', function(){
 
 	it('can create VM object', function(){
-		var init=jasmine.createSpy('init');
 		var click=jasmine.createSpy('click');
 		var obj={
 			el: 'div',
@@ -156,10 +155,19 @@ describe('ViewModel', function(){
 			
 		},
 		select: function(elem,value,context){
+			value=value.replace("'",'"','g');
+			//console.log(value);
+			//console.log(value);
+			value=$.parseJSON(value);
+			var placeholder=value.placeholder||false;
+			var placeholderVal=value.placeholderVal||0;
+			
+			//console.log(value);
 			var fn=function(){
-				
-				var elems=context[value]();
+				var elems=context[value.options]();
 				var html='';
+				if(placeholder)
+					html+='<option value="'+placeholderVal+'">'+placeholder+'</option>'
 				for(var prop in elems)
 				{
 					if(elems.hasOwnProperty(prop))
@@ -170,7 +178,7 @@ describe('ViewModel', function(){
 				$(elem).html(html);
 			}
 			fn();
-			context[value].subscribe(fn);
+			context[value.options].subscribe(fn);
 			
 		}
 	}
@@ -181,27 +189,34 @@ describe('ViewModel', function(){
 			el: '#testvm',
 			events: {
 				'change select': 'onChoose',
-				'click button': 'reset'
+				'click #reset': 'reset',
+				'click #add': 'addVariant',
+			},
+			addVariant: function(){
+				var variants=this.variants();
+				variants.length++;
+				var newVal=this.$('input[name=add_new]').val();
+				variants[variants.length]=newVal;
+				this.variants.fire();
+				this.chosenId.fire();
 			},
 			initialize: function(){
-				console.log(this);
 				this.chosen=Computable(function(){
-					var val=this.chosenId()*1;
-					return val?this.variants()[val]:0;
+					var val=this.chosenId();
+					return val!=-1?this.variants()[val]:0;
 				},this);
 			},
-			variants: Observable({
-				0: 'Choose some value...',
-				1: 'Cat',
-				2: 'Dog',
-				3: 'Bird'
-			}),
-			chosenId: Observable(0),
+			variants: Observable([
+				'Cat',
+				'Dog',
+				'Bird'
+			]),
+			chosenId: Observable(-1),
 			reset: function(){
-				this.chosenId(0);
+				this.chosenId(-1);
 			},
 			onChoose: function(e){
-				this.chosenId($(e.currentTarget).val());
+				this.chosenId(parseInt($(e.currentTarget).val(),10));
 			}
 		});
 		
@@ -209,7 +224,7 @@ describe('ViewModel', function(){
 	
 	it('each method must return this', function(){
 		var vm=new ViewModel();
-		var exclude='on,initialize,hasListener,get,set';
+		var exclude='on,initialize,hasListener,get,$';
 		var me;
 		for(var prop in vm)
 		{

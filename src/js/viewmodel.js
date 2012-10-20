@@ -56,8 +56,11 @@
 			$el=$(this);
 			binds=$el.attr('data-bind').split(bindSplitter);
 			for(i=binds.length-1;i>=0;i--){
-				var arr=binds[i].match(/^(\S+)\s*:\s*(\S[\s\S]*)$/)
 				
+				var arr=binds[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
+				//console.log(binds[i]);
+				//console.log(arr);
+				//console.log(binds[i].match(/^(\S+):/));
 				
 				var fn=ViewModel.binds[arr[1]];
 				
@@ -74,24 +77,29 @@
 	}
 	
 	ViewModel.prototype._construct=function(){
-		if(!this._cid)
+		var me=this;
+		if(!me._cid)
 		{
-			this._cid=VM.unique('vm');
+			me._cid=VM.unique('vm');
 		}
 		
-		if(!this.el)
-			this.el='div';
-		if(typeof this.el == 'string')
+		if(!me.el)
+			me.el='div';
+		if(typeof me.el == 'string')
 		{
-			if(simpleTagRegex.test(this.el))
-				this.el=document.createElement(this.el);
+			if(simpleTagRegex.test(me.el))
+				me.el=document.createElement(me.el);
 			else
-				this.el=$(this.el)[0];
+				me.el=$(me.el)[0];
 		}
-		this.$el=$(this.el);
-		this.initialize();
-		if(this.autoinit)
-			this.parse().delegateEvents();
+		me.$el=$(me.el);
+		me.$=function(selector){
+			return me.$el.find(selector);
+		}
+		me.initialize();
+		
+		if(me.autoinit)
+			me.parse().delegateEvents();
 		return this;
 	}
 	ViewModel.prototype.autoinit=true;
