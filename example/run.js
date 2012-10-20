@@ -1,87 +1,18 @@
 (function(){
 	ViewModel.binds={
 		html: function(elem,value,context){
+			var comp=ViewModel.findObservable(context, value);
 			var fn=function(){
-				$(elem).html(context[value]());
+				$(elem).html(comp());
 			}
 			fn();
-			context[value].subscribe(fn);
+			comp.subscribe(fn);
 		},
-		display: function(elem,value,context){
-			var fn=function(){
-				(context[value]())?$(elem).show():$(elem).hide();
-			}
-			fn();
-			context[value].subscribe(fn);
-		},
-		enabled: function(elem,value,context){
-			//console.log(context[value],context);
-			var fn=function(){
-				(context[value]())?$(elem).prop('disabled', false):$(elem).prop('disabled', true);
-			}
-			fn();
-			context[value].subscribe(fn);
-		},
-		disabled: function(elem,value,context){
-			var fn=function(){
-				(!context[value]())?$(elem).prop('disabled', false):$(elem).prop('disabled', true);
-			}
-			fn();
-			context[value].subscribe(fn);
-		},
-		value: function(elem,value,context){
-			var fn=function(){
-				$(elem).val(context[value]());
-			}
-			fn();
-			context[value].subscribe(fn);
-		},
-		click: function(elem,value,context){
-			$(elem).on('click',function(){
-				context[value].apply(context,arguments);
-			});	
-		},
-		show_hide: function(elem,value,context){
-			value=value.split(/\s+/);
-			var val=value[1];
-			var duration=value[0];
-			
-			var fn=function(){
-				(context[val]())?$(elem).show(duration):$(elem).hide(duration);
-			}
-			fn();
-			context[val].subscribe(fn);
-			
-		},
-		select: function(elem,value,context){
-			value=value.replace("'",'"','g');
-			//console.log(value);
-			//console.log(value);
-			value=$.parseJSON(value);
-			var placeholder=value.placeholder||false;
-			var placeholderVal=value.placeholderVal||0;
-			
-			//console.log(value);
-			var fn=function(){
-				var elems=context[value.options]();
-				var html='';
-				if(placeholder)
-					html+='<option value="'+placeholderVal+'">'+placeholder+'</option>'
-				for(var prop in elems)
-				{
-					if(elems.hasOwnProperty(prop))
-					{
-						html+='<option value="'+prop+'">'+elems[prop]+'</option>'
-					}
-				}
-				$(elem).html(html);
-			}
-			fn();
-			context[value.options].subscribe(fn);
-			
-		},
-		each: function(elem,value,context){
-			console.log(elem,value,context);
+		'with': function (elem,value,context){
+			var comp=ViewModel.findObservable(context, value);
+			//console.log(comp);
+			//console.log(comp()());
+			return comp();
 		}
 	};
 })();
@@ -89,6 +20,60 @@
 
 
 $(function(){
+	
+	var vm={
+		foo: Observable({
+			bar:{ 
+				baz: 'bar content'
+			}
+		}),
+		bar: Observable('435dffgd')
+	}
+	ViewModel.findBinds($('#with')[0], vm);
+	vm.foo({
+		bar:{ 
+			baz: 'bar content 2'
+		}
+	});
+	return;
+	var comp=ViewModel.findObservable(vm, 'foo().bar.baz+bar()');
+	var comp2=ViewModel.findObservable(vm.foo, 'bar.baz');
+	console.log(comp());
+	vm.bar(234234);
+	console.log(comp());
+	
+	console.log(comp2());
+	vm.foo({
+		bar: {
+			baz: 1324
+		}
+	})
+	console.log(comp2());
+	return;
+	/*
+	
+	ViewModel.binds.html($('#with span')[0], vm.bar, '+15');
+	vm.bar({});
+	alert(vm.bar+15)
+	return;*/
+	ViewModel.create({
+		el: '#with',
+		foo: Observable({
+			bar: 'bar content'
+		}),
+		bar: Observable('435dffgd'),
+		events: {
+			'click': 'click'
+		},
+		numClicks:0,
+		click: function(){
+			this.numClicks++;
+			this.foo({
+				bar:'I click it '+ this.numClicks +' times'
+			});
+		}
+	})
+	return;
 	var Car=Model.extend({
 		mapping: 'cars'
 	});

@@ -18,7 +18,9 @@
 		<script type="text/javascript" src="example/run.js"></script>
     </head>
     <body>
-
+		<div id="with" data-bind="with: foo">
+			<span data-bind="html: bar.baz"></span>
+		</div>
 		<div id="vm">
 			<table id="table">
 				<thead>
@@ -31,10 +33,10 @@
 					</tr>
 				</thead>
 				<tbody data-bind="each: models">
-					<tr data-bind="width: attributes">
+					<tr data-bind="with: attributes">
 						<td data-bind="text: id"></td>
-						<td data-bind="text: amount"></td>
-						<td data-bind="text: color"></td>
+						<td><input type="text" data-bind="value: amount" /></td>
+						<td><input type="text" data-bind="value: color" /></td>
 						<td><a class="save" href="#">save</a></td>
 						<td><a class="remove" href="#">remove</a></td>
 					</tr>
