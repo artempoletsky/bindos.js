@@ -4,55 +4,43 @@
         <title></title>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 		<script type="text/javascript" src="lib/jquery-1.8.2.min.js"></script>
-		
-		
-		<link rel="stylesheet" href="lib/jasmine.css" />
-		<script type="text/javascript" src="lib/jasmine.js"></script>
-		<script type="text/javascript" src="lib/jasmine-html.js"></script>
+
+
 		<script type="text/javascript" src="src/js/core.js"></script>
 		<script type="text/javascript" src="src/js/events.js"></script>
 		<!--script type="text/javascript" src="spec/events.test.js"></script-->
 		<script type="text/javascript" src="src/js/observable.js"></script>
 		<script type="text/javascript" src="src/js/viewmodel.js"></script>
 		<!--script type="text/javascript" src="spec/viewmodel.test.js"></script-->
-		
-		<script type="text/javascript" src="src/js/model.js"></script>
-		<script type="text/javascript" src="spec/model.test.js"></script>
-		<script type="text/javascript" src="src/js/collection.js"></script>
-		<script type="text/javascript" src="spec/collection.test.js"></script>
-		<script type="text/javascript">
-			(function(){
-				var jasmineEnv = jasmine.getEnv();
-				jasmineEnv.updateInterval = 250;
-				var htmlReporter = new jasmine.HtmlReporter();
-				jasmineEnv.addReporter(htmlReporter);
-				jasmineEnv.specFilter = function(spec) {
-					return htmlReporter.specFilter(spec);
-				};
-				var currentWindowOnload = window.onload;
-				window.onload = function() {
-					if (currentWindowOnload) {
-						currentWindowOnload();
-					}
 
-					jasmineEnv.execute();
-				};
-			})()
-		</script>
+		<script type="text/javascript" src="src/js/model.js"></script>
+		<script type="text/javascript" src="src/js/collection.js"></script>
+		<script type="text/javascript" src="example/run.js"></script>
     </head>
     <body>
-		<div id="testvm">
-			<label>Add variant</label> <br />
-			<input type="text" name="add_new" /> <button id="add">add</button>
-			<br />
-			<select data-bind="
-					select: { 
-					'placeholder': 'Choose some value...',
-					'placeholderVal': '-1',
-					'options': 'variants'
-					}; 
-					value: chosenId"></select> <button id="reset" data-bind="enabled: chosen">Reset</button>
-			<div data-bind="show_hide:fast chosen" style="display: none;">Your choose is <span data-bind="html: chosen"></span></div>
+
+		<div id="vm">
+			<table id="table">
+				<thead>
+					<tr>
+						<td>id</td>
+						<td>amount</td>
+						<td>color</td>
+						<td></td>
+						<td></td>
+					</tr>
+				</thead>
+				<tbody data-bind="each: models">
+					<tr data-bind="width: attributes">
+						<td data-bind="text: id"></td>
+						<td data-bind="text: amount"></td>
+						<td data-bind="text: color"></td>
+						<td><a class="save" href="#">save</a></td>
+						<td><a class="remove" href="#">remove</a></td>
+					</tr>
+				</tbody>
+			</table>
+			<button id="insertOne">insert</button>
 		</div>
     </body>
 </html>

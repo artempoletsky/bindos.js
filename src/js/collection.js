@@ -2,22 +2,50 @@
 	function Collection(json){
 		this.models=[];
 		this.length=0;
+		this.url='api/?model='+this.model.prototype.mapping;
 		if(json)
 		{
 			this.reset(json);
 		}
-		
+		this.initialize();
 	}
 	
 	Collection.prototype=new Events();
 	Collection.prototype.constructor=Collection;
 	Collection.extend=Model.extend;
 	Collection.prototype.model=Model;
+	Collection.prototype.initialize=function(){
+		return this;
+	}
+	Collection.prototype.fetch=function(options){
+		var me=this;
+		options||(options={});
+		var opt={
+			success: function(data){
+				me.reset(data,options);
+				if(typeof options.success == 'function')
+				{
+					options.success.apply(me,arguments);
+				}
+			},
+			error: function(){
+				if(typeof options.error == 'function')
+				{
+					options.error.apply(me,arguments);
+				}
+			}
+		}
+		var resOpt={};
+		$.extend(resOpt,options,opt);
+		VM.sync('GET', this.url, resOpt);
+	}
 	Collection.prototype.parse=function(json){
 		return json;
 	}
-	Collection.prototype.reset=function(json){
-		this.models=[];
+	Collection.prototype.reset=function(json,options){
+		options||(options={});
+		if(!options.add)
+			this.models=[];
 		var modelsArr=this.parse(json);
 		if(modelsArr instanceof Array)
 		{
@@ -30,7 +58,11 @@
 		{
 			this.add(modelsArr);
 		}
-		this.fire('reset');
+		if(!options.add)
+			this.fire('reset');
+		else
+			this.fire('addScope');
+		
 	}
 	Collection.prototype.add=function(obj){
 		

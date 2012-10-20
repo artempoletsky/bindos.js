@@ -45,14 +45,7 @@ describe('Collection', function(){
 			model: Car,
 		});
 		var cc=new CarCollection();
-		$.ajax({
-			url: 'get_collection.php',
-			dataType: 'json',
-			success: function(data){
-				cc.reset(data);
-				console.log(cc);
-			}
-		})
+		
 	})
 	
 })
