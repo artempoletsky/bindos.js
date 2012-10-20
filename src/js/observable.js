@@ -135,6 +135,11 @@
 		resfn.refresh=function(){
 			value=fn.call(context);
 		}
+		resfn.__observable=true;
+		
+		resfn.valueOf=resfn.toString=function(){
+			return this();
+		}
 		return resfn;
 	}
 	

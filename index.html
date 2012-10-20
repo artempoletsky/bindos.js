@@ -18,9 +18,6 @@
 		<script type="text/javascript" src="example/run.js"></script>
     </head>
     <body>
-		<div id="with" data-bind="with: foo">
-			<span data-bind="html: bar.baz"></span>
-		</div>
 		<div id="vm">
 			<table id="table">
 				<thead>
@@ -32,8 +29,8 @@
 						<td></td>
 					</tr>
 				</thead>
-				<tbody data-bind="each: models">
-					<tr data-bind="with: attributes">
+				<tbody data-bind="each: collection">
+					<tr data-bind="attr: {id: 'car'+id}; with: attributes">
 						<td data-bind="text: id"></td>
 						<td><input type="text" data-bind="value: amount" /></td>
 						<td><input type="text" data-bind="value: color" /></td>

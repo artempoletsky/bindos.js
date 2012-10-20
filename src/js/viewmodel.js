@@ -10,8 +10,6 @@
 		ViewModel.findBinds(element,vm,context);
 	}
 	ViewModel.findObservable=function(context,string){
-		if(Observable.isObservable(context))
-			console.log(context());
 		var comp=Computed(function(){
 			try {
 				
