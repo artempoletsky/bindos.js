@@ -13,23 +13,25 @@
 			return comp();
 		},
 		each: function (elem,value,context){
-			var comp=ViewModel.findObservable(context, value)();
-			//console.log(value,context,context.models());
-			//console.log(comp()());
+			var collection=ViewModel.findObservable(context, value)();
+			
 			var html=$(elem).html();
 			$(elem).empty();
-			var fn=function(){
-				var collection=comp();
-				if(collection)
-					collection.each(function(model,index){
-						var tempDiv=document.createElement('div');
-						$(tempDiv).html(html);
-						ViewModel.findBinds(tempDiv, model);
-						$(tempDiv).children().appendTo(elem);
-					})
-			}
-			fn();
-			comp.subscribe(fn);
+			
+			collection.on('add',function(e){
+				//console.log(e.model);
+				var tempDiv=document.createElement('div');
+				$(tempDiv).html(html);
+				var obs=Observable(e.model);
+				ViewModel.findBinds(tempDiv, obs);
+				var $children=$(tempDiv).children();
+				$children.appendTo(elem);
+				e.model.one('remove',function(){
+					$children.remove();
+				}).on('change',function(e){
+					obs.fire();
+				})
+			});
 			return false;
 		},
 		value: function (elem,value,context){
@@ -41,14 +43,19 @@
 			comp.subscribe(fn);
 		},
 		attr: function (elem,value,context){
-			console.log(value);
-			return;
-			var comp=ViewModel.findObservable(context, value);
-			var fn=function(){
-				$(elem).val(comp());
+			value=value.match(/^{([\s\S]+)}$/)[1];
+			//console.log(context);
+			var attrs=value.split(/\s*,\s*/);
+			for(var i=attrs.length-1;i>=0;i--)
+			{
+				var arr=attrs[i].split(/\s*:\s*/);
+				var comp=ViewModel.findObservable(context, arr[1]);
+				var fn=function(){
+					$(elem).attr(arr[0],comp());
+				}
+				fn();
+				comp.subscribe(fn);
 			}
-			fn();
-			comp.subscribe(fn);
 		}
 	};
 })();
@@ -69,18 +76,39 @@ $(function(){
 	carsCollection.fetch();
 	ViewModel.create({
 		el: '#vm',
-		collection: Observable(),
+		collection: carsCollection,
 		initialize: function(){
-			var me=this;
-			carsCollection.on('reset', function(){
-				me.collection(this);
-			});
+			
 		},
 		events: {
-			'click #insertOne': 'insert'
+			'click #insertOne': 'insert',
+			'click .remove': 'remove',
+			'click .save': 'save',
+			'change input': 'change'
+		},
+		change: function(e){
+			var $t=$(e.currentTarget);
+			var model=this.getModel(e);
+			model.set($t.attr('name'),$t.val());
+		},
+		getModel: function(e){
+			var tr=$(e.currentTarget).closest('tr');
+			var id=tr.attr('id');
+			var cid=id.match(/^car(.*)$/)[1];
+			e.preventDefault();
+			return this.collection.getByCid(cid);
+		},
+		remove: function(e){
+			this.getModel(e).remove();
+		},
+		save: function(e){
+			this.getModel(e).save();
 		},
 		insert:function(){
-			
+			carsCollection.add({
+				amount: 0,
+				color: 'red'
+			})
 		}
 	})
 });

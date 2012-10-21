@@ -5,11 +5,14 @@
 		options||(options={});
 		this.attributes=this.parse(json);
 		this.id=this.attributes[this.idAttribute];
+		this.cid=VM.unique('c');
+		
 		if(this.mapping&&this.id)
 		{
 			modelsMap[this.mapping]||(modelsMap[this.mapping]={});
 			modelsMap[this.mapping][this.id]=this;
 		}
+		this.url='api/?model='+this.mapping+'&id='+this.id;
 		this.initialize();
 	}
 	Model.extend=function(props){
@@ -45,18 +48,44 @@
 	Model.prototype.validate=function(){
 		return true;
 	}
+	Model.prototype.save=function(){
+		var me=this;
+		if(this.id)
+			VM.sync('PUT', this.url,{
+				data: this.attributes
+			});
+		else
+			VM.sync('POST', this.url,{
+				data: this.attributes,
+				success: function(data){
+					me.set('id',data);
+					me.id=data;
+				}
+			});
+		return true;
+	}
+	Model.prototype.remove=function(){
+		this.fire('remove');
+		if(this.id)
+			VM.sync('DELETE', this.url);
+	}
 	Model.prototype.set=function(name,value){
 		var attrs={},prop;
 		if(arguments.length>1)
 			attrs[name]=value;
 		else
 			attrs=name;
+		var changed={};
 		for(prop in attrs)
 		{
 			this.attributes[prop]=attrs[prop];
+			changed[prop]=attrs[prop];
 			this.fire('change:'+prop);
 		}
-		this.fire('change');
+		this.fire({
+			type: 'change',
+			changed:changed
+		});
 		return this;
 	}
 	Model.fromStorage=function(name,id){

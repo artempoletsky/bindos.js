@@ -64,14 +64,21 @@
 			this.fire('addScope');
 		
 	}
-	Collection.prototype.add=function(obj){
+	Collection.prototype.add=function(model){
 		
-		if(!(obj instanceof Model))
+		if(!(model instanceof Model))
 		{
-			obj=Model.createOrUpdate(this.model, obj);
+			model=Model.createOrUpdate(this.model, model);
 		}
-		this.models.push(obj);
-		this.fire('add');
+		var me=this;
+		model.one('remove',function(){
+			me.cutByCid(this.cid);
+		})
+		this.models.push(model);
+		this.fire({
+			type: 'add',
+			model: model
+		});
 	}
 	Collection.prototype.cut=function(id){
 		var found;
@@ -84,8 +91,24 @@
 		})
 		return found;
 	}
+	Collection.prototype.cutByCid=function(cid){
+		var found;
+		this.each(function(model,index){
+			if(model.cid==cid)
+			{
+				found=this.cutAt(index);
+				return false;
+			}
+		})
+		return found;
+	}
 	Collection.prototype.cutAt=function(index){
-		return this.models.splice(index, 1);
+		var model=this.models.splice(index, 1)[0];
+		this.fire({
+			type: 'cut',
+			model: model
+		})
+		return model;
 	}
 	Collection.prototype.at=function(index){
 		return this.models[index];
@@ -110,6 +133,20 @@
 			}
 		})
 		return found;
+	}
+	Collection.prototype.getByCid=function(cid){
+		var found;
+		this.each(function(model){
+			if(model.cid==cid)
+			{
+				found=model;
+				return false;
+			}
+		})
+		return found;
+	}
+	Collection.prototype.remove=function(id){
+		var model=this.cut(id);
 	}
 	this.Collection=Collection;
 })()

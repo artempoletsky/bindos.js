@@ -19,6 +19,7 @@
     </head>
     <body>
 		<div id="vm">
+			<button id="insertOne">insert</button>
 			<table id="table">
 				<thead>
 					<tr>
@@ -30,16 +31,16 @@
 					</tr>
 				</thead>
 				<tbody data-bind="each: collection">
-					<tr data-bind="attr: {id: 'car'+id}; with: attributes">
-						<td data-bind="text: id"></td>
-						<td><input type="text" data-bind="value: amount" /></td>
-						<td><input type="text" data-bind="value: color" /></td>
+					<tr data-bind="attr: {id: 'car'+cid}">
+						<td data-bind="html: get('id')"></td>
+						<td><input type="text" name="amount" data-bind="value: get('amount')" /></td>
+						<td><input type="text" name="color" data-bind="value: get('color')" /></td>
 						<td><a class="save" href="#">save</a></td>
 						<td><a class="remove" href="#">remove</a></td>
 					</tr>
 				</tbody>
 			</table>
-			<button id="insertOne">insert</button>
+			
 		</div>
     </body>
 </html>
