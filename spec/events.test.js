@@ -22,7 +22,7 @@ describe('Events', function(){
 			var context=new Object(),
 			event={
 				type: 'baz'
-			}
+			};
 			var obj={
 				bazHandler:function(e){
 					expect(e).toBe(event);

@@ -19,10 +19,10 @@ describe('Collection', function(){
 	it('can map to some model', function(){
 		var Book=Model.extend({
 			idAttribute: 'idBook',
-			mapping: 'book',
+			mapping: 'book'
 		})
 		var BooksCollection=Collection.extend({
-			model: Book,
+			model: Book
 		});
 		var c=new BooksCollection([
 		{
@@ -33,16 +33,16 @@ describe('Collection', function(){
 		},
 		{
 			idBook: 3
-		},
+		}
 		]);
 		expect(c.get(1).get('idBook')).toBe(1);
 		
 		var Car=Model.extend({
-			mapping: 'car',
+			mapping: 'car'
 		});
 		
 		var CarCollection=Collection.extend({
-			model: Car,
+			model: Car
 		});
 		var cc=new CarCollection();
 		

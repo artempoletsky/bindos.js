@@ -28,7 +28,7 @@ describe('Model', function(){
 		
 		var m=new Book({
 			"x": "10",
-			"idBook": 1,
+			"idBook": 1
 		});
 		var m2=Model.fromStorage('book', 1);
 		expect(m).toBe(m2);
@@ -40,7 +40,7 @@ describe('Model', function(){
 		
 		var m3=Model.createOrUpdate(Book, {
 			idBook: 1,
-			x: 0,
+			x: 0
 		})
 		expect(m3).toBe(m2);
 		expect(m.get('x')).toBe(0);

@@ -155,7 +155,7 @@ describe('ViewModel', function(){
 			
 		},
 		select: function(elem,value,context){
-			value=value.replace("'",'"','g');
+			value=value.replace(/'/g,'"');
 			//console.log(value);
 			//console.log(value);
 			value=$.parseJSON(value);
@@ -190,7 +190,7 @@ describe('ViewModel', function(){
 			events: {
 				'change select': 'onChoose',
 				'click #reset': 'reset',
-				'click #add': 'addVariant',
+				'click #add': 'addVariant'
 			},
 			addVariant: function(){
 				var variants=this.variants();
