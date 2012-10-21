@@ -25,8 +25,9 @@ $(function(){
 		});
 		obs.fire();
 	}
-	
+	ViewModel.findBinds($('#vm')[0], null);
+	/*
 	ViewModel.create({
 		el: '#vm'
-	})
+	})*/
 });
