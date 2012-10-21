@@ -151,34 +151,3 @@
 	this.Computed=Computed;
 	this.Subscribeable=Subscribeable;
 })()
-
-if(false)
-{
-	/****************************/
-	/***********EXAMPLE**********/
-	/****************************/
-	var a=Observable('Hello');
-	var b=Observable(' World');
-	var cvar=Computable(function(){
-		return a()+b();
-	});
-	cvar.name='cvar';
-	console.log('cvar is '+cvar());
-	
-	cvar.subscribe(function(){
-		console.log('cvar changed to '+this());
-	});
-	
-	b(' Youmu');
-	
-	var dvar=Computable(function(){
-		return cvar()+' and Youmu';
-	});
-	dvar.name='dvar';
-	dvar.subscribe(function(){
-		console.log('dvar changed to '+this());
-	});
-	
-	
-	b(' World');
-}
