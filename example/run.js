@@ -84,7 +84,7 @@ $(function(){
 	});
 	
 	var carsCollection=new(Collection.extend({
-		model: Car,
+		model: Car
 	}));
 	
 	carsCollection.fetch();

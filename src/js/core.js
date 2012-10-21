@@ -37,12 +37,19 @@
 		},
 		sync:function(method,url,options){
 			//console.log(method);
-			options||(options={})
+			options||(options={});
+			
+			var data={
+				method: method
+			}
+			if(method=='PUT')
+				method='POST';
+			$.extend(data, options.data);
 			$.ajax({
-				url: url,
+				url: url+'&'+Math.random(),
 				dataType: 'json',
 				type: method,
-				data: options.data,
+				data: data,
 				success: options.success,
 				error: options.error
 			})
