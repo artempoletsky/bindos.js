@@ -164,7 +164,13 @@
 		
 		return this;
 	}
-
+	Events.prototype.one=function(events,fn,context){
+		var proxy=function(){
+			this.off(events, proxy, context);
+			fn.apply(this, arguments);
+		}
+		return this.on(events, proxy, context);
+	}
 	Events.prototype.hasListener=function(event){
 		if(!this._listeners)
 			return false;

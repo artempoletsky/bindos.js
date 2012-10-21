@@ -1,12 +1,66 @@
 (function(){
 	var $=this.$;
-	var refreshAttr=function(vm,attr,element,fn){
-		vm[fn].call(vm,element,attr);
-	}
+	
 	var eventSplitter=/\s+/;
 	var bindSplitter=/\s*;\s*/;
 	var simpleTagRegex=/^[a-z]+$/;
 	
+	function findBinds(element,vm,context)
+	{
+		ViewModel.findBinds(element,vm,context);
+	}
+	ViewModel.findObservable=function(context,string){
+		var comp=Computed(function(){
+			try {
+				
+				with(Observable.isObservable(context)?context():context)
+					return eval(string);
+			} catch (exception) { 
+				throw 'Error "'+exception.message+'" in expression "'+string+'"';
+			}
+
+			
+		},context);
+		
+		return comp;
+	}
+	ViewModel.findBinds=function(element,context){
+		var children,curBindsString,binds,i,newctx;
+		//console.dir(element);
+		curBindsString=element.attributes&&element.attributes['data-bind'];
+		//console.log(curBindsString);
+		
+		if(curBindsString)
+		{
+			binds=curBindsString.value.split(bindSplitter);
+			for(i=binds.length-1;i>=0;i--){
+				
+				var arr=binds[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
+				
+				var fn=ViewModel.binds[arr[1]];
+				
+				if(fn)
+				{
+					newctx=fn.call(this, element, arr[2], context);
+					if(newctx===false)
+					{
+						return;
+					}
+					else if(newctx)
+					{
+						context=newctx;
+					}
+						
+				}
+				
+			}
+		}
+		children=element.childNodes;
+		if(children)
+		for(i=children.length-1;i>=0;i--){
+			findBinds(children[i],context);
+		}
+	}
 	/**
 	 * @return ViewModel
 	 */
@@ -51,6 +105,8 @@
 	}
 	ViewModel.prototype.parse=function(){
 		delete this._binds;
+		findBinds(this.el, this, '');
+		return this;
 		var $el,binds,bind,me=this,i,context=me;
 		me.$el.find('[data-bind]').add(me.$el).filter('[data-bind]').each(function(){
 			$el=$(this);

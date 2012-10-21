@@ -201,7 +201,7 @@ describe('ViewModel', function(){
 				this.chosenId.fire();
 			},
 			initialize: function(){
-				this.chosen=Computable(function(){
+				this.chosen=Computed(function(){
 					var val=this.chosenId();
 					return val!=-1?this.variants()[val]:0;
 				},this);
@@ -224,7 +224,7 @@ describe('ViewModel', function(){
 	
 	it('each method must return this', function(){
 		var vm=new ViewModel();
-		var exclude='on,initialize,hasListener,get,$';
+		var exclude='on,initialize,hasListener,get,$,setElement,one';
 		var me;
 		for(var prop in vm)
 		{
@@ -241,6 +241,10 @@ describe('ViewModel', function(){
 			}
 		}
 		me=vm.on('click', function(){});
+		expect(me).toBe(vm);
+		me=vm.one('click', function(){});
+		expect(me).toBe(vm);
+		me=vm.setElement(document.createElement('div'));
 		expect(me).toBe(vm);
 	})
 	
