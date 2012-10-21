@@ -34,6 +34,18 @@
 				unique[prefix]=0;
 			unique[prefix]++;
 			return prefix+unique[prefix];
+		},
+		sync:function(method,url,options){
+			//console.log(method);
+			options||(options={})
+			$.ajax({
+				url: url,
+				dataType: 'json',
+				type: method,
+				data: options.data,
+				success: options.success,
+				error: options.error
+			})
 		}
 	};
 	this.VM=VM;

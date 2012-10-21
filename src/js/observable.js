@@ -95,13 +95,21 @@
 			}
 			return value;
 		}
-		Subscribeable(fn);
+		fn.valueOf=fn.toString=function(){
+			return this();
+		}
 		
+		Subscribeable(fn);
+		fn.__observable=true;
 		return fn;
 	}
+	Observable.isObservable=function(fn){
+		if(typeof fn != 'function')
+			return false;
+		return fn.__observable||false;
+	}
 	
-	
-	var Computable=function(fn,context){
+	var Computed=function(fn,context){
 		
 		var value=fn.call(context);
 	
@@ -127,13 +135,18 @@
 		resfn.refresh=function(){
 			value=fn.call(context);
 		}
+		resfn.__observable=true;
+		
+		resfn.valueOf=resfn.toString=function(){
+			return this();
+		}
 		return resfn;
 	}
 	
 	
 	
 	this.Observable=Observable;
-	this.Computable=Computable;
+	this.Computed=Computed;
 	this.Subscribeable=Subscribeable;
 })()
 
