@@ -76,6 +76,7 @@
 			{
 				if(!compare(set, value))
 				{
+					fn.lastValue=value;
 					value=set;
 					fn.fire();
 				}
@@ -95,6 +96,7 @@
 			}
 			return value;
 		}
+		fn.lastValue=undefined;
 		fn.valueOf=fn.toString=function(){
 			return this();
 		}
@@ -112,7 +114,7 @@
 	var Computed=function(fn,context){
 		
 		var value=fn.call(context);
-	
+		
 		var resfn=function(){
 			//console.log(computableInit);
 			if(computableInit)
