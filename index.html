@@ -31,7 +31,7 @@
 					</tr>
 				</thead>
 				<tbody data-bind="each: collection">
-					<tr data-bind="attr: {id: 'car'+cid}">
+					<tr data-bind="attr: {id: 'car'+cid}; style: {background-color: get('color')}">
 						<td data-bind="html: get('id')"></td>
 						<td><input type="text" name="amount" data-bind="value: get('amount')" /></td>
 						<td><input type="text" name="color" data-bind="value: get('color')" /></td>

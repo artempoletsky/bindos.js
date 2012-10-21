@@ -56,6 +56,21 @@
 				fn();
 				comp.subscribe(fn);
 			}
+		},
+		style: function (elem,value,context){
+			value=value.match(/^{([\s\S]+)}$/)[1];
+			//console.log(context);
+			var attrs=value.split(/\s*,\s*/);
+			for(var i=attrs.length-1;i>=0;i--)
+			{
+				var arr=attrs[i].split(/\s*:\s*/);
+				var comp=ViewModel.findObservable(context, arr[1]);
+				var fn=function(){
+					$(elem).css(arr[0],comp());
+				}
+				fn();
+				comp.subscribe(fn);
+			}
 		}
 	};
 })();
@@ -67,7 +82,6 @@ $(function(){
 	var Car=Model.extend({
 		mapping: 'cars'
 	});
-	var car=new Car();
 	
 	var carsCollection=new(Collection.extend({
 		model: Car,
@@ -107,7 +121,7 @@ $(function(){
 		insert:function(){
 			carsCollection.add({
 				amount: 0,
-				color: 'red'
+				color: 'white'
 			})
 		}
 	})
