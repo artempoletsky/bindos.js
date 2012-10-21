@@ -56,6 +56,7 @@
 			}
 		}
 		children=element.childNodes;
+		if(children)
 		for(i=children.length-1;i>=0;i--){
 			findBinds(children[i],context);
 		}
