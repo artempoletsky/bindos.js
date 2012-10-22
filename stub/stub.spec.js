@@ -1,6 +1,6 @@
 describe('Stub', function(){
 	
-	it('must contains all props in lib,must not contains props not existing in lib',function(){
+	it('must contains all props in lib',function(){
 		for (var className in FrontboneStub)
 		{
 			var StubClass=FrontboneStub[className];
@@ -37,6 +37,32 @@ describe('Stub', function(){
 						throw Error('Stub method '+className+'.prototype.'+proper+' must have '+Class.prototype[proper].length+' arguments');
 					}
 				}
+			}
+			
+		}
+	})
+	
+	it('must not contains props not existing in lib',function(){
+		for (var className in FrontboneStub)
+		{
+			var StubClass=FrontboneStub[className];
+			var Class=window[className];
+			
+			for (var proper in StubClass)
+			{
+				if(Class[proper]===undefined)
+				{
+					throw Error('Method '+className+'.'+proper+' not found');
+				}
+				
+			}
+			for (var proper in StubClass.prototype)
+			{
+				if(Class.prototype[proper]===undefined)
+				{
+					throw Error('Method '+className+'.prototype.'+proper+' not found');
+				}
+				
 			}
 			
 		}
