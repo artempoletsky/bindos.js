@@ -519,17 +519,7 @@
 			this._construct();
 		}
 		ViewModel.prototype=new Events();
-		ViewModel.prototype.addBind=function(attr,element,value){
-			var binds,curBind;
-			binds=this._binds||(this._binds={});
-			curBind=binds[attr]||(binds[attr]=[]);
-			curBind.push({
-				el: element,
-				val: value
-			});
-			return this;
-		}
-	
+		
 		ViewModel.prototype.setElement=function(el){
 			this.undelegateEvents();
 			this.el=el;
