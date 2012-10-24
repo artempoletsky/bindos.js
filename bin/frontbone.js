@@ -457,6 +457,7 @@
 				Constructor.prototype[prop]=props[prop];
 			}
 			Constructor.extend=ParentClass.extend;
+			Constructor.create=ParentClass.create;
 			return Constructor;
 		}
 		Model.prototype=new Events();
@@ -639,10 +640,12 @@
 	 * @return ViewModel
 	 */
 		ViewModel.create=function(obj){
+			obj||(obj={});
 			var newObj={};
-			$.extend(newObj,ViewModel.prototype,obj);
+			$.extend(newObj,this.prototype,obj);
+			var args=Array.prototype.slice.call(arguments,1);
 			//console.log(newObj.initialize);
-			return newObj._construct();
+			return newObj._construct.apply(newObj, args);
 		}
 		function ViewModel(options) {
 			//для подсказок
@@ -753,7 +756,8 @@
 			me.initialize();
 		
 			if(me.autoinit)
-				me.parse().delegateEvents();
+				me.parse();
+			me.delegateEvents();
 			return this;
 		}
 		ViewModel.prototype.autoinit=true;
