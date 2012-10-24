@@ -243,7 +243,8 @@
 		Events.prototype.fire=function(events){ 
 			if(!this._listeners)
 				return this;
-		
+			var args = Array.prototype.slice.call(arguments,1);
+			
 			var aEvents,i,j,l,binds,bind,type;
 			aEvents=typeof events == 'string'? events.split(eventSplitter): [events];
 		
@@ -256,12 +257,16 @@
 				for(j=binds.length-1;j>=0;j--)
 				{
 					bind=binds[j];
-					bind.fn.call(bind.c,aEvents[i]);
+					
+					//args.unshift(aEvents[i]);
+					bind.fn.apply(bind.c,args);
+					//args.shift();
 				}
 			}
 		
 			return this;
 		}
+		Events.prototype.trigger=Events.prototype.fire;
 		Events.prototype.one=function(events,fn,context){
 			var proxy=function(){
 				this.off(events, proxy, context);
@@ -557,19 +562,35 @@
 		var bindSplitter=/\s*;\s*/;
 		var simpleTagRegex=/^[a-z]+$/;
 	
-		function findBinds(element,vm,context)
-		{
-			ViewModel.findBinds(element,vm,context);
-		}
+		
 		ViewModel.extend=Model.extend;
 		ViewModel.findObservable=function(context,string){
+			//console.log(context,string);
+			var obs=(function(){
+				try {
+					with(context)
+						return eval(string);
+				} catch (exception) { 
+					console.log('Error "'+exception.message+'" in expression "'+string+'" Context: ',context);
+				}
+
+				
+			})();
+			if(Observable.isObservable(obs))
+			{
+				//console.log('already observable: ');
+				//console.log(context,string);
+				return obs;
+			}
+			
+			
 			var comp=Computed(function(){
 				try {
 				
 					with(Observable.isObservable(context)?context():context)
 						return eval(string);
 				} catch (exception) { 
-					throw 'Error "'+exception.message+'" in expression "'+string+'"';
+					console.log('Error "'+exception.message+'" in expression "'+string+'" Context: ',context);
 				}
 
 			
@@ -611,7 +632,7 @@
 			children=element.childNodes;
 			if(children)
 				for(i=children.length-1;i>=0;i--){
-					findBinds(children[i],context);
+					ViewModel.findBinds(children[i], context);
 				}
 		}
 		/**
@@ -635,7 +656,7 @@
 				this.$el=$();
 				this.el=document.createElement('div');
 			}
-			this._construct();
+			this._construct(options);
 		}
 		ViewModel.prototype=new Events();
 		ViewModel.prototype.constructor=ViewModel;
@@ -646,9 +667,13 @@
 			this.parse().delegateEvents();
 			return this;
 		}
+		ViewModel.prototype.remove=function(){
+			this.$el.remove();
+			return this;
+		}
 		ViewModel.prototype.parse=function(){
 			delete this._binds;
-			findBinds(this.el, this, '');
+			ViewModel.findBinds(this.el, this);
 			return this;
 			var $el,binds,bind,me=this,i,context=me;
 			me.$el.find('[data-bind]').add(me.$el).filter('[data-bind]').each(function(){
@@ -701,8 +726,11 @@
 		}
 		ViewModel.prototype._construct=function(options){
 			options||(options={});
+			this.options=options;
 			this.collection=options.collection;
 			this.model=options.model;
+			if(options.el)
+				this.el=options.el;
 			var me=this;
 			if(!me._cid)
 			{
