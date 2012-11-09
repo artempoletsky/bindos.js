@@ -260,7 +260,7 @@
 					
 					//args.unshift(aEvents[i]);
 					bind.fn.apply(bind.c,args);
-					//args.shift();
+				//args.shift();
 				}
 			}
 		
@@ -359,7 +359,7 @@
 			var fn=function(set){
 				if(arguments.length>0)
 				{
-					if(!compare(set, value))
+					//if(!compare(set, value))
 					{
 						fn.lastValue=value;
 						value=set;
@@ -442,30 +442,11 @@
 	
 	(function(){
 		var modelsMap={};
-		function Model(json,options){
-			this._construct(json, options);
-		}
-		Model.extend=function(props){
-			var ParentClass=this.prototype.constructor;
-			var Constructor=function(){
-				this._construct.apply(this, arguments);
-			}
-			Constructor.prototype=new ParentClass();
-			Constructor.prototype.constructor=Constructor;
-			for(var prop in props)
-			{
-				Constructor.prototype[prop]=props[prop];
-			}
-			Constructor.extend=ParentClass.extend;
-			Constructor.create=ParentClass.create;
-			return Constructor;
-		}
-		Model.prototype=new Events();
-		Model.prototype.constructor=Model;
-		Model.prototype._construct=function(json,options){
-			json||(json={});
+		function Model(data,options){
+			data||(data={});
 			options||(options={});
-			this.attributes=this.parse(json);
+			this.attributes=this.parse(data);
+			this._changed={};
 			this.id=this.attributes[this.idAttribute];
 			this.cid=VM.unique('c');
 		
@@ -477,6 +458,31 @@
 			this.url='api/?model='+this.mapping+'&id='+this.id;
 			this.initialize();
 		}
+		
+		
+		
+		// Shared empty constructor function to aid in prototype-chain creation.
+		var ctor = function(){};
+
+		Model.extend=function(props){
+			var ParentClass=this;
+			var Constructor=(props&& props.hasOwnProperty('constructor'))?
+			props.constructor :
+			function(){
+				ParentClass.apply(this, arguments);
+			};
+			
+			ctor.prototype=ParentClass.prototype;
+			Constructor.prototype=new ctor();
+			
+			$.extend(Constructor.prototype, props);
+			Constructor.prototype.constructor=Constructor;
+			Constructor.extend = ParentClass.extend;
+			return Constructor;
+		}
+		Model.prototype=new Events();
+		Model.prototype.constructor=Model;
+		
 		Model.prototype.idAttribute='id';
 		Model.prototype.mapping=false;
 		Model.prototype.initialize=function(){
@@ -487,6 +493,7 @@
 		}
 		Model.prototype.update=function(json){
 			this.set(this.parse(json));
+			this._changed={};
 		}
 		Model.prototype.get=function(name){
 			return this.attributes[name];
@@ -498,14 +505,16 @@
 			var me=this;
 			if(this.id)
 				VM.sync('PUT', this.url,{
-					data: this.attributes
+					data: this._changed,
+					success: function(data){
+						me.update(data);
+					}
 				});
 			else
 				VM.sync('POST', this.url,{
 					data: this.attributes,
 					success: function(data){
-						me.set('id',data);
-						me.id=data;
+						me.update(data);
 					}
 				});
 			return true;
@@ -524,10 +533,13 @@
 			var changed={};
 			for(prop in attrs)
 			{
+				if(prop==this.idAttribute)
+					this.id=attrs[prop];
 				this.attributes[prop]=attrs[prop];
 				changed[prop]=attrs[prop];
 				this.fire('change:'+prop);
 			}
+			this._changed=changed;
 			this.fire({
 				type: 'change',
 				changed:changed
@@ -562,55 +574,50 @@
 		var eventSplitter=/\s+/;
 		var bindSplitter=/\s*;\s*/;
 		var simpleTagRegex=/^[a-z]+$/;
-	
 		
 		ViewModel.extend=Model.extend;
 		ViewModel.findObservable=function(context,string){
 			//console.log(context,string);
-			var obs=(function(){
+			if(Observable.isObservable(context))
+				context=context();
+			
+			var fnEval=function(){
 				try {
 					with(context)
 						return eval(string);
 				} catch (exception) { 
 					console.log('Error "'+exception.message+'" in expression "'+string+'" Context: ',context);
 				}
-
-				
-			})();
+			}
+			
+			var obs=fnEval();
 			if(Observable.isObservable(obs))
 			{
-				//console.log('already observable: ');
-				//console.log(context,string);
 				return obs;
 			}
 			
-			
 			var comp=Computed(function(){
-				try {
-				
-					with(Observable.isObservable(context)?context():context)
-						return eval(string);
-				} catch (exception) { 
-					console.log('Error "'+exception.message+'" in expression "'+string+'" Context: ',context);
-				}
-
-			
+				return fnEval();
 			},context);
 		
 			return comp;
 		}
 		ViewModel.findBinds=function(element,context){
 			var children,curBindsString,binds,i,newctx;
-			//console.dir(element);
-			curBindsString=element.attributes&&element.attributes['data-bind'];
-			//console.log(curBindsString);
-		
+			
+			curBindsString=$(element).attr('data-bind');
+			
+			
 			if(curBindsString)
 			{
-				binds=curBindsString.value.split(bindSplitter);
+				/*
+				$.each(curBindsString,function(name,val){
+					alert(name+': '+val);
+				})*/
+				//alert(curBindsString.value)
+				binds=curBindsString.split(bindSplitter);
 				for(i=binds.length-1;i>=0;i--){
-				
-					var arr=binds[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
+					var arr=binds[i].match(/^\s*(\S+)\s*:\s*(\S[\s\S]*\S)\s*$/);
 				
 					var fn=ViewModel.binds[arr[1]];
 				
@@ -636,17 +643,7 @@
 					ViewModel.findBinds(children[i], context);
 				}
 		}
-		/**
-	 * @return ViewModel
-	 */
-		ViewModel.create=function(obj){
-			obj||(obj={});
-			var newObj={};
-			$.extend(newObj,this.prototype,obj);
-			var args=Array.prototype.slice.call(arguments,1);
-			//console.log(newObj.initialize);
-			return newObj._construct.apply(newObj, args);
-		}
+		
 		function ViewModel(options) {
 			//для подсказок
 			if(false)
@@ -659,7 +656,37 @@
 				this.$el=$();
 				this.el=document.createElement('div');
 			}
-			this._construct(options);
+			options||(options={});
+			this.options=options;
+			this.collection=options.collection;
+			this.model=options.model;
+			if(options.el)
+				this.el=options.el;
+			var me=this;
+			if(!me._cid)
+			{
+				me._cid=VM.unique('vm');
+			}
+			//console.log(options);
+			if(!me.el)
+				me.el='div';
+			if(typeof me.el == 'string')
+			{
+				if(simpleTagRegex.test(me.el)&&me.el!='html'&&me.el!='body')
+					me.el=document.createElement(me.el);
+				else
+					me.el=$(me.el)[0];
+			}
+			me.$el=$(me.el);
+			me.$=function(selector){
+				return me.$el.find(selector);
+			}
+			//console.log(me);
+			me.initialize();
+		
+			if(me.autoinit)
+				me.parse();
+			me.delegateEvents();
 		}
 		ViewModel.prototype=new Events();
 		ViewModel.prototype.constructor=ViewModel;
@@ -727,41 +754,9 @@
 			this._bindedToModel=true;
 			return model;
 		}
-		ViewModel.prototype._construct=function(options){
-			options||(options={});
-			this.options=options;
-			this.collection=options.collection;
-			this.model=options.model;
-			if(options.el)
-				this.el=options.el;
-			var me=this;
-			if(!me._cid)
-			{
-				me._cid=VM.unique('vm');
-			}
 		
-			if(!me.el)
-				me.el='div';
-			if(typeof me.el == 'string')
-			{
-				if(simpleTagRegex.test(me.el))
-					me.el=document.createElement(me.el);
-				else
-					me.el=$(me.el)[0];
-			}
-			me.$el=$(me.el);
-			me.$=function(selector){
-				return me.$el.find(selector);
-			}
-			me.initialize();
-		
-			if(me.autoinit)
-				me.parse();
-			me.delegateEvents();
-			return this;
-		}
-		ViewModel.prototype.autoinit=true;
-		ViewModel.prototype.initialize=function(){}
+		ViewModel.prototype.autoinit=false;
+		ViewModel.prototype.initialize=function(){};
 		ViewModel.prototype.delegateEvents=function(events){
 			events||(events=this.events);
 			this.undelegateEvents();
@@ -806,7 +801,7 @@
 	
 
 	(function(){
-		function Collection(json){
+		function Collection(models,options){
 			this.models=[];
 			this.length=0;
 			this.url='api/?model='+this.model.prototype.mapping;
@@ -845,6 +840,7 @@
 				var resOpt={};
 				$.extend(resOpt,options,opt);
 				VM.sync('GET', this.url, resOpt);
+				return this;
 			}
 			Collection.prototype.parse=function(json){
 				return json;
@@ -882,10 +878,7 @@
 					me.cutByCid(this.cid);
 				})
 				this.models.push(model);
-				this.fire({
-					type: 'add',
-					model: model
-				});
+				this.fire('add', model);
 			}
 			Collection.prototype.cut=function(id){
 				var found;
@@ -976,19 +969,20 @@
 			},
 			each: function (elem,value,context){
 				var collection=ViewModel.findObservable(context, value)();
-			
+				
 				var html=$(elem).html();
 				$(elem).empty();
-			
-				collection.on('add',function(e){
+				//console.log(context);
+				collection.on('add',function(model){
+					//console.log(model);
 					//console.log(e.model);
 					var tempDiv=document.createElement('div');
 					$(tempDiv).html(html);
-					var obs=Observable(e.model);
+					var obs=Observable(model);
 					ViewModel.findBinds(tempDiv, obs);
 					var $children=$(tempDiv).children();
 					$children.appendTo(elem);
-					e.model.one('remove',function(){
+					model.one('remove',function(){
 						$children.remove();
 					}).on('change',function(e){
 						obs.fire();
@@ -1042,20 +1036,40 @@
 				for(var i=attrs.length-1;i>=0;i--)
 				{
 					var arr=attrs[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
-					var comp=ViewModel.findObservable(context, arr[2]);
-					var fn=function(){
-						if(comp())
-						{
-							$(elem).addClass(arr[1]);
+					(function(val,className){
+						var comp=ViewModel.findObservable(context, val);
+						
+						var fn=function(){
+							
+							if(comp())
+							{
+								$(elem).addClass(className);
+							}
+							else
+							{
+								$(elem).removeClass(className);
+							}
 						}
-						else
-						{
-							$(elem).removeClass(arr[1]);
-						}
-					}
-					fn();
-					comp.subscribe(fn);
+						fn();
+						comp.subscribe(fn);
+					})(arr[2],arr[1])
+					
 				}
+			},
+			display: function (elem,value,context){
+				var comp=ViewModel.findObservable(context, value);
+				var fn=function(){
+					if(comp())
+					{
+						$(elem).show();
+					}
+					else
+					{
+						$(elem).hide();
+					}
+				}
+				fn();
+				comp.subscribe(fn);
 			}
 		};
 	})();
