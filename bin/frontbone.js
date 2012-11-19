@@ -74,7 +74,6 @@
 				return prefix+unique[prefix];
 			},
 			sync:function(method,url,options){
-				//console.log(method);
 				options||(options={});
 			
 				var data={
@@ -162,8 +161,6 @@
 			
 				for(b=binds[a].length-1;b>=0;b--)
 				{
-					//console.log(binds[a][b].ns,bind.ns);
-					//console.log(compareBinds(bind,binds[a][b]));
 					if(compareBinds(bind,binds[a][b]))
 					{
 						if(mode=='filter')
@@ -253,7 +250,7 @@
 				type=typeof aEvents[i] == 'string'? aEvents[i]: aEvents[i].type;
 			
 				binds=findBinds(this._listeners,type,false,false);
-				//console.log(binds);
+				
 				for(j=binds.length-1;j>=0;j--)
 				{
 					bind=binds[j];
@@ -359,12 +356,12 @@
 			var fn=function(set){
 				if(arguments.length>0)
 				{
-					//if(!compare(set, value))
-					{
-						fn.lastValue=value;
-						value=set;
-						fn.fire();
-					}
+				//if(!compare(set, value))
+				{
+					fn.lastValue=value;
+					value=set;
+					fn.fire();
+				}
 				}
 				else
 				{
@@ -402,7 +399,6 @@
 			var value=fn.call(context);
 		
 			var resfn=function(){
-				//console.log(computableInit);
 				if(computableInit)
 				{
 					(function(comp){
@@ -480,6 +476,7 @@
 			Constructor.extend = ParentClass.extend;
 			return Constructor;
 		}
+		Events.extend=Model.extend;
 		Model.prototype=new Events();
 		Model.prototype.constructor=Model;
 		
@@ -577,7 +574,6 @@
 		
 		ViewModel.extend=Model.extend;
 		ViewModel.findObservable=function(context,string){
-			//console.log(context,string);
 			if(Observable.isObservable(context))
 				context=context();
 			
@@ -606,7 +602,7 @@
 			var children,curBindsString,binds,i,newctx;
 			
 			curBindsString=$(element).attr('data-bind');
-			
+			$(element).removeAttr('data-bind');
 			
 			if(curBindsString)
 			{
@@ -667,7 +663,6 @@
 			{
 				me._cid=VM.unique('vm');
 			}
-			//console.log(options);
 			if(!me.el)
 				me.el='div';
 			if(typeof me.el == 'string')
@@ -681,7 +676,6 @@
 			me.$=function(selector){
 				return me.$el.find(selector);
 			}
-			//console.log(me);
 			me.initialize();
 		
 			if(me.autoinit)
@@ -712,10 +706,7 @@
 				for(i=binds.length-1;i>=0;i--){
 				
 					var arr=binds[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
-					//console.log(binds[i]);
-					//console.log(arr);
-					//console.log(binds[i].match(/^(\S+):/));
-				
+					
 					var fn=ViewModel.binds[arr[1]];
 				
 					if(fn)
@@ -745,7 +736,7 @@
 								return '';
 							}
 							var val=(this['format_'+prop])? this['format_'+prop](mod.get(prop)):mod.get(prop);
-							//console.log(prop,val);
+							
 							return val;
 							
 						}, context)
@@ -955,27 +946,62 @@
 
 	(function(){
 		ViewModel.binds={
+			log: function(elem,value,context){
+				var comp=this.findObservable(context, value);
+				console.log(context,'.',value,'=',comp());
+			},
 			html: function(elem,value,context){
-				var comp=ViewModel.findObservable(context, value);
+				var comp=this.findObservable(context, value);
 				var fn=function(){
 					$(elem).html(comp());
 				}
 				fn();
 				comp.subscribe(fn);
 			},
+			text: function(elem,value,context){
+				var comp=this.findObservable(context, value);
+				var fn=function(){
+					$(elem).text(comp());
+				}
+				fn();
+				comp.subscribe(fn);
+			},
 			'with': function (elem,value,context){
-				var comp=ViewModel.findObservable(context, value);
-				return comp();
+				return this.findObservable(context, value)();
 			},
 			each: function (elem,value,context){
-				var collection=ViewModel.findObservable(context, value)();
+				var fArray=this.findObservable(context, value);
+				var $el=$(elem);
+				var html=$el.html();
+				$el.hide().empty();
+				var fn=function(){
+					
+					$el.hide().empty();
+					var array=fArray();
+					if(array)
+					{
+						$.each(array,function(ind,val){
+							var tempDiv=document.createElement('div');
+							$(tempDiv).html(html);
+							ViewModel.findBinds(tempDiv, val);
+							var $children=$(tempDiv).children();
+							$children.appendTo(elem);
+						});
+					}
+					$el.show();
+				}
+				fn();
+				fArray.subscribe(fn);
+				
+			},
+			eachModel: function (elem,value,context){
+				var collection=this.findObservable(context, value)();
 				
 				var html=$(elem).html();
 				$(elem).empty();
-				//console.log(context);
+				
 				collection.on('add',function(model){
-					//console.log(model);
-					//console.log(e.model);
+					
 					var tempDiv=document.createElement('div');
 					$(tempDiv).html(html);
 					var obs=Observable(model);
@@ -1000,7 +1026,6 @@
 			},
 			attr: function (elem,value,context){
 				value=value.match(/^{([\s\S]+)}$/)[1];
-				//console.log(context);
 				var attrs=value.split(/\s*,\s*/);
 				for(var i=attrs.length-1;i>=0;i--)
 				{
@@ -1015,12 +1040,11 @@
 			},
 			style: function (elem,value,context){
 				value=value.match(/^{([\s\S]+)}$/)[1];
-				//console.log(context);
 				var attrs=value.split(/\s*,\s*/);
 				for(var i=attrs.length-1;i>=0;i--)
 				{
 					var arr=attrs[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
-					//console.log(arr);
+					
 					var comp=ViewModel.findObservable(context, arr[2]);
 					var fn=function(){
 						$(elem).css(arr[1],comp());
@@ -1031,7 +1055,7 @@
 			},
 			css: function (elem,value,context){
 				value=value.match(/^{([\s\S]+)}$/)[1];
-				//console.log(context);
+				
 				var attrs=value.split(/\s*,\s*/);
 				for(var i=attrs.length-1;i>=0;i--)
 				{
@@ -1057,7 +1081,7 @@
 				}
 			},
 			display: function (elem,value,context){
-				var comp=ViewModel.findObservable(context, value);
+				var comp=this.findObservable(context, value);
 				var fn=function(){
 					if(comp())
 					{
@@ -1070,6 +1094,21 @@
 				}
 				fn();
 				comp.subscribe(fn);
+			},
+			click: function(elem,value_S_T_R_I_N_G,context){
+				var $el=$(elem);
+				
+				$el.click(function(){
+					
+					with(context)
+					{
+						var val=eval(value_S_T_R_I_N_G);						
+						if(typeof val == 'function')
+						{
+							val.call(context);
+						}
+					}
+				});
 			}
 		};
 	})();
