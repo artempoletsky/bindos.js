@@ -441,7 +441,9 @@
 		function Model(data,options){
 			data||(data={});
 			options||(options={});
-			this.attributes=this.parse(data);
+			var attrs={};
+			$.extend(attrs,this.defaults,this.parse(data));
+			this.attributes=attrs;
 			this._changed={};
 			this.id=this.attributes[this.idAttribute];
 			this.cid=VM.unique('c');
@@ -482,11 +484,38 @@
 		
 		Model.prototype.idAttribute='id';
 		Model.prototype.mapping=false;
+		Model.prototype.defaults={};
+		Model.prototype.toJSON=function(){
+			return _.clone(this.attributes);
+		};
 		Model.prototype.initialize=function(){
 			return this;
 		}
 		Model.prototype.parse=function(json){
 			return json;
+		}
+		Model.prototype.fetch=function(options){
+			var me=this;
+			options||(options={});
+			var opt={
+				success: function(data){
+					me.update(data);
+					if(typeof options.success == 'function')
+					{
+						options.success.apply(me,arguments);
+					}
+				},
+				error: function(){
+					if(typeof options.error == 'function')
+					{
+						options.error.apply(me,arguments);
+					}
+				}
+			}
+			var resOpt={};
+			$.extend(resOpt,options,opt);
+			VM.sync('GET', this.url, resOpt);
+			return this;
 		}
 		Model.prototype.update=function(json){
 			this.set(this.parse(json));
@@ -721,16 +750,40 @@
 			return this;
 		}
 		ViewModel.prototype.bindToModel=function(json){
-			var model=Observable(new Model(json));
+			var oModel=Observable(new Model(json));
+			var model=oModel();
+			var doReplace=true;
+			var ctx={};
+			//console.log(model);
 			
+			var replace=function(newModel)
+			{
+				if(model)
+					model.off(0,0,ctx);
+				model=newModel;
+				if(newModel)
+					newModel.on('change',function(){
+						doReplace=false;
+						oModel.fire();
+						doReplace=true;
+					},ctx);
+				
+			}
+			replace(model);
+			oModel.subscribe(function(){
+				if(doReplace)
+				{		
+					replace(this());
+				}
+			})
 			if(!this._bindedToModel)
-				for(var prop in model().attributes)
+				for(var prop in model.attributes)
 				{
 					this[prop]=(function(prop,context){
 						
 						return Computed(function(){
 							
-							var mod=model();
+							var mod=oModel();
 							if(!mod)
 							{
 								return '';
@@ -743,7 +796,7 @@
 					})(prop,this);
 				}
 			this._bindedToModel=true;
-			return model;
+			return oModel;
 		}
 		
 		ViewModel.prototype.autoinit=false;
@@ -796,9 +849,9 @@
 			this.models=[];
 			this.length=0;
 			this.url='api/?model='+this.model.prototype.mapping;
-			if(json)
+			if(models)
 			{
-				this.reset(json);
+				this.reset(models);
 			}
 			this.initialize();
 		}
@@ -839,7 +892,11 @@
 			Collection.prototype.reset=function(json,options){
 				options||(options={});
 				if(!options.add)
+				{
 					this.models=[];
+					this.length=0;
+				}
+					
 				var modelsArr=this.parse(json);
 				if(modelsArr instanceof Array)
 				{
@@ -858,8 +915,12 @@
 					this.fire('addScope');
 		
 			}
+			Collection.prototype.indexOf=function(model)
+			{
+				return this.models.indexOf(model);
+			}
 			Collection.prototype.add=function(model){
-		
+				
 				if(!(model instanceof Model))
 				{
 					model=Model.createOrUpdate(this.model, model);
@@ -870,6 +931,7 @@
 				})
 				this.models.push(model);
 				this.fire('add', model);
+				this.length=this.models.length;
 			}
 			Collection.prototype.cut=function(id){
 				var found;
@@ -1107,7 +1169,7 @@
 						{
 							val.call(context);
 						}
-					}
+						}
 				});
 			}
 		};
