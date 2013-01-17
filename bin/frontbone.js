@@ -1178,11 +1178,13 @@
 				for(var i = attrs.length - 1; i >= 0; i--) {
 					var arr = attrs[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
 					var comp = ViewModel.findObservable(context, arr[2], addArgs);
-					var fn = function() {
-						$(elem).attr(arr[1], comp());
-					}
-					fn();
-					comp.subscribe(fn);
+					(function(elem,attr,comp){
+						var fn=function(){
+							$(elem).attr(attr,comp());
+						}
+						fn();
+						comp.subscribe(fn);
+					})(elem,arr[1],comp);
 				}
 			},
 			style: function(elem, value, context, addArgs) {
