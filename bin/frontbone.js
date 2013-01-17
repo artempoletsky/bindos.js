@@ -236,22 +236,23 @@
 			return this;
 		}
 		Events.prototype.fire = function(events) {
-			if(!this._listeners) {
+			if(!this._listeners) 
 				return this;
-			}
-			var args = Array.prototype.slice.call(arguments, 1);
-
-			var aEvents, i, j, l, binds, bind, type;
-			aEvents = typeof events == 'string' ? events.split(eventSplitter) : [events];
-
-			for(i = 0, l = aEvents.length; i < l; i++) {
-				type = typeof aEvents[i] == 'string' ? aEvents[i] : aEvents[i].type;
-
-				binds = findBinds(this._listeners, type, false, false);
-
-				for(j = binds.length - 1; j >= 0; j--) {
-					bind = binds[j];
-
+			var args = Array.prototype.slice.call(arguments,1);
+			
+			var aEvents,i,j,l,binds,bind,type;
+			aEvents=typeof events == 'string'? events.split(eventSplitter): [events];
+		
+			for(i=0,l=aEvents.length;i<l;i++)
+			{
+				type=typeof aEvents[i] == 'string'? aEvents[i]: aEvents[i].type;
+			
+				binds=findBinds(this._listeners,type,false,false);
+				
+				for(j=binds.length-1;j>=0;j--)
+				{
+					bind=binds[j];
+					
 					//args.unshift(aEvents[i]);
 					bind.fn.apply(bind.c, args);
 				//args.shift();
@@ -342,21 +343,29 @@
 					fn._listeners[i].call(fn);
 			};
 			return fn;
-		};
-		var computableInit = false;
-
-		var Observable = function(initial) {
-			var value = initial;
-			var fn = function(set) {
-				if(arguments.length > 0) {
-					fn.lastValue = value;
-					value = set;
+		}
+		var computableInit=false;
+	
+		var Observable=function(initial)
+		{
+			var value=initial;
+			var fn=function(set){
+				if(arguments.length>0)
+				{
+				//if(!compare(set, value))
+				{
+					fn.lastValue=value;
+					value=set;
 					fn.fire();
-				} else {
-					if(computableInit) {
-						(function(comp) {
-
-							fn.subscribe(function() {
+				}
+				}
+				else
+				{
+					if(computableInit)
+					{
+						(function(comp){
+						
+							fn.subscribe(function(){
 								comp.refresh();
 								comp.fire();
 							})
@@ -384,18 +393,18 @@
 			}
 			return fn.__observable || false;
 		}
-
-		var Computed = function(fn, context) {
-			if(!context) {
-				context = this;
-			}
-			var value = fn.call(context);
-
-			var resfn = function() {
-				if(computableInit) {
-					(function(comp) {
-
-						resfn.subscribe(function() {
+	
+		var Computed=function(fn,context){
+			if(!context)
+				context=this;
+			var value=fn.call(context);
+		
+			var resfn=function(){
+				if(computableInit)
+				{
+					(function(comp){
+						
+						resfn.subscribe(function(){
 							comp.refresh();
 							comp.fire();
 						})
@@ -423,23 +432,25 @@
 		this.Computed = Computed;
 		this.Subscribeable = Subscribeable;
 	}).call(this);
-
-	(function() {
-		var modelsMap = {};
-
-		function Model(data, options) {
-			data || (data = {});
-			options || (options = {});
-			var attrs = {};
-			$.extend(attrs, this.defaults, this.parse(data));
-			this.attributes = attrs;
-			this._changed = {};
-			this.id = this.attributes[this.idAttribute];
-			this.cid = VM.unique('c');
-
-			if(this.mapping && this.id) {
-				modelsMap[this.mapping] || (modelsMap[this.mapping] = {});
-				modelsMap[this.mapping][this.id] = this;
+	
+	
+	
+	(function(){
+		var modelsMap={};
+		function Model(data,options){
+			data||(data={});
+			options||(options={});
+			var attrs={};
+			$.extend(attrs,this.defaults,this.parse(data));
+			this.attributes=attrs;
+			this._changed={};
+			this.id=this.attributes[this.idAttribute];
+			this.cid=VM.unique('c');
+		
+			if(this.mapping&&this.id)
+			{
+				modelsMap[this.mapping]||(modelsMap[this.mapping]={});
+				modelsMap[this.mapping][this.id]=this;
 			}
 			this.initialize();
 		}
@@ -460,18 +471,18 @@
 			Constructor.prototype.constructor = Constructor;
 			Constructor.extend = ParentClass.extend;
 			return Constructor;
-		};
-		Events.extend = Model.extend;
-		Model.prototype = new Events();
-		Model.prototype.constructor = Model;
-
-		Model.prototype.idAttribute = 'id';
-		Model.prototype.mapping = false;
-		Model.prototype.defaults = {};
-		Model.prototype.toJSON = function() {
+		}
+		Events.extend=Model.extend;
+		Model.prototype=new Events();
+		Model.prototype.constructor=Model;
+		
+		Model.prototype.idAttribute='id';
+		Model.prototype.mapping=false;
+		Model.prototype.defaults={};
+		Model.prototype.toJSON=function(){
 			return _.clone(this.attributes);
 		};
-		Model.prototype.initialize = function() {
+		Model.prototype.initialize=function(){
 			return this;
 		};
 		Model.prototype.parse = function(json) {
@@ -663,47 +674,44 @@
 
 		function ViewModel(options) {
 			//для подсказок
-			if(false) {
+			if(false)
+			{
 				Events.call(this);
-				this._binds = {};
-				this.events = {};
-				this.attributes = {};
-				this._cid = '';
-				this.$el = $();
-				this.el = document.createElement('div');
+				this._binds={};
+				this.events={};
+				this.attributes={};
+				this._cid='';
+				this.$el=$();
+				this.el=document.createElement('div');
 			}
-			options || (options = {});
-			this.options = options;
-			this.collection = options.collection;
-			this.model = options.model;
-			if(options.el) {
-				this.el = options.el;
+			options||(options={});
+			this.options=options;
+			this.collection=options.collection;
+			this.model=options.model;
+			if(options.el)
+				this.el=options.el;
+			var me=this;
+			if(!me._cid)
+			{
+				me._cid=VM.unique('vm');
 			}
-
-			var me = this;
-			if(!me._cid) {
-				me._cid = VM.unique('vm');
+			if(!me.el)
+				me.el='div';
+			if(typeof me.el == 'string')
+			{
+				if(simpleTagRegex.test(me.el)&&me.el!='html'&&me.el!='body')
+					me.el=document.createElement(me.el);
+				else
+					me.el=$(me.el)[0];
 			}
-			if(!me.el) {
-				me.el = 'div';
-			}
-			if(typeof me.el == 'string') {
-				if(simpleTagRegex.test(me.el) && me.el != 'html' && me.el != 'body') {
-					me.el = document.createElement(me.el);
-				} else {
-					me.el = $(me.el)[0];
-				}
-			}
-
-			me.$el = $(me.el);
-			me.$ = function(selector) {
+			me.$el=$(me.el);
+			me.$=function(selector){
 				return me.$el.find(selector);
-			};
+			}
 			me.initialize();
 
-			if(me.autoInit) {
+			if(me.autoinit)
 				me.parse();
-			}
 			me.delegateEvents();
 		}
 
@@ -724,18 +732,19 @@
 			delete this._binds;
 			ViewModel.findBinds(this.el, this);
 			return this;
-			var $el, binds, bind, me = this, i, context = me;
-			me.$el.find('[data-bind]').add(me.$el).filter('[data-bind]').each(function() {
-				$el = $(this);
-				binds = $el.attr('data-bind').split(bindSplitter);
-				for(i = binds.length - 1; i >= 0; i--) {
-
-					var arr = binds[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
-
-					var fn = ViewModel.binds[arr[1]];
-
-					if(fn) {
-						fn.call(me, this, arr[2], context)
+			var $el,binds,bind,me=this,i,context=me;
+			me.$el.find('[data-bind]').add(me.$el).filter('[data-bind]').each(function(){
+				$el=$(this);
+				binds=$el.attr('data-bind').split(bindSplitter);
+				for(i=binds.length-1;i>=0;i--){
+				
+					var arr=binds[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
+					
+					var fn=ViewModel.binds[arr[1]];
+				
+					if(fn)
+					{
+						fn.call(me, this,arr[2], context)	
 					}
 
 				//bind=parseBind(binds);
@@ -769,7 +778,7 @@
 					replace(this());
 				}
 			});
-			if(!this._bindedToModel) {
+			if(!this._bindedToModel) 
 				for(var prop in model.attributes) {
 					this[prop] = (function(prop, context) {
 
@@ -784,16 +793,14 @@
 						}, context)
 					})(prop, this);
 				}
-			}
-			this._bindedToModel = true;
+			this._bindedToModel=true;
 			return oModel;
-		};
-
-		ViewModel.prototype.autoInit = false;
-		ViewModel.prototype.initialize = function() {};
-		ViewModel.prototype.delegateEvents = function(events) {
-			events || (events = this.events);
-
+		}
+		
+		ViewModel.prototype.autoinit=false;
+		ViewModel.prototype.initialize=function(){};
+		ViewModel.prototype.delegateEvents=function(events){
+			events||(events=this.events);
 			this.undelegateEvents();
 			var fnName, fn, name, eventsPath, eventName, me = this;
 			for(name in events) {
@@ -835,6 +842,7 @@
 			this.models = [];
 			this.length = 0;
 
+
 			// хэш вида  id : глобальный индекс
 			this._hashId = [];
 			if(models) {
@@ -875,18 +883,20 @@
 			};
 			Collection.prototype.parse = function(json) {
 				return json;
-			};
-			Collection.prototype.reset = function(json, options) {
-				options || (options = {});
-				if(!options.add) {
-					this.models = [];
-					this.length = 0;
-					this._hashId = []
+			}
+			Collection.prototype.reset=function(json,options){
+				options||(options={});
+				if(!options.add)
+				{
+					this.models=[];
+					this.length=0;
 				}
-
-				var modelsArr = this.parse(json);
-				if(modelsArr instanceof Array) {
-					for(var i = 0, l = modelsArr.length; i < l; i++) {
+					
+				var modelsArr=this.parse(json);
+				if(modelsArr instanceof Array)
+				{
+					for(var i=0,l=modelsArr.length;i<l;i++)
+					{
 						this.add(modelsArr[i]);
 					}
 				} else {
@@ -1168,11 +1178,13 @@
 				for(var i = attrs.length - 1; i >= 0; i--) {
 					var arr = attrs[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
 					var comp = ViewModel.findObservable(context, arr[2], addArgs);
-					var fn = function() {
-						$(elem).attr(arr[1], comp());
-					}
-					fn();
-					comp.subscribe(fn);
+					(function(elem,attr,comp){
+						var fn=function(){
+							$(elem).attr(attr,comp());
+						}
+						fn();
+						comp.subscribe(fn);
+					})(elem,arr[1],comp);
 				}
 			},
 			style: function(elem, value, context, addArgs) {
