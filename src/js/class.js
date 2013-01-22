@@ -1,65 +1,86 @@
+
 (function(){
 	var ctor=function(){};
-	var AbstractClass=function(){
-		
-	}
-		
-	AbstractClass.extend=function(props){
-		var Constructor=(props&& props.hasOwnProperty('constructor'))?
-		props.constructor :
-		function(){
-			ParentClass.apply(this, arguments);
-		};
-			
-		ctor.prototype=ParentClass.prototype;
-		Constructor.prototype=new ctor();
-			
-		$.extend(Constructor.prototype, props);
-		Constructor.prototype.constructor=Constructor;
-		Constructor.extend = ParentClass.extend;
-		return Constructor;
-		
-	};
-	this.AbstractClass=AbstractClass;
-})();
-
-
-
-(function(){
 	var Class=function(){
 		
 	}
-	var basePath='src/js/';
-	var checkClass=function(module){
-		try {
-			var result=eval(module);
-			if(typeof result!==undefined)
+	Class.prototype._constructor=Object;
+	
+	Class.extend=function(props){
+		var ParentClass=this;
+		
+		var Constructor=function(){
+			var oldSuper=this._super;
+			this._super=ParentClass.prototype._constructor;
+			this._constructor.apply(this, arguments);
+			this._super=oldSuper;
+		};
+		
+		ctor.prototype=ParentClass.prototype;
+		Constructor.prototype=new ctor();
+		_.each(props,function(val,key){
+			if(typeof val =='function')
 			{
-				return result;
+				if(key=='_constructor'||key=='constructor')
+					return;
+				
+				Constructor.prototype[key]=
+				(function(key,func){
+					return function(){
+						var oldSuper=this._super;
+						this._super=ParentClass.prototype[key];
+						func.apply(this, arguments);
+						this._super=oldSuper;
+					};
+				})(key,val);
 			}
-		} catch (exception) { 
-		}
-		return false;
-	}
-	Class.extendsFrom=function(module)
-	{
-		var className=module.split('.').pop();
-		var parent=checkClass(module);
-		if(!parent)
+			else
+			{
+				Constructor.prototype[key]=val;
+			}
+		});
+		if(props.hasOwnProperty('constructor'))
+			Constructor.prototype._constructor=props.constructor;
+		else
+			Constructor.prototype._constructor=ParentClass.prototype._constructor;
+		//_.extend(Constructor.prototype, props);
+		Constructor.prototype.constructor=Constructor;
+		Constructor.extend = ParentClass.extend;
+		Constructor.create = ParentClass.create;
+		return Constructor;
+		
+	};
+	
+	
+	
+	Class.create=function(proto){	
+		var args=_.toArray(arguments);
+		args.shift();
+		var child=this.extend(proto);
+		var fnBody='return new child(';
+		var len=args.length;
+		var keys=['child'];
+		var vals=[child];
+		if(len>0)
 		{
-			var path=basePath+module.toLowerCase().replace('.', '/','g')+'.js';
-			try {
-				require(path);
-			} catch (exception) { 
-				throw exception;
+			for(var i=0;i<len;i++)
+			{
+				fnBody+='arg'+i+', ';
+				keys.push('arg'+i);
+				vals.push(args[i]);
 			}
-			parent=checkClass(module);
-			if(!parent)
-				throw new Error('Class '+className+' not exists!');
+			fnBody=fnBody.substr(0,fnBody.length-2);
+		}
+		fnBody+=');';
+		keys.push(fnBody);
+		var instance;
+		try {
+			instance=Function.apply(undefined,keys).apply(undefined, vals)
+		} catch (exception) { 
+			throw exception;
 		}
 		
-		//console.log(parent);
-	}
-	//Class.extendsFrom('Foo');
-	window.Class=Class;
+		return instance;
+	};
+	this.Class=Class;
 })();
