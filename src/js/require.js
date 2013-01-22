@@ -44,7 +44,8 @@
 		require.log.push(path);
 		
 		var xhr=createXMLHTTPObject();
-		xhr.open('GET',path,false);
+		var url=path;
+		xhr.open('GET', url += ((/\?/).test(url) ? "&" : "?") + (new Date()).getTime(),false);
 		xhr.send();
 		if(xhr.status==200)
 		{
