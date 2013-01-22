@@ -222,7 +222,7 @@ describe('ViewModel', function(){
 		
 	})
 	
-	it('each method must return this', function(){
+	xit('each method must return this', function(){
 		var vm=new ViewModel();
 		var exclude='on,initialize,hasListener,get,$,setElement,one';
 		var me;
