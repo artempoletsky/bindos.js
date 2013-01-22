@@ -35,4 +35,4 @@
 	}
 	//Class.extendsFrom('Foo');
 	window.Class=Class;
-})()
+})();
