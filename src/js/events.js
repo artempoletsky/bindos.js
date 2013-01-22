@@ -37,10 +37,11 @@
 		return true;
 	}
 
-	function makeBind(event, fn, context) {
+	function makeBind(event, fn, context,isSignal) {
 		var bind = parse(event);
 		bind.fn = fn;
 		bind.c = context;
+		bind.s=isSignal;
 		return bind;
 	}
 
@@ -159,7 +160,8 @@
 				for(j=binds.length-1;j>=0;j--)
 				{
 					bind=binds[j];
-					
+					if(bind.s)
+						this.off(undefined, bind.fn)
 					//args.unshift(aEvents[i]);
 					bind.fn.apply(bind.c, args);
 				//args.shift();
@@ -169,11 +171,19 @@
 			return this;
 		},
 		one: function(events, fn, context) {
-			var proxy = function() {
-				this.off(events, proxy, context);
-				fn.apply(this, arguments);
+			var aEvents = events.split(eventSplitter), i, bind;
+			if(typeof fn != 'function') {
+				throw TypeError('function expected');
 			}
-			return this.on(events, proxy, context);
+
+			if(!context) {
+				context = this;
+			}
+			for(i = aEvents.length - 1; i >= 0; i--) {
+				bind = makeBind(aEvents[i], fn, context,true);
+				add(this, bind);
+			}
+			return this;
 		},
 		hasListener : function(event) {
 			if(!this._listeners) {

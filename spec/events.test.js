@@ -11,17 +11,19 @@ describe('Events', function(){
 			expect(disp.hasListener('foo')).toBeFalsy();
 			disp.on('foo', spyHandler);
 			disp.on('bar', spyHandler2);
-			console.log(disp._listeners);
 			expect(disp.hasListener('foo')).not.toBeFalsy();
 		})
-		xit('and should be able to trigger event', function(){
+		it('and should be able to trigger event', function(){
+			var disp=new Events();
+			var spyHandler=jasmine.createSpy('handler');
+			disp.on('foo', spyHandler);
 			disp.fire('foo');
 			expect(spyHandler).toHaveBeenCalled();
 			
 		})
 		
-		xit('and should be able to trigger multiple handlers', function(){
-			
+		it('and should be able to trigger multiple handlers', function(){
+			var disp=new Events();
 			var context=new Object(),
 			event={
 				type: 'baz'
@@ -55,17 +57,23 @@ describe('Events', function(){
 			expect(obj.bazHandler2.calls.length).toEqual(2);
 		})
 		
-		xit('and should be able to unbind event', function(){
+		it('and should be able to unbind event', function(){
+			var disp=new Events();
+			var spyHandler=jasmine.createSpy('handler');
+			var spyHandler2=jasmine.createSpy('handler');
+			disp.on('foo',spyHandler);
+			disp.on('bar',spyHandler2);
 			//console.log(disp._listeners);
 			disp.off('foo',spyHandler);
 			//console.log(disp._listeners);
 			disp.fire('foo');
-			expect(spyHandler.calls.length).toEqual(1);
+			expect(spyHandler.calls.length).toEqual(0);
 			disp.fire('bar');
 			expect(spyHandler2.calls.length).toEqual(1);
 		})
 		
-		xit('and should be able to unbind all handlers with some context', function(){
+		it('and should be able to unbind all handlers with some context', function(){
+			var disp=new Events();
 			var context1=new Object();
 			var spy1=jasmine.createSpy('spy1');
 			var spy2=jasmine.createSpy('spy2');
@@ -83,7 +91,8 @@ describe('Events', function(){
 			expect(spy2.calls.length).toEqual(2);
 		})
 		
-		xit('and should be able to unbind all same handlers', function(){
+		it('and should be able to unbind all same handlers', function(){
+			var disp=new Events();
 			var spy1=jasmine.createSpy('spy1');
 			var spy2=jasmine.createSpy('spy2');
 			
@@ -97,7 +106,7 @@ describe('Events', function(){
 			expect(spy2.calls.length).toEqual(2);
 		});
 		
-		xit('support signals',function(){
+		it('support signals',function(){
 			var ev=new Events();
 			var cb=jasmine.createSpy('cb');
 			ev.one('click', cb);
@@ -113,7 +122,7 @@ describe('Events', function(){
 		});
 	})
 	
-	xdescribe('support name spaces', function(){
+	describe('support name spaces', function(){
 		var disp=new Events();
 		it('and should trigger by namespace', function(){
 			var spy1=jasmine.createSpy('spy1');
