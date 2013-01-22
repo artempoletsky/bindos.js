@@ -3,7 +3,7 @@
 	var AbstractClass=function(){
 		
 	}
-	
+		
 	AbstractClass.extend=function(props){
 		var Constructor=(props&& props.hasOwnProperty('constructor'))?
 		props.constructor :
@@ -21,7 +21,11 @@
 		
 	};
 	this.AbstractClass=AbstractClass;
+})();
 
+
+
+(function(){
 	var Class=function(){
 		
 	}
