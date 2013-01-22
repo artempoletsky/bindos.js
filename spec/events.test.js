@@ -92,7 +92,22 @@ describe('Events', function(){
 			disp.fire('foo');
 			expect(spy1.calls.length).toEqual(1);
 			expect(spy2.calls.length).toEqual(2);
-		})
+		});
+		
+		it('support signals',function(){
+			var ev=new Events();
+			var cb=jasmine.createSpy('cb');
+			ev.one('click', cb);
+			expect(cb.calls.length).toEqual(0);
+			ev.trigger('click');
+			expect(cb.calls.length).toEqual(1);
+			ev.trigger('click');
+			expect(cb.calls.length).toEqual(1);
+			ev.one('click', cb);
+			ev.off('click', cb);
+			ev.trigger('click');
+			expect(cb.calls.length).toEqual(1);
+		});
 	})
 	
 	describe('support name spaces', function(){
