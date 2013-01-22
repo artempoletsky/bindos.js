@@ -29,8 +29,9 @@
 					return function(){
 						var oldSuper=this._super;
 						this._super=ParentClass.prototype[key];
-						func.apply(this, arguments);
+						var result=func.apply(this, arguments);
 						this._super=oldSuper;
+						return result;
 					};
 				})(key,val);
 			}

@@ -53,6 +53,7 @@ describe('Class', function(){
 			times: 0,
 			tick: function(){
 				this.times++;
+				return this.times;
 			},
 			constructor: function(){
 				this.iAmPerson=true;
@@ -67,7 +68,7 @@ describe('Class', function(){
 				this._super();
 			},
 			tick: function(){
-				this._super();
+				return this._super();
 			}
 		});
 		var john=new Nynja();
@@ -80,6 +81,7 @@ describe('Class', function(){
 		expect(john.times).toBe(0);
 		john.tick();
 		expect(john.times).toBe(1);
+		expect(john.tick()).toBe(2);
 		
 	});
 	it('child without constructor must construct with parent constructor', function(){

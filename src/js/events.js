@@ -58,7 +58,7 @@
 		self._listeners = binds;
 	}
 
-	function findBinds(binds, event, fn, context, mode) {
+	var findBinds = function (binds, event, fn, context, mode) {
 		var result = [], a, b, bind = makeBind(event, fn, context);
 		if(!mode) {
 			mode = 'filter';
@@ -116,7 +116,6 @@
 	}
 	
 	var Events=Class.extend({
-		_listeners: [],
 		on: function(events, fn, context){
 			var aEvents = events.split(eventSplitter), i, bind;
 			if(typeof fn != 'function') {
