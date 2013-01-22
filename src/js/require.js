@@ -26,12 +26,12 @@
 			break;
 		}
 		return xmlhttp;
-	};
+	}
 	var EvalError=function(message,file,line){
 		this.file=file;
 		this.line=line;
 		this.message=message;
-	}
+	};
 	EvalError.prototype=new Error();
 	EvalError.prototype.constructor=EvalError;
 	
@@ -56,7 +56,7 @@
 			throw new Error('File "'+path+'" not exists!')
 		}
 			
-	}
+	};
 	require.log=[];
 	require.unpack=function(){
 		var result='';
@@ -65,6 +65,6 @@
 			result+='<script type="text/javascript" src="'+require.log[i]+'"></script>\n';
 		}
 		return result;
-	}
+	};
 	window.require=require;
 })();
