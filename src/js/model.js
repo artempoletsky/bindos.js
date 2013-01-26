@@ -123,7 +123,7 @@
 		remove: function() {
 			this.fire('remove');
 			if(this.id) {
-				VM.sync('delete', this.url());
+				Model.sync('delete', this.url());
 			}
 		}
 	});

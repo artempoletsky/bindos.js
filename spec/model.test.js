@@ -115,5 +115,60 @@ describe('Model', function(){
 		Model.sync=oldSync;
 	});
 	
+	it('fetch',function(){
+		var oldSync=Model.sync;
+		var method,url,attributes,hasId=false;
+		Model.sync=function(a,b,c){
+			method=a;
+			url=b;
+			attributes=c;
+			c.success({
+				id: 20,
+				a: 1,
+				b: 2
+			});
+		}
+		
+		var m=Model.create({
+			mapping: 'foo'
+		},{
+			id: 20
+		});
+		var spyOnA=jasmine.createSpy('spyOnA');
+		m.on('change:a',spyOnA);
+		m.fetch();
+		
+		expect(method).toBe('read');
+		expect(url).toBe('/foo/20/');
+		expect(m.prop('a')).toBe(1);
+		expect(m.prop('b')).toBe(2);
+		expect(spyOnA.calls.length).toBe(1);
+		
+		Model.sync=oldSync;
+	});
+	
+	it('remove',function(){
+		var oldSync=Model.sync;
+		var method,url,attributes,hasId=false;
+		Model.sync=function(a,b,c){
+			method=a;
+			url=b;
+			attributes=c;
+		}
+		var spy=jasmine.createSpy('spy');
+		var m=Model.create({
+			mapping: 'foo'
+		},{
+			id: 20
+		});
+		m.on('remove',spy);
+		m.remove();
+		
+		expect(method).toBe('delete');
+		expect(url).toBe('/foo/20/');
+		expect(spy.calls.length).toBe(1);
+		Model.sync=oldSync;
+	});
+	
 	
 })
