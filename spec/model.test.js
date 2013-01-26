@@ -44,5 +44,23 @@ describe('Model', function(){
 		})
 		expect(m3).toBe(m2);
 		expect(m.get('x')).toBe(0);
-	})
+	});
+	it('prop',function(){
+		var m=Model.create({
+			
+			},{
+				a: 10
+			});
+		expect(m.prop('a')).toBe(10);
+		m.prop('a',20);
+		expect(m.prop('a')).toBe(20);
+		m.prop({
+			a: 21,
+			b: "foo"
+		});
+		expect(m.prop('a')).toBe(21);
+		expect(m.prop('b')).toBe("foo");
+	});
+	
+	
 })
