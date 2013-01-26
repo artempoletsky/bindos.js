@@ -31,11 +31,12 @@
 		},
 		baseURL: '/',
 		url: function(){
-			var mapping=this.mapping||'';
-			return this.baseURL+mapping+'/'+this.id;
+			var mapping=this.mapping?this.mapping+'/':'';
+			var id=this.id?this.id+'/':''
+			return this.baseURL+mapping+id;
 		},
 		update: function(json){
-			this.set(this.parse(json));
+			this.prop(this.parse(json));
 			this._changed = {};
 			return this;
 		},
@@ -52,6 +53,10 @@
 			var self=this;
 			_.each(values,function(val,key){
 				self._changed[key]=self.attributes[key]=val;
+				if(key==self.idAttribute)
+				{
+					self.id=val;
+				}
 				self.fire('change:'+key);
 			});
 			this.fire('change');
@@ -64,7 +69,7 @@
 			return this.prop.apply(this, arguments);
 		},
 		/**
-		 * DEPRECATED since 26.01.2013
+		 * синоним для prop
 		 */
 		set: function(){
 			return this.prop.apply(this, arguments);
@@ -94,16 +99,20 @@
 		},
 		save: function(){
 			var me = this;
+			if(!this.validate())
+				throw new Error('Model is invalid');
 			if(this.id) {
+				if(_.keys(me._changed).length==0)//нечего сохранять
+					return this;
 				Model.sync('update', this.url(), {
-					data: this._changed,
+					data: me._changed,
 					success: function(data) {
 						me.update(data);
 					}
 				});
 			} else {
 				Model.sync('create', this.url(), {
-					data: this.attributes,
+					data: _.clone(this.attributes),
 					success: function(data) {
 						me.update(data);
 					}
