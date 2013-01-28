@@ -60,7 +60,7 @@ describe('ViewModel', function(){
 		expect(called).toBe(true);
 	})
 	
-	xit('can delegate events', function(){
+	it('can delegate events', function(){
 		var called=false;
 		var dom=$('<div id="grand"><div class="father"><div class="child"></div></div></div>');
 		var vm=ViewModel.create({
@@ -80,7 +80,7 @@ describe('ViewModel', function(){
 		vm.$el.find('.child').click();
 		expect(called).toBe(true);
 	})
-	xit('can undelegate events', function(){
+	it('can undelegate events', function(){
 		var called=0;
 		var dom=$('<div id="grand"><div class="father"><div class="child"></div></div></div>');
 		var vm=ViewModel.create({
@@ -186,7 +186,7 @@ describe('ViewModel', function(){
 		}
 	}
 	
-	xit('can parse binds from html', function(){
+	it('can parse binds from html', function(){
 		
 		ViewModel.create({
 			el: '#testvm',
@@ -225,7 +225,7 @@ describe('ViewModel', function(){
 		
 	})
 	
-	xit('each method must return this', function(){
+	it('each method must return this', function(){
 		var vm=new ViewModel();
 		var exclude='on,initialize,hasListener,get,$,setElement,one,bindToModel,_constructor';
 		var me;

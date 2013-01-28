@@ -8,7 +8,7 @@
 			this.attributes=_.extend({},this.defaults,this.parse(data));
 			this._changed={};
 			this.id=this.attributes[this.idAttribute];
-			this.cid=_.unique('c');
+			this.cid=_.uniqueId('c');
 			//заносим в глобальную коллекцию
 			if(this.mapping&&this.id)
 			{

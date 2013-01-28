@@ -23,7 +23,7 @@
 			var me=this;
 			if(!me._cid)
 			{
-				me._cid=_.unique('vm');
+				me._cid=_.uniqueId('vm');
 			}
 			if(!me.el)
 				me.el='div';
@@ -109,14 +109,14 @@
 					throw TypeError(fnName + ' is not a function');
 				}
 				eventsPath = name.split(eventSplitter);
-				eventName = eventsPath.shift() + '.' + this._cid;
-
+				eventName = eventsPath.shift() + '.' + me._cid;
+				
 				var proxy = (function(fn) {
 					return function() {
 						fn.apply(me, arguments);
 					}
 				})(fn);
-				console.log(me.$el);
+				
 				if(eventsPath.length) {
 					me.$el.delegate(eventsPath.join(' '), eventName, proxy);
 				} else {
