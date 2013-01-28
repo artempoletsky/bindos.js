@@ -170,5 +170,14 @@ describe('Model', function(){
 		Model.sync=oldSync;
 	});
 	
+	it('create or update',function(){
+		var m=Model.createOrUpdate(Model, {
+			x: 1,
+			y: 2
+		});
+		expect(m.get('x')).toBe(1);
+		expect(m.get('y')).toBe(2);
+	});
+	
 	
 })
