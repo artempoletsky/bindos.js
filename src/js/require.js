@@ -26,12 +26,12 @@
 			break;
 		}
 		return xmlhttp;
-	};
+	}
 	var EvalError=function(message,file,line){
 		this.file=file;
 		this.line=line;
 		this.message=message;
-	}
+	};
 	EvalError.prototype=new Error();
 	EvalError.prototype.constructor=EvalError;
 	
@@ -44,7 +44,8 @@
 		require.log.push(path);
 		
 		var xhr=createXMLHTTPObject();
-		xhr.open('GET',path,false);
+		var url=path;
+		xhr.open('GET', url += ((/\?/).test(url) ? "&" : "?") + (new Date()).getTime(),false);
 		xhr.send();
 		if(xhr.status==200)
 		{
@@ -55,7 +56,7 @@
 			throw new Error('File "'+path+'" not exists!')
 		}
 			
-	}
+	};
 	require.log=[];
 	require.unpack=function(){
 		var result='';
@@ -64,6 +65,6 @@
 			result+='<script type="text/javascript" src="'+require.log[i]+'"></script>\n';
 		}
 		return result;
-	}
+	};
 	window.require=require;
 })();

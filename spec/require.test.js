@@ -6,6 +6,7 @@ describe('require', function(){
 		expect($).toBeDefined();
 		require('src/js/class.js');
 		expect(Class).toBeDefined();
+		require('spec/class.test.js');
 	});
 	
 	it('not load file twice',function(){
@@ -14,7 +15,7 @@ describe('require', function(){
 		expect(a).toBe(20);
 	});
 	
-	it('throws error when file not exists',function(){
+	xit('throws error when file not exists',function(){
 		expect(function(){
 			require('not_exists');
 		}).toThrow('File "not_exists" not exists!');
@@ -24,7 +25,7 @@ describe('require', function(){
 		expect(require.log[1]).toBe('lib/jquery-1.8.2.min.js');
 		//expect(require.log[3]).toBeUndefined();
 	});
-	it('can return list of included files as script tags', function(){
+	xit('can return list of included files as script tags', function(){
 		console.log(require.unpack());
 	});
 });

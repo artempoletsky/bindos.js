@@ -150,4 +150,4 @@
 	this.Observable=Observable;
 	this.Computed=Computed;
 	this.Subscribeable=Subscribeable;
-})()
+})();
