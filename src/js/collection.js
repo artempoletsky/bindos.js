@@ -72,7 +72,6 @@
 			typeof index=='number'||(index=this.length);
 			if(!(model instanceof Model))
 			{
-				console.log(this.model, model);
 				model=Model.createOrUpdate(this.model, model);
 			}
 			var me=this;

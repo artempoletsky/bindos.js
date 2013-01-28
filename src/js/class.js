@@ -19,7 +19,9 @@
 		ctor.prototype=ParentClass.prototype;
 		Constructor.prototype=new ctor();
 		_.each(props,function(val,key){
-			if(typeof val =='function')
+			//если функция и не конструктор
+			//конструкторы передаются в чистом виде, иначе ими нельзя создать объект
+			if(typeof val =='function'&&typeof val.prototype._constructor == 'undefined')
 			{
 				if(key=='_constructor'||key=='constructor')
 					return;
