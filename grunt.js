@@ -14,8 +14,14 @@ module.exports = function(grunt) {
 				],
 				dest: 'bin/frontbone-0.9.0.js'
 			}
+		},
+		min: {
+			dist: {
+				src: ['bin/frontbone-0.9.0.js'],
+				dest: 'bin/frontbone-0.9.0.min.js'
+			}
 		}
 	});
 	// Default task.
-	grunt.registerTask('default', 'concat');
+	grunt.registerTask('default', 'concat min');
 };
