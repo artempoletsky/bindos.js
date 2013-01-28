@@ -116,6 +116,7 @@
 						fn.apply(me, arguments);
 					}
 				})(fn);
+				console.log(me.$el);
 				if(eventsPath.length) {
 					me.$el.delegate(eventsPath.join(' '), eventName, proxy);
 				} else {

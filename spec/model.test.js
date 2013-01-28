@@ -106,7 +106,7 @@ describe('Model', function(){
 		expect(method).toBe('create');
 		
 		m.prop({
-			foo: 'bar',
+			foo: 'bar'
 		}).save();
 		expect(method).toBe('update');
 		expect(url).toBe('/foo/123/');

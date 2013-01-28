@@ -1,6 +1,10 @@
 (function(){
 	var eventSplitter = /\s+/;
 	var namespaceSplitter = '.';
+	if(!Array.prototype.indexOf)
+		Array.prototype.indexOf = function (searchElement, fromIndex ) {
+			return _.indexOf(this, searchElement, fromIndex);
+		};
 	
 	function parse(event) {
 		var arr = ('' + event).split(namespaceSplitter);

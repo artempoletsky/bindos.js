@@ -2,16 +2,16 @@
 	
 	var Collection=Model.extend({
 		
-		constructor: function(json)
+		constructor: function(models,attributes)
 		{
 			
-			this._super();
+			this._super(attributes);
 			this.models=[];
 			this.length=0;
 			
-			if(json)
+			if(models&&models.length)
 			{
-				this.reset(json);
+				this.reset(models);
 			}
 			this.initialize();
 			

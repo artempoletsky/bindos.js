@@ -4,6 +4,9 @@
 	var Class=function(){
 		
 	}
+	var fnTest = /xyz/.test(function(){
+		xyz;
+	}) ? /\b_super\b/ : /.*/;
 	Class.prototype._constructor=Object;
 	Class.prototype.constructor=Class;
 	Class.extend=function(props){
@@ -18,26 +21,22 @@
 		ctor.prototype=ParentClass.prototype;
 		Constructor.prototype=new ctor();
 		_.each(props,function(val,key){
-			
-			//если функция и не конструктор
-			//конструкторы передаются в чистом виде, иначе ими нельзя создать объект
-			if(typeof val =='function'&&typeof val.prototype._constructor == 'undefined')
-			{
-				Constructor.prototype[key]=
-				(function(key,func){
-					return function(){
-						var oldSuper=this._super;
-						this._super=ParentClass.prototype[key];
-						var result=func.apply(this, arguments);
-						this._super=oldSuper;
-						return result;
-					};
-				})(key,val);
-			}
-			else
-			{
-				Constructor.prototype[key]=val;
-			}
+			Constructor.prototype[key]= (
+				//если функция и не конструктор
+				typeof val =='function' &&
+				//и не конструктор
+				//конструкторы передаются в чистом виде, иначе ими нельзя создать объект
+				typeof val.prototype._constructor == 'undefined' &&
+				//и содержит _super
+				fnTest.test(val.toString())) ? (function(key,func){
+				return function(){
+					var oldSuper=this._super;
+					this._super=ParentClass.prototype[key];
+					var result=func.apply(this, arguments);
+					this._super=oldSuper;
+					return result;
+				};
+			})(key,val): val;
 		});
 		
 		Constructor.prototype.constructor=Constructor;

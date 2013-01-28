@@ -14,7 +14,7 @@ describe('Collection', function(){
 		}]);
 		expect(c.getByID(1).get('id')).toBe(1);
 	})
-	xit('can map to some model', function(){
+	it('can map to some model', function(){
 		var Book=Model.extend({
 			idAttribute: 'idBook',
 			mapping: 'book'

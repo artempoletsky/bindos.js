@@ -19,7 +19,7 @@ describe('ViewModel', function(){
 		
 	})
 	
-	it('can create VM object with constructor', function(){
+	xit('can create VM object with constructor', function(){
 		var init=jasmine.createSpy('init');
 		var click=jasmine.createSpy('click');
 		function TestViewModel(){
@@ -43,21 +43,24 @@ describe('ViewModel', function(){
 	it('context of \'delegateEvents\' handlers must be this ViewModel', function(){
 		var called=false;
 		var vm=ViewModel.create({
+			el: 'body',
 			events: {
 				'click': 'onClick'
 			},
 			onClick: function(){
+				console.log(434);
 				called=true;
 				expect(this).toBe(vm);
 			}
 		});
 		expect(vm.events.click).toEqual('onClick');
 		expect(called).toBe(false);
+		//$('body').append(vm.$el);
 		vm.$el.click();
 		expect(called).toBe(true);
 	})
 	
-	it('can delegate events', function(){
+	xit('can delegate events', function(){
 		var called=false;
 		var dom=$('<div id="grand"><div class="father"><div class="child"></div></div></div>');
 		var vm=ViewModel.create({
@@ -77,7 +80,7 @@ describe('ViewModel', function(){
 		vm.$el.find('.child').click();
 		expect(called).toBe(true);
 	})
-	it('can undelegate events', function(){
+	xit('can undelegate events', function(){
 		var called=0;
 		var dom=$('<div id="grand"><div class="father"><div class="child"></div></div></div>');
 		var vm=ViewModel.create({
@@ -183,7 +186,7 @@ describe('ViewModel', function(){
 		}
 	}
 	
-	it('can parse binds from html', function(){
+	xit('can parse binds from html', function(){
 		
 		ViewModel.create({
 			el: '#testvm',
@@ -222,7 +225,7 @@ describe('ViewModel', function(){
 		
 	})
 	
-	it('each method must return this', function(){
+	xit('each method must return this', function(){
 		var vm=new ViewModel();
 		var exclude='on,initialize,hasListener,get,$,setElement,one,bindToModel,_constructor';
 		var me;
