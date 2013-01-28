@@ -153,4 +153,4 @@
 		}
 	});
 	this.Collection=Collection;
-})()
+})();

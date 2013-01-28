@@ -102,7 +102,7 @@ describe('ViewModel', function(){
 		$child.click();
 		expect(called).toBe(2);
 	})
-	
+	/*
 	ViewModel.binds={
 		html: function(elem,value,context){
 			var fn=function(){
@@ -185,7 +185,7 @@ describe('ViewModel', function(){
 			
 		}
 	}
-	
+	*/
 	it('can parse binds from html', function(){
 		
 		ViewModel.create({
