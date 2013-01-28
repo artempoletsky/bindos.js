@@ -5,27 +5,24 @@
 		
 	}
 	Class.prototype._constructor=Object;
-	
+	Class.prototype.constructor=Class;
 	Class.extend=function(props){
 		var ParentClass=this;
 		
 		var Constructor=function(){
-			var oldSuper=this._super;
-			this._super=ParentClass.prototype._constructor;
 			this._constructor.apply(this, arguments);
-			this._super=oldSuper;
 		};
+		if(props.hasOwnProperty('constructor'))
+			props._constructor=props.constructor;
 		
 		ctor.prototype=ParentClass.prototype;
 		Constructor.prototype=new ctor();
 		_.each(props,function(val,key){
+			
 			//если функция и не конструктор
 			//конструкторы передаются в чистом виде, иначе ими нельзя создать объект
 			if(typeof val =='function'&&typeof val.prototype._constructor == 'undefined')
 			{
-				if(key=='_constructor'||key=='constructor')
-					return;
-				
 				Constructor.prototype[key]=
 				(function(key,func){
 					return function(){
@@ -42,11 +39,7 @@
 				Constructor.prototype[key]=val;
 			}
 		});
-		if(props.hasOwnProperty('constructor'))
-			Constructor.prototype._constructor=props.constructor;
-		else
-			Constructor.prototype._constructor=ParentClass.prototype._constructor;
-		//_.extend(Constructor.prototype, props);
+		
 		Constructor.prototype.constructor=Constructor;
 		Constructor.extend = ParentClass.extend;
 		Constructor.create = ParentClass.create;

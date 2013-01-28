@@ -57,6 +57,7 @@ describe('Class', function(){
 			},
 			constructor: function(){
 				this.iAmPerson=true;
+				this._super();
 			}
 		});
 		var Nynja=Person.extend({
@@ -99,7 +100,37 @@ describe('Class', function(){
 		expect(d.b).toBe(2);
 		expect(d.c).toBe(3);
 	});
-	
+	it('deep extendable with _super constructor',function(){
+		
+		var newObj;
+		var ctorCalls=0;
+		var A=Class.extend({
+			constructor: function(arg){
+				this.arg=arg;
+			}
+		});
+		
+		
+		
+		var B=A.extend({
+			constructor: function(arg){
+				this._super(arg);
+			//console.log(newObj,'B');
+			//console.assert(newObj===this);
+			}
+		});
+		var C=B.extend({
+			constructor: function(arg){
+				//console.assert(this._super===B);
+				this._super(arg);
+			//console.log(newObj,'C');
+				
+			}
+		});
+		var obj={};
+		var e=new C(obj);
+		expect(e.arg).toBe(obj);
+	});
 	it('has factory',function(){
 		var Child=Class.extend({
 			constructor: function(a,b,c){
