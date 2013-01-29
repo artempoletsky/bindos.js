@@ -81,6 +81,12 @@
 					this.fire('reset');
 			}
 		},
+		push: function(model){
+			return this.add(model);
+		},
+		unshift: function(model){
+			return this.add(model,0);
+		},
 		add: function(model,index,silent){
 			typeof index=='number'||(index=this.length);
 			if(!(model instanceof Model))
@@ -95,6 +101,7 @@
 			this.length=this.models.length;
 			if(!silent)
 				this.fire('add',[model],index);
+			return this;
 		},
 		cut: function(id){
 			var found;
@@ -118,8 +125,16 @@
 			})
 			return found;
 		},
+		shift: function(){
+			return this.cutAt(0);
+		},
+		pop: function(){
+			return this.cutAt();
+		},
 		cutAt: function(index){
+			index!==undefined||(index=this.models.length-1);
 			var model=this.models.splice(index, 1)[0];
+			this.length=this.models.length;
 			this.fire('cut',model,index);
 			return model;
 		},
@@ -170,19 +185,40 @@
 		};
 	});
 	
-	var itselfMethods = ['reduce', 'reduceRight',
-	'filter', 'select', 'reject',
-	'sortBy',
-	'without',
-	'shuffle'];
+	var filterMethods = ['filter', 'reject'];
+	var sortMethods = ['sortBy','shuffle'];
+
+	_.each(filterMethods, function(method) {
+		itself.prototype[method] = function() {
+			var antonym=method=='filter'?'reject':'filter';
+			var self=this.self;
+			var newModels=_[method].apply(_, [self.models].concat(_.toArray(arguments)));
+			var rejectedModels=_[antonym].apply(_, [self.models].concat(_.toArray(arguments)));
+			var indexes={};
+			_.each(rejectedModels,function(model){
+				indexes[self.indexOf(model)]=model;
+			});
+			self.models=newModels;
+			self.length=newModels.length;
+			//console.log(indexes);
+			self.fire('reject', indexes);
+			return self;
+		};
+	});
 	
-	_.each(itselfMethods, function(method) {
+	_.each(sortMethods, function(method) {
 		itself.prototype[method] = function() {
 			var self=this.self;
 			var newModels=_[method].apply(_, [self.models].concat(_.toArray(arguments)));
+			var indexes={};
+			_.each(newModels,function(model,index){
+				indexes[self.indexOf(model)]=index;
+			});
 			self.models=newModels;
 			self.length=newModels.length;
-			return newModels;
+			//console.log(indexes);
+			self.fire('sort', indexes);
+			return self;
 		};
 	});
 	

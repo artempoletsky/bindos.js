@@ -94,8 +94,12 @@ describe('Collection', function(){
 		var ind=Math.floor(Math.random()*len);
 		var x=col.at(ind).get('x');
 		expect(arr[ind]).toBe(x*x);
+		col.itself.shuffle();
 		
-		
+		col.itself.reject(function(model){
+			return model.prop('x')>=50;
+		});
+		expect(col.length).toBe(50);
 	})
 	
 })

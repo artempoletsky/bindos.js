@@ -629,19 +629,40 @@
 		};
 	});
 	
-	var itselfMethods = ['reduce', 'reduceRight',
-	'filter', 'select', 'reject',
-	'sortBy',
-	'without',
-	'shuffle'];
+	var filterMethods = ['filter', 'reject'];
+	var sortMethods = ['sortBy','shuffle'];
+
+	_.each(filterMethods, function(method) {
+		itself.prototype[method] = function() {
+			var antonym=method=='filter'?'reject':'filter';
+			var self=this.self;
+			var newModels=_[method].apply(_, [self.models].concat(_.toArray(arguments)));
+			var rejectedModels=_[antonym].apply(_, [self.models].concat(_.toArray(arguments)));
+			var indexes={};
+			_.each(rejectedModels,function(model){
+				indexes[self.indexOf(model)]=model;
+			});
+			self.models=newModels;
+			self.length=newModels.length;
+			//console.log(indexes);
+			self.fire('reject', indexes);
+			return self;
+		};
+	});
 	
-	_.each(itselfMethods, function(method) {
+	_.each(sortMethods, function(method) {
 		itself.prototype[method] = function() {
 			var self=this.self;
 			var newModels=_[method].apply(_, [self.models].concat(_.toArray(arguments)));
+			var indexes={};
+			_.each(newModels,function(model,index){
+				indexes[self.indexOf(model)]=index;
+			});
 			self.models=newModels;
 			self.length=newModels.length;
-			return newModels;
+			//console.log(indexes);
+			self.fire('sort', indexes);
+			return self;
 		};
 	});
 	
