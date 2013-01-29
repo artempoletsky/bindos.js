@@ -54,7 +54,7 @@
 				{
 					this.add(modelsArr[i],'end',true);
 				}
-				if(!options.add)
+				if(options.add)
 					this.fire('add',modelsArr,0);
 				else
 					this.fire('reset');
@@ -62,7 +62,7 @@
 			else
 			{
 				this.add(modelsArr,'end',true);
-				if(!options.add)
+				if(options.add)
 					this.fire('add',[modelsArr],0);
 				else
 					this.fire('reset');
