@@ -44,6 +44,8 @@ describe('Observable', function(){
 		var spy=jasmine.createSpy('spy');
 		priceCurrency.subscribe(spy);
 		
+		expect(priceCurrency()).toBe('0 UAH');
+		
 		//задаем 2 разных параметра вызов шпиона 1 раз
 		runs(function(){
 			price(10);
@@ -67,12 +69,56 @@ describe('Observable', function(){
 		});
 		
 		waitsFor(function() {
-			return priceCurrency()=="20 RUR";
+			return spy.calls.length==2;
 		});
 		
 		runs(function () {
 			expect(priceCurrency()).toBe("20 RUR");
 			expect(spy.calls.length).toBe(2);
+		});
+		
+		
+	});
+	
+	it('Computed of computed', function(){
+		var price=Observable(10);
+		var currency=Observable('USD');
+		var priceCurrency=Computed(function(){
+			return price()+' '+currency();
+		},this,true);
+		
+		var supportString=Observable('Service support');
+		var supportPhone=Observable('13322444');
+		var priceString=Observable('Price');
+		var support=Computed(function(){
+			return supportString()+': '+supportPhone();
+		},this,true);
+		
+		var alltext=Computed(function(){
+			return priceString()+': '+priceCurrency()+'. '+support();
+		},this,true);
+		expect(alltext()).toBe('Price: 10 USD. Service support: 13322444');
+		
+		var spy=jasmine.createSpy('spy');
+		priceCurrency.subscribe(spy);
+		
+		//change locale
+		runs(function(){
+			price(300);
+			currency('RUR');
+			supportString('Служба поддержки');
+			priceString('Цена');
+		});
+		
+		waitsFor(function() {
+			return spy.calls.length==1;
+		});
+		
+		waits(500);
+		
+		runs(function(){
+			expect(alltext()).toBe('Цена: 300 RUR. Служба поддержки: 13322444');
+			expect(spy.calls.length).toBe(1);
 		});
 		
 		

@@ -78,23 +78,21 @@
 		resfn.subscribeTo=function(obs)
 		{
 			obs.subscribe(function(){
-				if(!waitForUpdate)
+				resfn.refresh();
+				if(resfn.async)
 				{
-					if(resfn.async)
+					if(!waitForUpdate)
 					{
 						waitForUpdate=true;
 						window.requestAnimationFrame(function(){
-							resfn.refresh();
 							resfn.fire();
 							waitForUpdate=false;
 						});
 					}
-					else
-					{
-						resfn.refresh();
-						resfn.fire();
-					}
-						
+				}
+				else
+				{
+					resfn.fire();
 				}
 			});
 		}
