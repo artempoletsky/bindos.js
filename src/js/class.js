@@ -20,6 +20,8 @@
 		
 		ctor.prototype=ParentClass.prototype;
 		Constructor.prototype=new ctor();
+		_.extend(Constructor.prototype,props);
+		/*
 		_.each(props,function(val,key){
 			Constructor.prototype[key]= (
 				//если функция и не конструктор
@@ -30,14 +32,18 @@
 				//и содержит _super
 				fnTest.test(val.toString())) ? (function(key,func){
 				return function(){
+					
 					var oldSuper=this._super;
 					this._super=ParentClass.prototype[key];
 					var result=func.apply(this, arguments);
 					this._super=oldSuper;
 					return result;
 				};
+			
+				
+				
 			})(key,val): val;
-		});
+		});//*/
 		
 		Constructor.prototype.constructor=Constructor;
 		Constructor.extend = ParentClass.extend;

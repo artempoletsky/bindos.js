@@ -4,8 +4,8 @@
 		
 		constructor: function(models,attributes)
 		{
-			
-			this._super(attributes);
+			//Model.call(this,attributes);
+			//this._super(attributes);
 			this.models=[];
 			this.length=0;
 			
