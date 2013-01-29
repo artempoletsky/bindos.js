@@ -20,8 +20,8 @@
 		
 		ctor.prototype=ParentClass.prototype;
 		Constructor.prototype=new ctor();
-		_.extend(Constructor.prototype,props);
-		/*
+		//_.extend(Constructor.prototype,props);
+		//*
 		_.each(props,function(val,key){
 			Constructor.prototype[key]= (
 				//если функция и не конструктор
@@ -29,6 +29,8 @@
 				//и не конструктор
 				//конструкторы передаются в чистом виде, иначе ими нельзя создать объект
 				typeof val.prototype._constructor == 'undefined' &&
+				//и не Observable
+				//val._notSimple===undefined&&
 				//и содержит _super
 				fnTest.test(val.toString())) ? (function(key,func){
 				return function(){
@@ -690,6 +692,7 @@
 			for(var i=0,l=fn._listeners.length;i<l;i++)
 				fn._listeners[i].call(fn);
 		}
+		fn._notSimple=true;
 		return fn;
 	}
 	var computableInit=false;

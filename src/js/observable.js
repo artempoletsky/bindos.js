@@ -64,6 +64,7 @@
 			for(var i=0,l=fn._listeners.length;i<l;i++)
 				fn._listeners[i].call(fn);
 		}
+		fn._notSimple=true;
 		return fn;
 	}
 	var computableInit=false;
