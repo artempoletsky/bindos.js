@@ -1,55 +1,13 @@
 (function(){
-	function isObj(){
-		for(var i=arguments.length-1;i>=0;i--)
-		{
-			if(arguments[i]!==Object(arguments[i]))
-				return false;
-		}
-		return true;
-	}
-	function compare(o1,o2){
-		if(o1===o2)
-			return true;
-		var propsChecked={};
-		var hasProps=false;
-		if(isObj(o1,o2))
-		{
-			for(var prop in o1)
-			{
-				if(o1.hasOwnProperty(prop))
-				{
-					propsChecked[prop]=true;
-					hasProps=true;
-					if(!compare(o1[prop],o2[prop]))
-					{
-						return false;
-					}
-				}
-						
-			}
-			for(prop in o2)
-			{
-				if(propsChecked[prop])
-					continue;
-				
-				if(o2.hasOwnProperty(prop))
-				{
-					hasProps=true;
-					if(!compare(o1[prop],o2[prop]))
-					{
-						return false;
-					}	
-				}
-			}
-			if(!hasProps)
-				return true;
-		}
-		else
-		{
-			return false;
-		}
-		return true;
-	}
+	(function() {
+		var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
+		window.webkitRequestAnimationFrame || window.msRequestAnimationFrame 
+		|| function(callback){
+			setTimeout(callback, 1000/60);
+		};
+		window.requestAnimationFrame = requestAnimationFrame;
+	})();
+	
 	var Subscribeable=function(fn){
 		fn._listeners=[];
 		fn.subscribe=function(callback){
@@ -67,7 +25,7 @@
 		fn._notSimple=true;
 		return fn;
 	}
-	var computableInit=false;
+	var computedInit=false;
 	
 	var Observable=function(initial)
 	{
@@ -75,34 +33,25 @@
 		var fn=function(set){
 			if(arguments.length>0)
 			{
-				if(!compare(set, value))
+				if(value!=set||_.isObject(set))
 				{
 					fn.lastValue=value;
 					value=set;
 					fn.fire();
 				}
 			}
-			else
+			else if(computedInit)
 			{
-				if(computableInit)
-				{
-					(function(comp){
-						
-						fn.subscribe(function(){
-							comp.refresh();
-							comp.fire();
-						})
-					})(computableInit);
-				}
+				computedInit.subscribeTo(fn);
 			}
 			return value;
 		}
+		Subscribeable(fn);
+		
 		fn.lastValue=undefined;
 		fn.valueOf=fn.toString=function(){
 			return this();
 		}
-		
-		Subscribeable(fn);
 		fn.__observable=true;
 		return fn;
 	}
@@ -112,37 +61,57 @@
 		return fn.__observable||false;
 	}
 	
-	var Computed=function(fn,context){
+	var Computed=function(fn,context,async){
 		
 		var value=fn.call(context);
 		
 		var resfn=function(){
 			//console.log(computableInit);
-			if(computableInit)
+			if(computedInit)
 			{
-				(function(comp){
-						
-					resfn.subscribe(function(){
-						comp.refresh();
-						comp.fire();
-					})
-				})(computableInit);
+				computedInit.subscribeTo(resfn);
 			}
 			return value;
 		}
-		
-		computableInit=resfn;
-		fn.call(context);
-		computableInit=false;
+		var waitForUpdate=false;
+		resfn.async=async||false;
+		resfn.subscribeTo=function(obs)
+		{
+			obs.subscribe(function(){
+				if(!waitForUpdate)
+				{
+					if(resfn.async)
+					{
+						waitForUpdate=true;
+						window.requestAnimationFrame(function(){
+							resfn.refresh();
+							resfn.fire();
+							waitForUpdate=false;
+						});
+					}
+					else
+					{
+						resfn.refresh();
+						resfn.fire();
+					}
+						
+				}
+			});
+		}
 		Subscribeable(resfn);
 		resfn.refresh=function(){
 			value=fn.call(context);
 		}
+		
+		
 		resfn.__observable=true;
 		
 		resfn.valueOf=resfn.toString=function(){
 			return this();
 		}
+		computedInit=resfn;
+		fn.call(context);
+		computedInit=false;
 		return resfn;
 	}
 	
