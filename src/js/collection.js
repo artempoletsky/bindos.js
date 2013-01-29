@@ -150,6 +150,9 @@
 				}
 			})
 			return found;
+		},
+		indexOf: function(item,isSorted){
+			return _.indexOf(this.models, item, isSorted)
 		}
 	});
 	this.Collection=Collection;
