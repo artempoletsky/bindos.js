@@ -140,7 +140,7 @@
 		if(Observable.isObservable(context)) {
 			context = context();
 		}
-		var keys=VM.keys(addArgs);
+		var keys=_.keys(addArgs);
 			
 		var vals=[];
 		for(var i=0;i<keys.length;i++)
