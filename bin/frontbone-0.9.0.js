@@ -502,7 +502,17 @@
 		reset: function(json,options){
 			options||(options={});
 			if(!options.add)
+			{
 				this.models=[];
+				this.length=0;
+			}
+			if(!json)
+			{
+				this.fire('reset');
+				return;
+			}
+				
+				
 			var modelsArr=this.parse(json);
 			
 			if(modelsArr instanceof Array)
