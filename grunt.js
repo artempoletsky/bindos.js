@@ -1,4 +1,5 @@
 module.exports = function(grunt) {
+	var version='0.9.1';
 	// Project configuration.
 	grunt.initConfig({
 		concat: {
@@ -12,13 +13,13 @@ module.exports = function(grunt) {
 					'src/js/viewmodel.js',
 					'src/js/binds_bank.js'
 				],
-				dest: 'bin/frontbone-0.9.0.js'
+				dest: 'bin/frontbone-'+version+'.js'
 			}
 		},
 		min: {
 			dist: {
-				src: ['bin/frontbone-0.9.0.js'],
-				dest: 'bin/frontbone-0.9.0.min.js'
+				src: ['bin/frontbone-'+version+'.js'],
+				dest: 'bin/frontbone-'+version+'.min.js'
 			}
 		}
 	});
