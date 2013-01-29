@@ -5,13 +5,13 @@ module.exports = function(grunt) {
 		concat: {
 			dist: {
 				src: [
-					'src/js/class.js', 
-					'src/js/events.js', 
-					'src/js/model.js',
-					'src/js/collection.js',
-					'src/js/observable.js',
-					'src/js/viewmodel.js',
-					'src/js/binds_bank.js'
+					'src/class.js', 
+					'src/events.js', 
+					'src/model.js',
+					'src/collection.js',
+					'src/observable.js',
+					'src/viewmodel.js',
+					'src/binds_bank.js'
 				],
 				dest: 'bin/frontbone-'+version+'.js'
 			}
