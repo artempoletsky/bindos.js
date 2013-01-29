@@ -1,11 +1,14 @@
 (function(){
-	
+	var itself=function(self){
+		this.self=self;
+	}
 	var Collection=Model.extend({
 		
 		constructor: function(models,attributes)
 		{
 			//Model.call(this,attributes);
 			//this._super(attributes);
+			this.itself=new itself(this);
 			this.models=[];
 			this.length=0;
 			
@@ -93,16 +96,6 @@
 			if(!silent)
 				this.fire('add',[model],index);
 		},
-		each: function(callback){
-			var isBreak;
-			for(var i=0,l=this.models.length;i<l;i++)
-			{
-				isBreak=callback.call(this,this.models[i],i);
-				if(isBreak===false)
-					break;
-			}
-			return this;
-		},
 		cut: function(id){
 			var found;
 			this.each(function(model,index){
@@ -160,10 +153,38 @@
 				}
 			})
 			return found;
-		},
-		indexOf: function(item,isSorted){
-			return _.indexOf(this.models, item, isSorted)
 		}
 	});
+	
+	// Underscore methods that we want to implement on the Collection.
+	var methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'find',
+	'detect', 'filter', 'select', 'reject', 'every', 'all', 'some', 'any',
+	'include', 'contains', 'invoke', 'max', 'min', 'sortBy', 'sortedIndex',
+	'toArray', 'size', 'first', 'initial', 'rest', 'last', 'without', 'indexOf',
+	'shuffle', 'lastIndexOf', 'isEmpty', 'groupBy'];
+
+	// Mix in each Underscore method as a proxy to `Collection#models`.
+	_.each(methods, function(method) {
+		Collection.prototype[method] = function() {
+			return _[method].apply(_, [this.models].concat(_.toArray(arguments)));
+		};
+	});
+	
+	var itselfMethods = ['reduce', 'reduceRight',
+	'filter', 'select', 'reject',
+	'sortBy',
+	'without',
+	'shuffle'];
+	
+	_.each(itselfMethods, function(method) {
+		itself.prototype[method] = function() {
+			var self=this.self;
+			var newModels=_[method].apply(_, [self.models].concat(_.toArray(arguments)));
+			self.models=newModels;
+			self.length=newModels.length;
+			return newModels;
+		};
+	});
+	
 	this.Collection=Collection;
 })();
