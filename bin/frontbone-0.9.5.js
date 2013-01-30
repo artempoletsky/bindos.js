@@ -975,7 +975,7 @@
 
 		var comp = Computed(function() {
 			return fnEval();
-		}, context, true);
+		}, context);
 
 		return comp;
 	}
