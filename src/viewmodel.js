@@ -134,7 +134,7 @@
 		}
 	});
 	
-
+	ViewModel.compAsync=true;
 	
 	ViewModel.findObservable = function(context, string, addArgs) {
 		addArgs||(addArgs={});
@@ -160,18 +160,38 @@
 				console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
 			}
 		}
-
+		var comp;
 		var obs = fnEval();
-		if(Observable.isObservable(obs)) {
-			return obs;
+		if(ViewModel.compAsync)
+		{
+			if(Observable.isObservable(obs)) {
+				comp=Computed(function(){
+					return obs();
+				},context,true);
+			}
+			else
+			{
+				comp = Computed(function() {
+					return fnEval();
+				}, context,true);	
+			}
 		}
-
-		var comp = Computed(function() {
-			return fnEval();
-		}, context);
-
+		else
+		{
+			
+			if(Observable.isObservable(obs)) {
+				comp=obs;
+			}
+			else
+				comp = Computed(function() {
+					return fnEval();
+				}, context);
+			
+			
+		}
 		return comp;
 	}
+	
 	ViewModel.findBinds = function(element, context, addArgs) {
 		var children, curBindsString, binds, i, newctx;
 
