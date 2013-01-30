@@ -2,9 +2,8 @@
 	var modelsMap={};
 	
 	var Model=Events.extend({
-		constructor: function(data,options){
+		constructor: function(data){
 			data||(data={});
-			options||(options={});
 			this.attributes=_.extend({},this.defaults,this.parse(data));
 			this._changed={};
 			this.id=this.attributes[this.idAttribute];
