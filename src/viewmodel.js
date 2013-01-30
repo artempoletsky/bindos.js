@@ -137,6 +137,7 @@
 
 	
 	ViewModel.findObservable = function(context, string, addArgs) {
+		addArgs||(addArgs={});
 		if(Observable.isObservable(context)) {
 			context = context();
 		}
