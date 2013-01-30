@@ -944,6 +944,7 @@
 
 	
 	ViewModel.findObservable = function(context, string, addArgs) {
+		addArgs||(addArgs={});
 		if(Observable.isObservable(context)) {
 			context = context();
 		}
@@ -974,7 +975,7 @@
 
 		var comp = Computed(function() {
 			return fnEval();
-		}, context);
+		}, context, true);
 
 		return comp;
 	}
