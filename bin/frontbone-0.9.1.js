@@ -20,6 +20,8 @@
 		
 		ctor.prototype=ParentClass.prototype;
 		Constructor.prototype=new ctor();
+		//_.extend(Constructor.prototype,props);
+		//*
 		_.each(props,function(val,key){
 			Constructor.prototype[key]= (
 				//если функция и не конструктор
@@ -27,17 +29,23 @@
 				//и не конструктор
 				//конструкторы передаются в чистом виде, иначе ими нельзя создать объект
 				typeof val.prototype._constructor == 'undefined' &&
+				//и не Observable
+				val._notSimple===undefined&&
 				//и содержит _super
 				fnTest.test(val.toString())) ? (function(key,func){
 				return function(){
+					
 					var oldSuper=this._super;
 					this._super=ParentClass.prototype[key];
 					var result=func.apply(this, arguments);
 					this._super=oldSuper;
 					return result;
 				};
+			
+				
+				
 			})(key,val): val;
-		});
+		});//*/
 		
 		Constructor.prototype.constructor=Constructor;
 		Constructor.extend = ParentClass.extend;
@@ -455,8 +463,8 @@
 		
 		constructor: function(models,attributes)
 		{
-			
-			this._super(attributes);
+			//Model.call(this,attributes);
+			//this._super(attributes);
 			this.models=[];
 			this.length=0;
 			
@@ -496,7 +504,17 @@
 		reset: function(json,options){
 			options||(options={});
 			if(!options.add)
+			{
 				this.models=[];
+				this.length=0;
+			}
+			if(!json)
+			{
+				this.fire('reset');
+				return;
+			}
+				
+				
 			var modelsArr=this.parse(json);
 			
 			if(modelsArr instanceof Array)
@@ -505,7 +523,7 @@
 				{
 					this.add(modelsArr[i],'end',true);
 				}
-				if(!options.add)
+				if(options.add)
 					this.fire('add',modelsArr,0);
 				else
 					this.fire('reset');
@@ -513,7 +531,7 @@
 			else
 			{
 				this.add(modelsArr,'end',true);
-				if(!options.add)
+				if(options.add)
 					this.fire('add',[modelsArr],0);
 				else
 					this.fire('reset');
@@ -601,62 +619,23 @@
 				}
 			})
 			return found;
+		},
+		indexOf: function(item,isSorted){
+			return _.indexOf(this.models, item, isSorted)
 		}
 	});
 	this.Collection=Collection;
 })();
 (function(){
-	function isObj(){
-		for(var i=arguments.length-1;i>=0;i--)
-		{
-			if(arguments[i]!==Object(arguments[i]))
-				return false;
-		}
-		return true;
-	}
-	function compare(o1,o2){
-		if(o1===o2)
-			return true;
-		var propsChecked={};
-		var hasProps=false;
-		if(isObj(o1,o2))
-		{
-			for(var prop in o1)
-			{
-				if(o1.hasOwnProperty(prop))
-				{
-					propsChecked[prop]=true;
-					hasProps=true;
-					if(!compare(o1[prop],o2[prop]))
-					{
-						return false;
-					}
-				}
-						
-			}
-			for(prop in o2)
-			{
-				if(propsChecked[prop])
-					continue;
-				
-				if(o2.hasOwnProperty(prop))
-				{
-					hasProps=true;
-					if(!compare(o1[prop],o2[prop]))
-					{
-						return false;
-					}	
-				}
-			}
-			if(!hasProps)
-				return true;
-		}
-		else
-		{
-			return false;
-		}
-		return true;
-	}
+	(function() {
+		var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
+		window.webkitRequestAnimationFrame || window.msRequestAnimationFrame 
+		|| function(callback){
+			setTimeout(callback, 1000/60);
+		};
+		window.requestAnimationFrame = requestAnimationFrame;
+	})();
+	
 	var Subscribeable=function(fn){
 		fn._listeners=[];
 		fn.subscribe=function(callback){
@@ -671,9 +650,10 @@
 			for(var i=0,l=fn._listeners.length;i<l;i++)
 				fn._listeners[i].call(fn);
 		}
+		fn._notSimple=true;
 		return fn;
 	}
-	var computableInit=false;
+	var computedInit=false;
 	
 	var Observable=function(initial)
 	{
@@ -681,34 +661,25 @@
 		var fn=function(set){
 			if(arguments.length>0)
 			{
-				if(!compare(set, value))
+				if(value!=set||_.isObject(set))
 				{
 					fn.lastValue=value;
 					value=set;
 					fn.fire();
 				}
 			}
-			else
+			else if(computedInit)
 			{
-				if(computableInit)
-				{
-					(function(comp){
-						
-						fn.subscribe(function(){
-							comp.refresh();
-							comp.fire();
-						})
-					})(computableInit);
-				}
+				computedInit.subscribeTo(fn);
 			}
 			return value;
 		}
+		Subscribeable(fn);
+		
 		fn.lastValue=undefined;
 		fn.valueOf=fn.toString=function(){
 			return this();
 		}
-		
-		Subscribeable(fn);
 		fn.__observable=true;
 		return fn;
 	}
@@ -718,37 +689,55 @@
 		return fn.__observable||false;
 	}
 	
-	var Computed=function(fn,context){
+	var Computed=function(fn,context,async){
 		
 		var value=fn.call(context);
 		
 		var resfn=function(){
 			//console.log(computableInit);
-			if(computableInit)
+			if(computedInit)
 			{
-				(function(comp){
-						
-					resfn.subscribe(function(){
-						comp.refresh();
-						comp.fire();
-					})
-				})(computableInit);
+				computedInit.subscribeTo(resfn);
 			}
 			return value;
 		}
-		
-		computableInit=resfn;
-		fn.call(context);
-		computableInit=false;
+		var waitForUpdate=false;
+		resfn.async=async||false;
+		resfn.subscribeTo=function(obs)
+		{
+			obs.subscribe(function(){
+				resfn.refresh();
+				if(resfn.async)
+				{
+					if(!waitForUpdate)
+					{
+						waitForUpdate=true;
+						window.requestAnimationFrame(function(){
+							resfn.fire();
+							waitForUpdate=false;
+						});
+					}
+				}
+				else
+				{
+					resfn.fire();
+				}
+			});
+		}
 		Subscribeable(resfn);
 		resfn.refresh=function(){
 			value=fn.call(context);
 		}
+		
+		
 		resfn.__observable=true;
 		
 		resfn.valueOf=resfn.toString=function(){
 			return this();
 		}
+		computedInit=resfn;
+		fn.call(context);
+		computedInit=false;
 		return resfn;
 	}
 	
@@ -901,7 +890,7 @@
 		if(Observable.isObservable(context)) {
 			context = context();
 		}
-		var keys=VM.keys(addArgs);
+		var keys=_.keys(addArgs);
 			
 		var vals=[];
 		for(var i=0;i<keys.length;i++)
@@ -976,102 +965,201 @@
 	
 	this.ViewModel = ViewModel;
 })();
-(function(){
-	ViewModel.binds={
-		html: function(elem,value,context){
-			var comp=ViewModel.findObservable(context, value);
-			var fn=function(){
+(function() {
+	ViewModel.binds = {
+		log: function(elem, value, context, addArgs) {
+			var comp = this.findObservable(context, value, addArgs);
+			console.log(context, '.', value, '=', comp());
+		},
+		html: function(elem, value, context, addArgs) {
+			var comp = this.findObservable(context, value, addArgs);
+			var fn = function() {
 				$(elem).html(comp());
 			}
 			fn();
 			comp.subscribe(fn);
 		},
-		'with': function (elem,value,context){
-			var comp=ViewModel.findObservable(context, value);
-			return comp();
+		text: function(elem, value, context, addArgs) {
+			var comp = this.findObservable(context, value, addArgs);
+			var fn = function() {
+				$(elem).text(comp());
+			}
+			fn();
+			comp.subscribe(fn);
 		},
-		each: function (elem,value,context){
-			var collection=ViewModel.findObservable(context, value)();
-			
-			var html=$(elem).html();
-			$(elem).empty();
-			
-			collection.on('add',function(e){
-				//console.log(e.model);
-				var tempDiv=document.createElement('div');
-				$(tempDiv).html(html);
-				var obs=Observable(e.model);
-				ViewModel.findBinds(tempDiv, obs);
-				var $children=$(tempDiv).children();
-				$children.appendTo(elem);
-				e.model.one('remove',function(){
-					$children.remove();
-				}).on('change',function(e){
-					obs.fire();
-				})
-			});
+		'with': function(elem, value, context, addArgs) {
+			return this.findObservable(context, value, addArgs)();
+		},
+		each: function(elem, value, context, addArgs) {
+			var fArray = this.findObservable(context, value, addArgs);
+			var $el = $(elem);
+			var html = $el.html();
+			$el.hide().empty();
+			addArgs||(addArgs={});
+			var fn = function() {
+				$el.hide().empty();
+				var array = fArray();
+				if(array) {
+					$.each(array, function(ind, val) {
+						addArgs.$index=ind;
+						addArgs.$parent=array;
+						addArgs.$value=val;
+						var tempDiv = document.createElement('div');
+						$(tempDiv).html(html);
+						ViewModel.findBinds(tempDiv, val, addArgs);
+						var $children = $(tempDiv).children();
+						$children.appendTo(elem);
+					});
+				}
+				$el.show();
+			};
+			fn();
+			fArray.subscribe(fn);
 			return false;
 		},
-		value: function (elem,value,context){
-			var comp=ViewModel.findObservable(context, value);
+		eachModel: function(elem, value, context, addArgs) {
+			var collectionObs=this.findObservable(context, value, addArgs);
+			var html = $(elem).html();
+				
+			var rebindCollection=function(collection){
+				var i = 0;
+				addArgs||(addArgs={});
+				var renderModel = function(model, index) {
+					var tempDiv = document.createElement('div');
+					$(tempDiv).html(html);
+					
+					//model.__index__ = collection.getIndex(model);
+
+					var obs = Observable(model);
+					addArgs.$index=index;
+					addArgs.$parent=collection;
+					ViewModel.findBinds(tempDiv, obs, addArgs);
+
+					var $children = $(tempDiv).children();
+					if(index == 0) {
+						$children.prependTo(elem);
+					} else if($children.length && $(elem).children().eq(index*$children.length).length) {
+						$children.insertBefore($(elem).children().eq(index*$children.length));
+					} else {
+						$children.appendTo(elem);
+					}
+
+					var ctx = {};
+					model.on('change',function(e) {
+						obs.fire();
+					}, ctx).on('cut',function(from) {
+						if(from === collection) {
+							$children.empty().remove();
+							collection.fire('cut', model);
+						}
+						model.off(0, 0, ctx);
+						obs.destroy();
+						delete obs;
+					}, ctx);
+					i++;
+				};
+				if(collection.length) {
+					collection.each(renderModel)
+				}
+				collection.on('add', renderModel);
+				$(elem).show();
+			}
+				
+				
 			var fn=function(){
+				$(elem).hide();
+				$(elem).empty();
+				var collection = collectionObs();
+				if(collection)
+				{
+					rebindCollection(collection);
+				}
+			}
+			fn();
+			collectionObs.subscribe(fn);
+				
+			return false;
+		},
+		value: function(elem, value, context, addArgs) {
+			var comp = ViewModel.findObservable(context, value, addArgs);
+			var fn = function() {
 				$(elem).val(comp());
 			}
 			fn();
 			comp.subscribe(fn);
 		},
-		attr: function (elem,value,context){
-			value=value.match(/^{([\s\S]+)}$/)[1];
-			//console.log(context);
-			var attrs=value.split(/\s*,\s*/);
-			for(var i=attrs.length-1;i>=0;i--)
-			{
-				var arr=attrs[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
-				var comp=ViewModel.findObservable(context, arr[2]);
-				var fn=function(){
-					$(elem).attr(arr[1],comp());
-				}
-				fn();
-				comp.subscribe(fn);
+		attr: function(elem, value, context, addArgs) {
+			value = value.match(/^{([\s\S]+)}$/)[1];
+			var attrs = value.split(/\s*,\s*/);
+			for(var i = attrs.length - 1; i >= 0; i--) {
+				var arr = attrs[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
+				var comp = ViewModel.findObservable(context, arr[2], addArgs);
+				(function(elem,attr,comp){
+					var fn=function(){
+						$(elem).attr(attr,comp());
+					}
+					fn();
+					comp.subscribe(fn);
+				})(elem,arr[1],comp);
 			}
 		},
-		style: function (elem,value,context){
-			value=value.match(/^{([\s\S]+)}$/)[1];
-			//console.log(context);
-			var attrs=value.split(/\s*,\s*/);
-			for(var i=attrs.length-1;i>=0;i--)
-			{
-				var arr=attrs[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
-				//console.log(arr);
-				var comp=ViewModel.findObservable(context, arr[2]);
-				var fn=function(){
-					$(elem).css(arr[1],comp());
-				}
-				fn();
-				comp.subscribe(fn);
+		style: function(elem, value, context, addArgs) {
+			value = value.match(/^{([\s\S]+)}$/)[1];
+			var attrs = value.split(/\s*,\s*/);
+			for(var i = attrs.length - 1; i >= 0; i--) {
+				var arr = attrs[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
+
+				var comp = ViewModel.findObservable(context, arr[2], addArgs);
+				(function(elem,attr,comp){
+					var fn=function(){
+						$(elem).css(attr,comp());
+					}
+					fn();
+					comp.subscribe(fn);
+				})(elem,arr[1],comp);
 			}
 		},
-		css: function (elem,value,context){
-			value=value.match(/^{([\s\S]+)}$/)[1];
-			//console.log(context);
-			var attrs=value.split(/\s*,\s*/);
-			for(var i=attrs.length-1;i>=0;i--)
-			{
-				var arr=attrs[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
-				var comp=ViewModel.findObservable(context, arr[2]);
-				var fn=function(){
-					if(comp())
-					{
-						$(elem).addClass(arr[1]);
+		css: function(elem, value, context, addArgs) {
+			value = value.match(/^{([\s\S]+)}$/)[1];
+
+			var attrs = value.split(/\s*,\s*/);
+			for(var i = attrs.length - 1; i >= 0; i--) {
+				var arr = attrs[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
+				(function(val, className) {
+					var comp = ViewModel.findObservable(context, val, addArgs);
+
+					var fn = function() {
+
+						if(comp()) {
+							$(elem).addClass(className);
+						} else {
+							$(elem).removeClass(className);
+						}
 					}
-					else
-					{
-						$(elem).removeClass(arr[1]);
-					}
-				}
-				fn();
-				comp.subscribe(fn);
+					fn();
+					comp.subscribe(fn);
+				})(arr[2], arr[1])
+
 			}
+		},
+		display: function(elem, value, context, addArgs) {
+			var comp = this.findObservable(context, value, addArgs);
+			var fn = function() {
+				if(comp()) {
+					$(elem).show();
+				} else {
+					$(elem).hide();
+				}
+			}
+			fn();
+			comp.subscribe(fn);
+		},
+		click: function(elem, value, context,addArgs) {
+			var fn = this.findObservable(context, value, addArgs)();
+			var $el = $(elem);
+			$el.click(function() {
+				fn.apply(context,arguments);
+			});
 		}
 	};
 })();

@@ -1,11 +1,14 @@
 (function(){
-	
+	var itself=function(self){
+		this.self=self;
+	}
 	var Collection=Model.extend({
 		
 		constructor: function(models,attributes)
 		{
-			
-			this._super(attributes);
+			//Model.call(this,attributes);
+			//this._super(attributes);
+			this.itself=new itself(this);
 			this.models=[];
 			this.length=0;
 			
@@ -45,7 +48,17 @@
 		reset: function(json,options){
 			options||(options={});
 			if(!options.add)
+			{
 				this.models=[];
+				this.length=0;
+			}
+			if(!json)
+			{
+				this.fire('reset');
+				return;
+			}
+				
+				
 			var modelsArr=this.parse(json);
 			
 			if(modelsArr instanceof Array)
@@ -54,7 +67,7 @@
 				{
 					this.add(modelsArr[i],'end',true);
 				}
-				if(!options.add)
+				if(options.add)
 					this.fire('add',modelsArr,0);
 				else
 					this.fire('reset');
@@ -62,11 +75,17 @@
 			else
 			{
 				this.add(modelsArr,'end',true);
-				if(!options.add)
+				if(options.add)
 					this.fire('add',[modelsArr],0);
 				else
 					this.fire('reset');
 			}
+		},
+		push: function(model){
+			return this.add(model);
+		},
+		unshift: function(model){
+			return this.add(model,0);
 		},
 		add: function(model,index,silent){
 			typeof index=='number'||(index=this.length);
@@ -82,15 +101,6 @@
 			this.length=this.models.length;
 			if(!silent)
 				this.fire('add',[model],index);
-		},
-		each: function(callback){
-			var isBreak;
-			for(var i=0,l=this.models.length;i<l;i++)
-			{
-				isBreak=callback.call(this,this.models[i],i);
-				if(isBreak===false)
-					break;
-			}
 			return this;
 		},
 		cut: function(id){
@@ -115,8 +125,16 @@
 			})
 			return found;
 		},
+		shift: function(){
+			return this.cutAt(0);
+		},
+		pop: function(){
+			return this.cutAt();
+		},
 		cutAt: function(index){
+			index!==undefined||(index=this.models.length-1);
 			var model=this.models.splice(index, 1)[0];
+			this.length=this.models.length;
 			this.fire('cut',model,index);
 			return model;
 		},
@@ -152,5 +170,57 @@
 			return found;
 		}
 	});
+	
+	// Underscore methods that we want to implement on the Collection.
+	var methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'find',
+	'detect', 'filter', 'select', 'reject', 'every', 'all', 'some', 'any',
+	'include', 'contains', 'invoke', 'max', 'min', 'sortBy', 'sortedIndex',
+	'toArray', 'size', 'first', 'initial', 'rest', 'last', 'without', 'indexOf',
+	'shuffle', 'lastIndexOf', 'isEmpty', 'groupBy'];
+
+	// Mix in each Underscore method as a proxy to `Collection#models`.
+	_.each(methods, function(method) {
+		Collection.prototype[method] = function() {
+			return _[method].apply(_, [this.models].concat(_.toArray(arguments)));
+		};
+	});
+	
+	var filterMethods = ['filter', 'reject'];
+	var sortMethods = ['sortBy','shuffle'];
+
+	_.each(filterMethods, function(method) {
+		itself.prototype[method] = function() {
+			var antonym=method=='filter'?'reject':'filter';
+			var self=this.self;
+			var newModels=_[method].apply(_, [self.models].concat(_.toArray(arguments)));
+			var rejectedModels=_[antonym].apply(_, [self.models].concat(_.toArray(arguments)));
+			var indexes={};
+			_.each(rejectedModels,function(model){
+				indexes[self.indexOf(model)]=model;
+			});
+			self.models=newModels;
+			self.length=newModels.length;
+			//console.log(indexes);
+			self.fire('reject', indexes);
+			return self;
+		};
+	});
+	
+	_.each(sortMethods, function(method) {
+		itself.prototype[method] = function() {
+			var self=this.self;
+			var newModels=_[method].apply(_, [self.models].concat(_.toArray(arguments)));
+			var indexes={};
+			_.each(newModels,function(model,index){
+				indexes[self.indexOf(model)]=index;
+			});
+			self.models=newModels;
+			self.length=newModels.length;
+			//console.log(indexes);
+			self.fire('sort', indexes);
+			return self;
+		};
+	});
+	
 	this.Collection=Collection;
 })();

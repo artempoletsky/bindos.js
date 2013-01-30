@@ -46,4 +46,60 @@ describe('Collection', function(){
 		
 	})
 	
+	it('support underscore metods', function(){
+		var data=[];
+		var len=100;
+		for(var i=0;i<len;i++)
+		{
+			data.push({
+				x: i
+			});
+		}
+		var col=Collection.create({},data);
+		
+		var sorted=function(collection){
+			var result=true;
+			collection.each(function(model,index){
+				if(model.get('x')!=index)
+				{
+					result=false;
+				}
+				return false;
+			});
+			return result;
+		}
+		//console.log(col.at(5).get('x'));
+		expect(sorted(col)).toBe(true);
+		col.itself.shuffle();
+		//console.log(col.at(5).get('x'));
+		expect(sorted(col)).toBe(false);
+		
+		col.itself.sortBy(function(model){
+			return model.get('x');
+		});
+		//console.log(col.at(5).get('x'));
+		expect(sorted(col)).toBe(true);
+		
+		var methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'find',
+		'detect', 'filter', 'select', 'reject', 'every', 'all', 'some', 'any',
+		'include', 'contains', 'invoke', 'max', 'min', 'sortBy', 'sortedIndex',
+		'toArray', 'size', 'first', 'initial', 'rest', 'last', 'without', 'indexOf',
+		'shuffle', 'lastIndexOf', 'isEmpty', 'groupBy'];
+		
+		//map test
+		var square=function(model){
+			return model.prop('x')*model.prop('x')
+		};
+		var arr=col.map(square);
+		var ind=Math.floor(Math.random()*len);
+		var x=col.at(ind).get('x');
+		expect(arr[ind]).toBe(x*x);
+		col.itself.shuffle();
+		
+		col.itself.reject(function(model){
+			return model.prop('x')>=50;
+		});
+		expect(col.length).toBe(50);
+	})
+	
 })

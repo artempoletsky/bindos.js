@@ -1,6 +1,4 @@
-/lib/
 /nbproject/
 *.rar
 *.zip
-
-/api/
+/lib/
