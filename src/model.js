@@ -122,7 +122,7 @@
 		remove: function() {
 			this.fire('remove');
 			if(this.id) {
-				Model.sync('delete', this.url());
+				Model.sync('delete', this.url(),{});
 			}
 		}
 	});

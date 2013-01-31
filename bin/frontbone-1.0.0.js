@@ -412,7 +412,7 @@
 		remove: function() {
 			this.fire('remove');
 			if(this.id) {
-				Model.sync('delete', this.url());
+				Model.sync('delete', this.url(),{});
 			}
 		}
 	});
@@ -574,10 +574,11 @@
 		},
 		cutByCid: function(cid){
 			var found;
+			var self=this;
 			this.each(function(model,index){
 				if(model.cid==cid)
 				{
-					found=this.cutAt(index);
+					found=self.cutAt(index);
 					return false;
 				}
 			})

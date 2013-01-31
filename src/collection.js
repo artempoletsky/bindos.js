@@ -116,10 +116,11 @@
 		},
 		cutByCid: function(cid){
 			var found;
+			var self=this;
 			this.each(function(model,index){
 				if(model.cid==cid)
 				{
-					found=this.cutAt(index);
+					found=self.cutAt(index);
 					return false;
 				}
 			})
