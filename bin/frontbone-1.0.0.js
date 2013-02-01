@@ -633,10 +633,37 @@
 	// Underscore methods that we want to implement on the Collection.
 	var methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'find',
 	'detect', 'filter', 'select', 'reject', 'every', 'all', 'some', 'any',
-	'include', 'contains', 'invoke', 'max', 'min', 'sortBy', 'sortedIndex',
+	'include', 'contains', 'invoke', 'max', 'min', 'sortBy', 'sortByDesc', 'sortedIndex',
 	'toArray', 'size', 'first', 'initial', 'rest', 'last', 'without', 'indexOf',
 	'shuffle', 'lastIndexOf', 'isEmpty', 'groupBy'];
+	
+	// An internal function to generate lookup iterators.
+	var lookupIterator = function(value) {
+		return _.isFunction(value) ? value : function(obj){
+			return obj[value];
+		};
+	};
 
+	// Sort the object's values by a criterion produced by an iterator.
+	_.sortByDesc = function(obj, value, context) {
+		var iterator = lookupIterator(value);
+		return _.pluck(_.map(obj, function(value, index, list) {
+			return {
+				value : value,
+				index : index,
+				criteria : iterator.call(context, value, index, list)
+			};
+		}).sort(function(left, right) {
+			var a = left.criteria;
+			var b = right.criteria;
+			if (a !== b) {
+				if (a > b || a === void 0) return -1;
+				if (a < b || b === void 0) return 1;
+			}
+			return left.index < right.index ? -1 : 1;
+		}), 'value');
+	};
+	
 	// Mix in each Underscore method as a proxy to `Collection#models`.
 	_.each(methods, function(method) {
 		Collection.prototype[method] = function() {
@@ -645,7 +672,7 @@
 	});
 	
 	var filterMethods = ['filter', 'reject'];
-	var sortMethods = ['sortBy','shuffle'];
+	var sortMethods = ['sortBy','sortByDesc','shuffle'];
 
 	_.each(filterMethods, function(method) {
 		itself.prototype[method] = function() {
