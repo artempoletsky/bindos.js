@@ -163,5 +163,37 @@ describe('ViewModel', function(){
 		expect(called).toBe(1);
 	});
 	
+	it('has extended events behavior', function(){
+		var spy=jasmine.createSpy('spy');
+		var element=$('<div><div><div class="trigger"></div><div class="trigger1"></div></div></div>')[0];
+		window.foo={
+			bar: function(){}
+		}
+		spyOn(foo, 'bar');
+		var vm=ViewModel.create({
+			events: {
+				'simpleFunction .trigger': spy,
+				'globalFunction .trigger': 'foo.bar',
+				'click,anotherEvents': spy,
+				'click,anotherEvents .trigger,div .trigger1': spy,
+				'click,anotherEvents,onceMore': spy
+			},
+			el: element
+		});
+		vm.$el.find('.trigger').trigger('simpleFunction');
+		expect(spy.calls.length).toBe(1);
+		vm.$el.find('.trigger').trigger('globalFunction');
+		expect(foo.bar.calls.length).toBe(1);
+		vm.$el.click();
+		expect(spy.calls.length).toBe(3);
+		vm.$el.find('.trigger1').trigger('anotherEvents');
+		expect(spy.calls.length).toBe(6);
+		vm.$el.trigger('onceMore');
+		expect(spy.calls.length).toBe(7);
+		vm.undelegateEvents();
+		vm.$el.trigger('onceMore');
+		expect(spy.calls.length).toBe(7);
+	});
+	
 	
 })

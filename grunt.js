@@ -1,5 +1,5 @@
 module.exports = function(grunt) {
-	var version='1.0.0';
+	var version='1.1.0';
 	// Project configuration.
 	grunt.initConfig({
 		concat: {

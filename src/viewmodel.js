@@ -104,12 +104,14 @@
 			for(name in events) {
 
 				fnName = events[name];
-				fn = me[fnName];
+				//если это простая функция, содержится в VM или глобальная функция
+				fn = (typeof fnName == 'function')?fnName: me[fnName]||Function('return '+fnName)();
 				if(typeof fn != 'function') {
 					throw TypeError(fnName + ' is not a function');
 				}
 				eventsPath = name.split(eventSplitter);
-				eventName = eventsPath.shift() + '.' + me._cid;
+				//меняем запятые в имени события на пробелы и неймспейс
+				eventName = eventsPath.shift().split(',').join('.' + me._cid+' ') + '.' + me._cid;
 				
 				var proxy = (function(fn) {
 					return function() {
@@ -134,7 +136,7 @@
 		}
 	});
 	
-	ViewModel.compAsync=true;
+	ViewModel.compAsync=false;
 	
 	ViewModel.findObservable = function(context, string, addArgs) {
 		addArgs||(addArgs={});
