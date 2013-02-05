@@ -292,9 +292,8 @@
 	var modelsMap={};
 	
 	var Model=Events.extend({
-		constructor: function(data,options){
+		constructor: function(data){
 			data||(data={});
-			options||(options={});
 			this.attributes=_.extend({},this.defaults,this.parse(data));
 			this._changed={};
 			this.id=this.attributes[this.idAttribute];
@@ -413,7 +412,7 @@
 		remove: function() {
 			this.fire('remove');
 			if(this.id) {
-				Model.sync('delete', this.url());
+				Model.sync('delete', this.url(),{});
 			}
 		}
 	});
@@ -458,13 +457,16 @@
 })();
 
 (function(){
-	
+	var itself=function(self){
+		this.self=self;
+	}
 	var Collection=Model.extend({
 		
 		constructor: function(models,attributes)
 		{
 			//Model.call(this,attributes);
 			//this._super(attributes);
+			this.itself=new itself(this);
 			this.models=[];
 			this.length=0;
 			
@@ -537,6 +539,12 @@
 					this.fire('reset');
 			}
 		},
+		push: function(model){
+			return this.add(model);
+		},
+		unshift: function(model){
+			return this.add(model,0);
+		},
 		add: function(model,index,silent){
 			typeof index=='number'||(index=this.length);
 			if(!(model instanceof Model))
@@ -551,15 +559,6 @@
 			this.length=this.models.length;
 			if(!silent)
 				this.fire('add',[model],index);
-		},
-		each: function(callback){
-			var isBreak;
-			for(var i=0,l=this.models.length;i<l;i++)
-			{
-				isBreak=callback.call(this,this.models[i],i);
-				if(isBreak===false)
-					break;
-			}
 			return this;
 		},
 		cut: function(id){
@@ -575,17 +574,26 @@
 		},
 		cutByCid: function(cid){
 			var found;
+			var self=this;
 			this.each(function(model,index){
 				if(model.cid==cid)
 				{
-					found=this.cutAt(index);
+					found=self.cutAt(index);
 					return false;
 				}
 			})
 			return found;
 		},
+		shift: function(){
+			return this.cutAt(0);
+		},
+		pop: function(){
+			return this.cutAt();
+		},
 		cutAt: function(index){
+			index!==undefined||(index=this.models.length-1);
 			var model=this.models.splice(index, 1)[0];
+			this.length=this.models.length;
 			this.fire('cut',model,index);
 			return model;
 		},
@@ -619,20 +627,110 @@
 				}
 			})
 			return found;
-		},
-		indexOf: function(item,isSorted){
-			return _.indexOf(this.models, item, isSorted)
 		}
 	});
+	
+	// Underscore methods that we want to implement on the Collection.
+	var methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'find',
+	'detect', 'filter', 'select', 'reject', 'every', 'all', 'some', 'any',
+	'include', 'contains', 'invoke', 'max', 'min', 'sortBy', 'sortByDesc', 'sortedIndex',
+	'toArray', 'size', 'first', 'initial', 'rest', 'last', 'without', 'indexOf',
+	'shuffle', 'lastIndexOf', 'isEmpty', 'groupBy'];
+	
+	// An internal function to generate lookup iterators.
+	var lookupIterator = function(value) {
+		return _.isFunction(value) ? value : function(obj){
+			return obj[value];
+		};
+	};
+
+	// Sort the object's values by a criterion produced by an iterator.
+	_.sortByDesc = function(obj, value, context) {
+		var iterator = lookupIterator(value);
+		return _.pluck(_.map(obj, function(value, index, list) {
+			return {
+				value : value,
+				index : index,
+				criteria : iterator.call(context, value, index, list)
+			};
+		}).sort(function(left, right) {
+			var a = left.criteria;
+			var b = right.criteria;
+			if (a !== b) {
+				if (a > b || a === void 0) return -1;
+				if (a < b || b === void 0) return 1;
+			}
+			return left.index < right.index ? -1 : 1;
+		}), 'value');
+	};
+	
+	// Mix in each Underscore method as a proxy to `Collection#models`.
+	_.each(methods, function(method) {
+		Collection.prototype[method] = function() {
+			return _[method].apply(_, [this.models].concat(_.toArray(arguments)));
+		};
+	});
+	
+	var filterMethods = ['filter', 'reject'];
+	var sortMethods = ['sortBy','sortByDesc','shuffle'];
+
+	_.each(filterMethods, function(method) {
+		itself.prototype[method] = function() {
+			var antonym=method=='filter'?'reject':'filter';
+			var self=this.self;
+			var newModels=_[method].apply(_, [self.models].concat(_.toArray(arguments)));
+			var rejectedModels=_[antonym].apply(_, [self.models].concat(_.toArray(arguments)));
+			var indexes={};
+			_.each(rejectedModels,function(model){
+				indexes[self.indexOf(model)]=model;
+			});
+			self.models=newModels;
+			self.length=newModels.length;
+			//console.log(indexes);
+			self.fire('reject', indexes);
+			return self;
+		};
+	});
+	
+	_.each(sortMethods, function(method) {
+		itself.prototype[method] = function() {
+			var self=this.self;
+			var newModels=_[method].apply(_, [self.models].concat(_.toArray(arguments)));
+			var indexes={};
+			_.each(newModels,function(model,index){
+				indexes[self.indexOf(model)]=index;
+			});
+			self.models=newModels;
+			self.length=newModels.length;
+			//console.log(indexes);
+			self.fire('sort', indexes);
+			return self;
+		};
+	});
+	
 	this.Collection=Collection;
 })();
 (function(){
 	(function() {
 		var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
 		window.webkitRequestAnimationFrame || window.msRequestAnimationFrame 
-		|| function(callback){
-			setTimeout(callback, 1000/60);
-		};
+		|| (function(){
+			var calls=[];
+			var timoutIsset=false;
+			return function(callback){
+				calls.push(callback);
+				if(!timoutIsset)
+				{
+					setTimeout(function(){
+						_.each(calls,function(c){
+							c();
+						});
+						calls=[];
+						timoutIsset=false;
+					}, 1000/60);
+				}	
+			};
+		})();
 		window.requestAnimationFrame = requestAnimationFrame;
 	})();
 	
@@ -661,7 +759,7 @@
 		var fn=function(set){
 			if(arguments.length>0)
 			{
-				if(value!=set||_.isObject(set))
+				if(value!==set||_.isObject(set))
 				{
 					fn.lastValue=value;
 					value=set;
@@ -755,7 +853,7 @@
 	var bindSplitter = /\s*;\s*/;
 	var simpleTagRegex = /^[a-z]+$/;
 	
-	var ViewModel=Events.extend({
+	var ViewModel={
 		setElement : function(el) {
 			this.undelegateEvents();
 			this.el = el;
@@ -854,12 +952,14 @@
 			for(name in events) {
 
 				fnName = events[name];
-				fn = me[fnName];
+				//если это простая функция, содержится в VM или глобальная функция
+				fn = (typeof fnName == 'function')?fnName: me[fnName]||Function('return '+fnName)();
 				if(typeof fn != 'function') {
 					throw TypeError(fnName + ' is not a function');
 				}
 				eventsPath = name.split(eventSplitter);
-				eventName = eventsPath.shift() + '.' + me._cid;
+				//меняем запятые в имени события на пробелы и неймспейс
+				eventName = eventsPath.shift().split(',').join('.' + me._cid+' ') + '.' + me._cid;
 				
 				var proxy = (function(fn) {
 					return function() {
@@ -882,11 +982,13 @@
 		render: function() {
 			return this;
 		}
-	});
+	};
+	ViewModel=Events.extend(ViewModel);
 	
-
+	ViewModel.compAsync=false;
 	
 	ViewModel.findObservable = function(context, string, addArgs) {
+		addArgs||(addArgs={});
 		if(Observable.isObservable(context)) {
 			context = context();
 		}
@@ -909,18 +1011,38 @@
 				console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
 			}
 		}
-
+		var comp;
 		var obs = fnEval();
-		if(Observable.isObservable(obs)) {
-			return obs;
+		if(ViewModel.compAsync)
+		{
+			if(Observable.isObservable(obs)) {
+				comp=Computed(function(){
+					return obs();
+				},context,true);
+			}
+			else
+			{
+				comp = Computed(function() {
+					return fnEval();
+				}, context,true);	
+			}
 		}
-
-		var comp = Computed(function() {
-			return fnEval();
-		}, context);
-
+		else
+		{
+			
+			if(Observable.isObservable(obs)) {
+				comp=obs;
+			}
+			else
+				comp = Computed(function() {
+					return fnEval();
+				}, context);
+			
+			
+		}
 		return comp;
 	}
+	
 	ViewModel.findBinds = function(element, context, addArgs) {
 		var children, curBindsString, binds, i, newctx;
 
@@ -935,8 +1057,11 @@
 			//alert(curBindsString.value)
 			binds = curBindsString.split(bindSplitter);
 			for(i = binds.length - 1; i >= 0; i--) {
+				if(!binds[i])
+					continue;
 				var arr = binds[i].match(/^\s*(\S+)\s*:\s*(\S[\s\S]*\S)\s*$/);
-
+				if(!arr)
+					arr=[binds[i],binds[i],''];
 				var fn = ViewModel.binds[arr[1]];
 
 				if(fn) {

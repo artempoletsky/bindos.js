@@ -195,5 +195,27 @@ describe('ViewModel', function(){
 		expect(spy.calls.length).toBe(7);
 	});
 	
+	it('not strong binds syntax', function(){
+		ViewModel.binds.foo=function(elem,value,context,addArgs){
+			
+		}
+		ViewModel.binds.bar=function(elem,value,context,addArgs){
+			
+		}
+		spyOn(ViewModel.binds, 'foo');
+		spyOn(ViewModel.binds, 'bar');
+		var el=$('<div data-bind="foo"><div data-bind="bar: baz;"></div></div>')[0];
+		ViewModel.findBinds(el, window);
+		expect(ViewModel.binds.foo.calls.length).toBe(1);
+		expect(ViewModel.binds.foo.calls[0].args[0]).toBe(el);
+		expect(ViewModel.binds.foo.calls[0].args[1]).toBe('');
+		expect(ViewModel.binds.foo.calls[0].args[2]).toBe(window);
+		expect(ViewModel.binds.bar.calls.length).toBe(1);
+		expect(ViewModel.binds.bar.calls[0].args[0]).toBe(el.childNodes[0]);
+		expect(ViewModel.binds.bar.calls[0].args[1]).toBe('baz');
+		expect(ViewModel.binds.bar.calls[0].args[2]).toBe(window);
+		
+	});
+	
 	
 })

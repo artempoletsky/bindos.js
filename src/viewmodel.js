@@ -5,7 +5,7 @@
 	var bindSplitter = /\s*;\s*/;
 	var simpleTagRegex = /^[a-z]+$/;
 	
-	var ViewModel=Events.extend({
+	var ViewModel={
 		setElement : function(el) {
 			this.undelegateEvents();
 			this.el = el;
@@ -134,7 +134,8 @@
 		render: function() {
 			return this;
 		}
-	});
+	};
+	ViewModel=Events.extend(ViewModel);
 	
 	ViewModel.compAsync=false;
 	
@@ -208,8 +209,11 @@
 			//alert(curBindsString.value)
 			binds = curBindsString.split(bindSplitter);
 			for(i = binds.length - 1; i >= 0; i--) {
+				if(!binds[i])
+					continue;
 				var arr = binds[i].match(/^\s*(\S+)\s*:\s*(\S[\s\S]*\S)\s*$/);
-
+				if(!arr)
+					arr=[binds[i],binds[i],''];
 				var fn = ViewModel.binds[arr[1]];
 
 				if(fn) {
