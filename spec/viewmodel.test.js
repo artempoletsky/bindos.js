@@ -163,5 +163,59 @@ describe('ViewModel', function(){
 		expect(called).toBe(1);
 	});
 	
+	it('has extended events behavior', function(){
+		var spy=jasmine.createSpy('spy');
+		var element=$('<div><div><div class="trigger"></div><div class="trigger1"></div></div></div>')[0];
+		window.foo={
+			bar: function(){}
+		}
+		spyOn(foo, 'bar');
+		var vm=ViewModel.create({
+			events: {
+				'simpleFunction .trigger': spy,
+				'globalFunction .trigger': 'foo.bar',
+				'click,anotherEvents': spy,
+				'click,anotherEvents .trigger,div .trigger1': spy,
+				'click,anotherEvents,onceMore': spy
+			},
+			el: element
+		});
+		vm.$el.find('.trigger').trigger('simpleFunction');
+		expect(spy.calls.length).toBe(1);
+		vm.$el.find('.trigger').trigger('globalFunction');
+		expect(foo.bar.calls.length).toBe(1);
+		vm.$el.click();
+		expect(spy.calls.length).toBe(3);
+		vm.$el.find('.trigger1').trigger('anotherEvents');
+		expect(spy.calls.length).toBe(6);
+		vm.$el.trigger('onceMore');
+		expect(spy.calls.length).toBe(7);
+		vm.undelegateEvents();
+		vm.$el.trigger('onceMore');
+		expect(spy.calls.length).toBe(7);
+	});
+	
+	it('not strong binds syntax', function(){
+		ViewModel.binds.foo=function(elem,value,context,addArgs){
+			
+		}
+		ViewModel.binds.bar=function(elem,value,context,addArgs){
+			
+		}
+		spyOn(ViewModel.binds, 'foo');
+		spyOn(ViewModel.binds, 'bar');
+		var el=$('<div data-bind="foo"><div data-bind="bar: baz;"></div></div>')[0];
+		ViewModel.findBinds(el, window);
+		expect(ViewModel.binds.foo.calls.length).toBe(1);
+		expect(ViewModel.binds.foo.calls[0].args[0]).toBe(el);
+		expect(ViewModel.binds.foo.calls[0].args[1]).toBe('');
+		expect(ViewModel.binds.foo.calls[0].args[2]).toBe(window);
+		expect(ViewModel.binds.bar.calls.length).toBe(1);
+		expect(ViewModel.binds.bar.calls[0].args[0]).toBe(el.childNodes[0]);
+		expect(ViewModel.binds.bar.calls[0].args[1]).toBe('baz');
+		expect(ViewModel.binds.bar.calls[0].args[2]).toBe(window);
+		
+	});
+	
 	
 })

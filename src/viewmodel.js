@@ -5,7 +5,7 @@
 	var bindSplitter = /\s*;\s*/;
 	var simpleTagRegex = /^[a-z]+$/;
 	
-	var ViewModel=Events.extend({
+	var ViewModel={
 		setElement : function(el) {
 			this.undelegateEvents();
 			this.el = el;
@@ -104,12 +104,14 @@
 			for(name in events) {
 
 				fnName = events[name];
-				fn = me[fnName];
+				//если это простая функция, содержится в VM или глобальная функция
+				fn = (typeof fnName == 'function')?fnName: me[fnName]||Function('return '+fnName)();
 				if(typeof fn != 'function') {
 					throw TypeError(fnName + ' is not a function');
 				}
 				eventsPath = name.split(eventSplitter);
-				eventName = eventsPath.shift() + '.' + me._cid;
+				//меняем запятые в имени события на пробелы и неймспейс
+				eventName = eventsPath.shift().split(',').join('.' + me._cid+' ') + '.' + me._cid;
 				
 				var proxy = (function(fn) {
 					return function() {
@@ -132,9 +134,10 @@
 		render: function() {
 			return this;
 		}
-	});
+	};
+	ViewModel=Events.extend(ViewModel);
 	
-
+	ViewModel.compAsync=false;
 	
 	ViewModel.findObservable = function(context, string, addArgs) {
 		addArgs||(addArgs={});
@@ -160,18 +163,38 @@
 				console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
 			}
 		}
-
+		var comp;
 		var obs = fnEval();
-		if(Observable.isObservable(obs)) {
-			return obs;
+		if(ViewModel.compAsync)
+		{
+			if(Observable.isObservable(obs)) {
+				comp=Computed(function(){
+					return obs();
+				},context,true);
+			}
+			else
+			{
+				comp = Computed(function() {
+					return fnEval();
+				}, context,true);	
+			}
 		}
-
-		var comp = Computed(function() {
-			return fnEval();
-		}, context);
-
+		else
+		{
+			
+			if(Observable.isObservable(obs)) {
+				comp=obs;
+			}
+			else
+				comp = Computed(function() {
+					return fnEval();
+				}, context);
+			
+			
+		}
 		return comp;
 	}
+	
 	ViewModel.findBinds = function(element, context, addArgs) {
 		var children, curBindsString, binds, i, newctx;
 
@@ -186,8 +209,11 @@
 			//alert(curBindsString.value)
 			binds = curBindsString.split(bindSplitter);
 			for(i = binds.length - 1; i >= 0; i--) {
+				if(!binds[i])
+					continue;
 				var arr = binds[i].match(/^\s*(\S+)\s*:\s*(\S[\s\S]*\S)\s*$/);
-
+				if(!arr)
+					arr=[binds[i],binds[i],''];
 				var fn = ViewModel.binds[arr[1]];
 
 				if(fn) {

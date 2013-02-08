@@ -1,25 +1,25 @@
 module.exports = function(grunt) {
-	var version='0.9.5';
+	var version='1.1.0';
 	// Project configuration.
 	grunt.initConfig({
 		concat: {
 			dist: {
 				src: [
-					'src/class.js', 
-					'src/events.js', 
-					'src/model.js',
-					'src/collection.js',
-					'src/observable.js',
-					'src/viewmodel.js',
-					'src/binds_bank.js'
+				'src/class.js', 
+				'src/events.js', 
+				'src/model.js',
+				'src/collection.js',
+				'src/observable.js',
+				'src/viewmodel.js',
+				'src/binds_bank.js'
 				],
-				dest: 'bin/frontbone-'+version+'.js'
+				dest: 'bin/frontbone.js'
 			}
 		},
 		min: {
 			dist: {
-				src: ['bin/frontbone-'+version+'.js'],
-				dest: 'bin/frontbone-'+version+'.min.js'
+				src: ['bin/frontbone.js'],
+				dest: 'bin/frontbone.min.js'
 			}
 		}
 	});

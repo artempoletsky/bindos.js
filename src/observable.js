@@ -2,9 +2,23 @@
 	(function() {
 		var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
 		window.webkitRequestAnimationFrame || window.msRequestAnimationFrame 
-		|| function(callback){
-			setTimeout(callback, 1000/60);
-		};
+		|| (function(){
+			var calls=[];
+			var timoutIsset=false;
+			return function(callback){
+				calls.push(callback);
+				if(!timoutIsset)
+				{
+					setTimeout(function(){
+						_.each(calls,function(c){
+							c();
+						});
+						calls=[];
+						timoutIsset=false;
+					}, 1000/60);
+				}	
+			};
+		})();
 		window.requestAnimationFrame = requestAnimationFrame;
 	})();
 	
@@ -33,7 +47,7 @@
 		var fn=function(set){
 			if(arguments.length>0)
 			{
-				if(value!=set||_.isObject(set))
+				if(value!==set||_.isObject(set))
 				{
 					fn.lastValue=value;
 					value=set;
