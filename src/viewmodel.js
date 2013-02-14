@@ -16,7 +16,8 @@
 		constructor: function(options){
 			options||(options={});
 			this.options=options;
-			this.collection=options.collection;
+			if(options.collection)
+				this.collection=options.collection;
 			this.model=options.model;
 			if(options.el)
 				this.el=options.el;
