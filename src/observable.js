@@ -75,11 +75,15 @@
 		return fn.__observable||false;
 	}
 	
-	var Computed=function(fn,context,async){
+	var Computed=function(fn,context,async,setter){
 		
 		var value=fn.call(context);
 		
 		var resfn=function(){
+			if(arguments.length==1)
+			{
+				setter.call(context,arguments[0]);
+			}
 			//console.log(computableInit);
 			if(computedInit)
 			{

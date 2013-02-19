@@ -123,4 +123,19 @@ describe('Observable', function(){
 		
 		
 	});
+
+	it('Computed may has setter', function(){
+		var leftIndex=Observable(0);
+		var topIndex=Observable(0);
+		
+		var index=Computed(function(){
+			return topIndex()*5+leftIndex();
+		}, null, false, function(val){
+			leftIndex(val-topIndex(Math.floor(val/5))*5)
+		});//последний параметр - сеттер
+		index(8);//используем Computed так же как Observable
+		expect(leftIndex()).toBe(3);
+		expect(topIndex()).toBe(1);
+		expect(index()).toBe(8);
+	});
 });
