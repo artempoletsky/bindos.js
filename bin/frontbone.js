@@ -1064,7 +1064,7 @@
 	}
 	
 	ViewModel.findBinds = function(element, context, addArgs) {
-		var children, curBindsString, binds, i, newctx;
+		var children, curBindsString, binds, i, newctx,l;
 
 		curBindsString = $(element).attr('data-bind');
 		$(element).removeAttr('data-bind');
@@ -1076,7 +1076,7 @@
 				 })*/
 			//alert(curBindsString.value)
 			binds = curBindsString.split(bindSplitter);
-			for(i = binds.length - 1; i >= 0; i--) {
+			for(i=0, l=binds.length; i < l; i++) {
 				if(!binds[i])
 					continue;
 				var arr = binds[i].match(/^\s*(\S+)\s*:\s*(\S[\s\S]*\S)\s*$/);
@@ -1101,7 +1101,7 @@
 		if(element) {
 			children = element.childNodes;
 			if(children) {
-				for(i = children.length - 1; i >= 0; i--) {
+				for(i=0, l=children.length; i < l; i++) {
 					ViewModel.findBinds(children[i], context, addArgs);
 				}
 			}
