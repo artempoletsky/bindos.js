@@ -787,11 +787,30 @@
 		return fn.__observable||false;
 	}
 	
-	var Computed=function(fn,context,async){
-		
+	var Computed=function(options){
+		var fn,context,async,setter
+		if(typeof options=='function')
+		{
+			fn=options;
+			context=arguments[1];
+			async=arguments[2];
+			setter=arguments[3];
+		}
+		else
+		{
+			fn=options.get;
+			context=options.context;
+			async=options.async;
+			setter=options.set;
+		}
+			
 		var value=fn.call(context);
 		
 		var resfn=function(){
+			if(arguments.length==1)
+			{
+				setter.call(context,arguments[0]);
+			}
 			//console.log(computableInit);
 			if(computedInit)
 			{

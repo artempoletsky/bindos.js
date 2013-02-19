@@ -138,4 +138,23 @@ describe('Observable', function(){
 		expect(topIndex()).toBe(1);
 		expect(index()).toBe(8);
 	});
+	
+	it('Computed construct from options object', function(){
+		var leftIndex=Observable(0);
+		var topIndex=Observable(0);
+		
+		var index=Computed({
+			get: function(){
+				return topIndex()*5+leftIndex();
+			},
+			set: function(val){
+				leftIndex(val-topIndex(Math.floor(val/5))*5)
+			}
+		});
+		
+		index(8);
+		expect(leftIndex()).toBe(3);
+		expect(topIndex()).toBe(1);
+		expect(index()).toBe(8);
+	});
 });
