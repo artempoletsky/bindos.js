@@ -198,9 +198,9 @@
 	
 	ViewModel.findBinds = function(element, context, addArgs) {
 		var children, curBindsString, binds, i, newctx,l;
-
-		curBindsString = $(element).attr('data-bind');
-		$(element).removeAttr('data-bind');
+		var $el=$(element);
+		curBindsString = $el.attr('data-bind');
+		$el.removeAttr('data-bind');
 
 		if(curBindsString) {
 			/*
@@ -232,11 +232,9 @@
 			}
 		}
 		if(element) {
-			children = element.childNodes;
-			if(children) {
-				for(i=0, l=children.length; i < l; i++) {
-					ViewModel.findBinds(children[i], context, addArgs);
-				}
+			children = $el.children();
+			for(i=0, l=children.length; i < l; i++) {
+				ViewModel.findBinds(children[i], context, addArgs);
 			}
 		}
 	}

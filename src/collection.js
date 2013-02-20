@@ -63,21 +63,14 @@
 			
 			if(modelsArr instanceof Array)
 			{
-				for(var i=0,l=modelsArr.length;i<l;i++)
-				{
-					this.add(modelsArr[i],'end',true);
-				}
-				if(options.add)
-					this.fire('add',modelsArr,0);
-				else
+				this.add(modelsArr,'end',!options.add);
+				if(!options.add)
 					this.fire('reset');
 			}
 			else
 			{
-				this.add(modelsArr,'end',true);
+				this.add(modelsArr,'end',!options.add);
 				if(options.add)
-					this.fire('add',[modelsArr],0);
-				else
 					this.fire('reset');
 			}
 		},
@@ -87,20 +80,30 @@
 		unshift: function(model){
 			return this.add(model,0);
 		},
-		add: function(model,index,silent){
+		add: function(models,index,silent){
+			if(!(models instanceof Array))
+				models=[models];
 			typeof index=='number'||(index=this.length);
-			if(!(model instanceof Model))
-			{
-				model=Model.createOrUpdate(this.model, model);
-			}
 			var me=this;
-			model.one('remove',function(){
-				me.cutByCid(this.cid);
-			})
-			this.models.splice(index, 0, model);
+			var addedModels=[];
+			_.each(models,function(model,ind){
+				if(!(model instanceof Model))
+				{
+					model=Model.createOrUpdate(me.model, model);
+				}
+				addedModels.push(model);
+				
+				model.one('remove',function(){
+					me.cutByCid(this.cid);
+				});
+				
+				me.models.splice(index+ind, 0, model);
+				
+			});
+		
 			this.length=this.models.length;
 			if(!silent)
-				this.fire('add',[model],index);
+				this.fire('add',addedModels,index);
 			return this;
 		},
 		cut: function(id){

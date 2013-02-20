@@ -177,11 +177,12 @@
 		},
 		display: function(elem, value, context, addArgs) {
 			var comp = this.findObservable(context, value, addArgs);
+			var $el=$(elem);
 			var fn = function() {
-				if(comp()) {
-					$(elem).show();
+				if(!!comp()) {
+					$el.show();
 				} else {
-					$(elem).hide();
+					$el.hide();
 				}
 			}
 			fn();
