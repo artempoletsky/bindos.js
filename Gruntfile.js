@@ -1,5 +1,11 @@
 module.exports = function(grunt) {
-
+	grunt.initConfig({
+		watch: {
+			files: '**/*',
+			tasks: ['jshint']
+		}
+	})
+	
 	// Project configuration.
 	grunt.initConfig({
 		pkg: grunt.file.readJSON('package.json'),
@@ -27,8 +33,13 @@ module.exports = function(grunt) {
 			}
 		},
 		watch: {
-			files: ['src/*.js'],
-			tasks: ['default']
+			scripts: {
+				files: 'src/*.js',
+				tasks: ['min'],
+				options: {
+					debounceDelay: 250
+				}
+			}
 		}
 	});
 
@@ -38,8 +49,8 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-contrib-watch');
 
 	// Default task(s).
-	grunt.registerTask('default', ['concat', 'uglify']);
-	grunt.registerTask('watch', ['watch']);
+	grunt.registerTask('min', ['concat', 'uglify']);
+	//grunt.registerTask('default', ['watch']);
 	
 
 };
