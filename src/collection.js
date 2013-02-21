@@ -16,7 +16,7 @@
 			{
 				this.reset(models);
 			}
-			this.initialize();
+			this.initialize(attributes);
 			
 		},
 		models: [],
