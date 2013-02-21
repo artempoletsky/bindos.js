@@ -2,3 +2,4 @@
 *.rar
 *.zip
 /lib/
+/node_modules/
