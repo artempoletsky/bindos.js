@@ -41,7 +41,7 @@
 			}
 			me.initialize();
 
-			if(me.autoinit)
+			if(me.autoParseBinds)
 				me.parse();
 			me.delegateEvents();
 		},
@@ -96,7 +96,7 @@
 			this._bindedToModel=true;
 			return oModel;
 		},
-		autoinit: false,
+		autoParseBinds: false,
 		initialize: function(){},
 		delegateEvents: function(events){
 			events||(events=this.events);
