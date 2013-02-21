@@ -1,10 +1,4 @@
 module.exports = function(grunt) {
-	grunt.initConfig({
-		watch: {
-			files: '**/*',
-			tasks: ['jshint']
-		}
-	})
 	
 	// Project configuration.
 	grunt.initConfig({

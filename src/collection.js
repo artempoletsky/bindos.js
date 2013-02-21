@@ -104,7 +104,7 @@
 					found=this.cutAt(index);
 					return false;
 				}
-			})
+			});
 			return found;
 		},
 		cutByCid: function(cid){

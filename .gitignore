@@ -3,3 +3,4 @@
 *.zip
 /lib/
 /node_modules/
+/.grunt/
