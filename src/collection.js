@@ -6,8 +6,6 @@
 		
 		constructor: function(models,attributes)
 		{
-			//Model.call(this,attributes);
-			//this._super(attributes);
 			this.itself=new itself(this);
 			this.models=[];
 			this.length=0;
@@ -61,18 +59,10 @@
 				
 			var modelsArr=this.parse(json);
 			
-			if(modelsArr instanceof Array)
-			{
-				this.add(modelsArr,'end',!options.add);
-				if(!options.add)
-					this.fire('reset');
-			}
-			else
-			{
-				this.add(modelsArr,'end',!options.add);
-				if(options.add)
-					this.fire('reset');
-			}
+			this.add(modelsArr,'end',!options.add);
+			if(!options.add)
+				this.fire('reset');			
+			
 		},
 		push: function(model){
 			return this.add(model);

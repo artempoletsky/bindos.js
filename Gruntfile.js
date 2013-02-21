@@ -11,16 +11,15 @@ module.exports = function(grunt) {
 		pkg: grunt.file.readJSON('package.json'),
 		concat: {
 			dist: {
-				src: [
-				'src/class.js', 
-				'src/events.js', 
-				'src/model.js',
-				'src/collection.js',
-				'src/observable.js',
-				'src/viewmodel.js',
-				'src/binds_bank.js'
+				src: ['src/observable.js'
+				,'src/class.js'
+				,'src/events.js'
+				,'src/model.js'
+				,'src/collection.js'
+				,'src/viewmodel.js'
+				,'src/binds_bank.js'
 				],
-				dest: 'bin/frontbone.js'
+				dest: 'bin/<%= pkg.name %>.js'
 			}
 		},
 		uglify: {
@@ -35,58 +34,40 @@ module.exports = function(grunt) {
 		watch: {
 			scripts: {
 				files: 'src/*.js',
-				tasks: ['min'],
+				tasks: ['jasmine', 'build'],
 				options: {
 					debounceDelay: 250
+				}
+			}
+		},
+		jasmine: {
+			pivotal: {
+				src: ['lib/lodash.min.js'
+				,'lib/jquery-1.8.2.js'
+				,'src/observable.js'
+				,'src/class.js'
+				,'src/events.js'
+				,'src/model.js'
+				,'src/collection.js'
+				,'src/viewmodel.js'
+				,'src/binds_bank.js'
+				],
+				options: {
+					specs: ['spec/*test.js','!spec/viewmodel.test.js'],
+					helpers: 'spec/*Helper.js'
 				}
 			}
 		}
 	});
 
-	// Load the plugin that provides the "uglify" task.
+	
+	grunt.loadNpmTasks('grunt-contrib-jasmine');
 	grunt.loadNpmTasks('grunt-contrib-uglify');
 	grunt.loadNpmTasks('grunt-contrib-concat');
 	grunt.loadNpmTasks('grunt-contrib-watch');
 
-	// Default task(s).
-	grunt.registerTask('min', ['concat', 'uglify']);
-	//grunt.registerTask('default', ['watch']);
+	
+	grunt.registerTask('build', ['concat', 'uglify']);
 	
 
 };
-/*
-module.exports = function(grunt) {
-	var version='1.1.0';
-	// Project configuration.
-	grunt.initConfig({
-		concat: {
-			dist: {
-				src: [
-				'src/class.js', 
-				'src/events.js', 
-				'src/model.js',
-				'src/collection.js',
-				'src/observable.js',
-				'src/viewmodel.js',
-				'src/binds_bank.js'
-				],
-				dest: 'bin/frontbone.js'
-			}
-		},
-		min: {
-			dist: {
-				src: ['bin/frontbone.js'],
-				dest: 'bin/frontbone.min.js'
-			}
-		},
-		watch: {
-			files: '[src/*.js]',
-			tasks: ['default']
-		}
-		
-	});
-	//grunt.loadNpmTasks('grunt-contrib-watch');
-	// Default task.
-	grunt.registerTask('default', ['concat','min']);
-	
-};*/
