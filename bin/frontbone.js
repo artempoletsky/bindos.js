@@ -623,7 +623,7 @@
 			this.models=[];
 			this.length=0;
 			
-			if(models&&models.length)
+			if(models)
 			{
 				this.reset(models);
 			}
@@ -671,7 +671,6 @@
 				
 				
 			var modelsArr=this.parse(json);
-			
 			this.add(modelsArr,'end',!options.add);
 			if(!options.add)
 				this.fire('reset');			
