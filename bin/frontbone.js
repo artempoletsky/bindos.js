@@ -622,7 +622,9 @@
 			this.itself=new itself(this);
 			this.models=[];
 			this.length=0;
-			
+
+			// хэш вида  id : глобальный индекс
+			this._hashId = [];
 			if(models)
 			{
 				this.reset(models);
@@ -662,11 +664,12 @@
 			{
 				this.models=[];
 				this.length=0;
+				this._hashId = [];
 			}
 			if(!json)
 			{
 				this.fire('reset');
-				return;
+				return this;
 			}
 				
 				
@@ -674,7 +677,7 @@
 			this.add(modelsArr,'end',!options.add);
 			if(!options.add)
 				this.fire('reset');			
-			
+			return this;
 		},
 		push: function(model){
 			return this.add(model);
@@ -682,30 +685,68 @@
 		unshift: function(model){
 			return this.add(model,0);
 		},
-		add: function(models,index,silent){
-			if(!(models instanceof Array))
-				models=[models];
-			typeof index=='number'||(index=this.length);
-			var me=this;
-			var addedModels=[];
-			_.each(models,function(model,ind){
-				if(!(model instanceof Model))
-				{
-					model=Model.createOrUpdate(me.model, model);
+		add: function ( models, index, silent ) {
+
+			var me = this,
+				hashIndex,
+				addedModels = [];
+
+			if ( !(models instanceof Array) ) {
+				models = [models];
+			}
+
+			if (typeof index !== 'number') {
+				index = this.length
+			}
+
+			function addHashIndex ( model, index ) {
+				if ( index === 0 && me.length ) {
+					// берем наименьший порядковый индекс из первого элемента хэша
+					hashIndex = me._hashId[0].index - 1;
+					// добавляем элемент в начало хэша
+					me._hashId.unshift({
+						id: model.id,
+						index: hashIndex
+					});
+				}
+				else {
+					var length = me._hashId.length;
+					// проверка для пустого хэша
+					if ( length === 0 ) {
+						hashIndex = 1;
+					}
+					else {
+						// берем порядковый индекс из последнего элемента в хэше
+						hashIndex = me._hashId[length - 1].index + 1;
+					}
+					// добавляем элемент в конец хэша
+					me._hashId.push({
+						id: model.id,
+						index: hashIndex
+					});
+				}
+			}
+
+			_.each(models, function ( model, ind ) {
+				if ( !(model instanceof Model) ) {
+					model = Model.createOrUpdate(me.model, model);
 				}
 				addedModels.push(model);
-				
-				model.one('remove',function(){
+
+				addHashIndex(model, (index + ind));
+
+				model.one('remove', function () {
 					me.cutByCid(this.cid);
 				});
-				
-				me.models.splice(index+ind, 0, model);
-				
+
+				me.models.splice(index + ind, 0, model);
+
 			});
-		
-			this.length=this.models.length;
-			if(!silent)
-				this.fire('add',addedModels,index);
+
+			this.length = this.models.length;
+			if ( !silent ) {
+				this.fire('add', addedModels, index);
+			}
 			return this;
 		},
 		cut: function(id){
@@ -740,6 +781,8 @@
 		cutAt: function(index){
 			index!==undefined||(index=this.models.length-1);
 			var model=this.models.splice(index, 1)[0];
+			// удаление элемента из хеша
+			this._hashId.splice(index, 1);
 			this.length=this.models.length;
 			this.fire('cut',model,index);
 			return model;
@@ -774,6 +817,16 @@
 				}
 			})
 			return found;
+		},
+		/**
+		 * Возвращение порядкового индекса модели
+		 * во всей коллекции
+		 * @param model
+		 * @return {Number}
+		 */
+		getIndex: function ( model ) {
+			var i = this.indexOf(model);
+			return this._hashId[i].index;
 		}
 	});
 	
@@ -1298,4 +1351,64 @@
 			});
 		}
 	};
+})();
+(function(){
+	var rawTemplates={};
+	var templates={};
+	ViewModel.tmpl={
+		getRawTemplate:function(name){
+			return rawTemplates[name];
+		},
+		getTemplate:function(name){
+			return templates[name];
+		},
+		create: function(name,rawText,selfObservable,addArgs,parentTagName){
+			var tempDiv = document.createElement(parentTagName||'div');
+			addArgs=addArgs||{};
+			tempDiv.innerHTML=rawText;
+			
+			var self=selfObservable();
+			var dummySelfObject={};
+			selfObservable.subscribe(function(){
+				_.each(dummySelfObject,function(observ,key){
+					observ(this()[key]);
+				});
+			});
+			
+			_.each(selfObservable(),function(val,key){
+				dummySelfObject[key]=Observable(val);
+			});
+			
+			ViewModel.findBinds(tempDiv, dummySelfObject, addArgs);
+			
+			templates[name]=function(self,newAddArgs){
+				
+				selfObservable(self);
+				_.each(newAddArgs,function(val,key){
+					if(addArgs[key]&&Observable.isObservable(addArgs[key]))
+						addArgs[key](val);
+				});
+				
+				return tempDiv.innerHTML;
+			};
+			templates[name].childrenLength=$(tempDiv).children().length;
+			
+			return templates[name];
+		}
+	}
+	
+	ViewModel.binds.template=function(elem,value,context,addArgs){
+		var $el=$(elem);
+		var vals=value.split(/\s*,\s*/);
+		var raw=$el.html();
+		rawTemplates[vals[0]]=raw;
+		if(vals[1])
+		{
+			var self=this.findObservable(context, vals[1], addArgs);
+			this.tmpl.create(vals[0],raw,self,addArgs,elem.tagName.toLowerCase());
+		}
+		$el.remove();
+		return false;
+	}
+	
 })();
