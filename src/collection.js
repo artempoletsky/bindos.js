@@ -53,7 +53,7 @@
 			if(!json)
 			{
 				this.fire('reset');
-				return;
+				return this;
 			}
 				
 				
@@ -61,7 +61,7 @@
 			this.add(modelsArr,'end',!options.add);
 			if(!options.add)
 				this.fire('reset');			
-			
+			return this;
 		},
 		push: function(model){
 			return this.add(model);
