@@ -12,6 +12,7 @@ module.exports = function(grunt) {
 				,'src/collection.js'
 				,'src/viewmodel.js'
 				,'src/binds_bank.js'
+				,'src/templates.js'
 				],
 				dest: 'bin/<%= pkg.name %>.js'
 			}
@@ -45,6 +46,7 @@ module.exports = function(grunt) {
 				,'src/collection.js'
 				,'src/viewmodel.js'
 				,'src/binds_bank.js'
+				,'src/templates.js'
 				],
 				options: {
 					specs: ['spec/*test.js','!spec/viewmodel.test.js'],
