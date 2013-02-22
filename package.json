@@ -24,5 +24,7 @@
     "url": "https://github.com/uistler/Frontbone.git"
   },
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "readmeFilename": "README.md",
+  "gitHead": "568a4dfce2adb1c2f181b1b4ee6fa457246af96b"
 }
