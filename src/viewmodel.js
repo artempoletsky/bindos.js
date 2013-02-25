@@ -88,7 +88,7 @@
 							if(!mod) {
 								return '';
 							}
-							return (this['format_' + prop]) ? this['format_' + prop](mod.get(prop)) : mod.get(prop);
+							return (this[prop]) ? this[prop](mod.prop(prop)) : mod.prop(prop);
 
 						}, context)
 					})(prop, this);
