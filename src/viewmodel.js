@@ -88,7 +88,7 @@
 							if(!mod) {
 								return '';
 							}
-							return (this[prop]) ? this[prop](mod.prop(prop)) : mod.prop(prop);
+							return mod.prop(prop);
 
 						}, context)
 					})(prop, this);
