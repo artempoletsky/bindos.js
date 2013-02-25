@@ -1,0 +1,30 @@
+{
+  "name": "frontbone",
+  "version": "1.0.0",
+  "description": "MVVM javascript framework",
+  "main": "Gruntfile.js",
+  "bin": {
+    "frontbone": "frontbone.js"
+  },
+  "directories": {
+    "example": "example"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "grunt": "~0.4.0",
+    "grunt-contrib-uglify": "~0.1.1",
+    "grunt-contrib-watch": "~0.2.0",
+    "grunt-contrib-concat": "~0.1.2"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uistler/Frontbone.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "readmeFilename": "README.md",
+  "gitHead": "568a4dfce2adb1c2f181b1b4ee6fa457246af96b"
+}

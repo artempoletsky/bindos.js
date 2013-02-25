@@ -41,7 +41,7 @@
 			}
 			me.initialize();
 
-			if(me.autoinit)
+			if(me.autoParseBinds)
 				me.parse();
 			me.delegateEvents();
 		},
@@ -88,7 +88,7 @@
 							if(!mod) {
 								return '';
 							}
-							return (this['format_' + prop]) ? this['format_' + prop](mod.get(prop)) : mod.get(prop);
+							return mod.prop(prop);
 
 						}, context)
 					})(prop, this);
@@ -96,7 +96,7 @@
 			this._bindedToModel=true;
 			return oModel;
 		},
-		autoinit: false,
+		autoParseBinds: false,
 		initialize: function(){},
 		delegateEvents: function(events){
 			events||(events=this.events);
@@ -197,10 +197,10 @@
 	}
 	
 	ViewModel.findBinds = function(element, context, addArgs) {
-		var children, curBindsString, binds, i, newctx;
-
-		curBindsString = $(element).attr('data-bind');
-		$(element).removeAttr('data-bind');
+		var children, curBindsString, binds, i, newctx,l;
+		var $el=$(element);
+		curBindsString = $el.attr('data-bind');
+		$el.removeAttr('data-bind');
 
 		if(curBindsString) {
 			/*
@@ -209,7 +209,7 @@
 				 })*/
 			//alert(curBindsString.value)
 			binds = curBindsString.split(bindSplitter);
-			for(i = binds.length - 1; i >= 0; i--) {
+			for(i=0, l=binds.length; i < l; i++) {
 				if(!binds[i])
 					continue;
 				var arr = binds[i].match(/^\s*(\S+)\s*:\s*(\S[\s\S]*\S)\s*$/);
@@ -232,11 +232,9 @@
 			}
 		}
 		if(element) {
-			children = element.childNodes;
-			if(children) {
-				for(i = children.length - 1; i >= 0; i--) {
-					ViewModel.findBinds(children[i], context, addArgs);
-				}
+			children = $el.children();
+			for(i=0, l=children.length; i < l; i++) {
+				ViewModel.findBinds(children[i], context, addArgs);
 			}
 		}
 	}

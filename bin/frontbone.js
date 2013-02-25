@@ -1,3 +1,158 @@
+(function(){
+	(function() {
+		var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
+		window.webkitRequestAnimationFrame || window.msRequestAnimationFrame 
+		|| (function(){
+			var calls=[];
+			var timoutIsset=false;
+			return function(callback){
+				calls.push(callback);
+				if(!timoutIsset)
+				{
+					setTimeout(function(){
+						_.each(calls,function(c){
+							c();
+						});
+						calls=[];
+						timoutIsset=false;
+					}, 1000/60);
+				}	
+			};
+		})();
+		window.requestAnimationFrame = requestAnimationFrame;
+	})();
+	
+	var Subscribeable=function(fn){
+		fn._listeners=[];
+		fn.subscribe=function(callback){
+			fn._listeners.push(callback);
+		}
+		fn.unsubscribe=function(callback){
+			for(var i=0,l=fn._listeners.length;i<l;i++)
+				if(fn._listeners[i]===callback)
+					fn._listeners.splice(i, 1);
+		}
+		fn.fire=function(){
+			for(var i=0,l=fn._listeners.length;i<l;i++)
+				fn._listeners[i].call(fn);
+		}
+		fn._notSimple=true;
+		return fn;
+	}
+	var computedInit=false;
+	
+	var Observable=function(initial)
+	{
+		var value=initial;
+		var fn=function(set){
+			if(arguments.length>0)
+			{
+				if(value!==set||_.isObject(set))
+				{
+					fn.lastValue=value;
+					value=set;
+					fn.fire();
+				}
+			}
+			else if(computedInit)
+			{
+				computedInit.subscribeTo(fn);
+			}
+			return value;
+		}
+		Subscribeable(fn);
+		
+		fn.lastValue=undefined;
+		fn.valueOf=fn.toString=function(){
+			return this();
+		}
+		fn.__observable=true;
+		return fn;
+	}
+	Observable.isObservable=function(fn){
+		if(typeof fn != 'function')
+			return false;
+		return fn.__observable||false;
+	}
+	
+	var Computed=function(options){
+		var fn,context,async,setter
+		if(typeof options=='function')
+		{
+			fn=options;
+			context=arguments[1];
+			async=arguments[2];
+			setter=arguments[3];
+		}
+		else
+		{
+			fn=options.get;
+			context=options.context;
+			async=options.async;
+			setter=options.set;
+		}
+			
+		var value=fn.call(context);
+		
+		var resfn=function(){
+			if(arguments.length==1)
+			{
+				setter.call(context,arguments[0]);
+			}
+			//console.log(computableInit);
+			if(computedInit)
+			{
+				computedInit.subscribeTo(resfn);
+			}
+			return value;
+		}
+		var waitForUpdate=false;
+		resfn.async=async||false;
+		resfn.subscribeTo=function(obs)
+		{
+			obs.subscribe(function(){
+				resfn.refresh();
+				if(resfn.async)
+				{
+					if(!waitForUpdate)
+					{
+						waitForUpdate=true;
+						window.requestAnimationFrame(function(){
+							resfn.fire();
+							waitForUpdate=false;
+						});
+					}
+				}
+				else
+				{
+					resfn.fire();
+				}
+			});
+		}
+		Subscribeable(resfn);
+		resfn.refresh=function(){
+			value=fn.call(context);
+		}
+		
+		
+		resfn.__observable=true;
+		
+		resfn.valueOf=resfn.toString=function(){
+			return this();
+		}
+		computedInit=resfn;
+		fn.call(context);
+		computedInit=false;
+		return resfn;
+	}
+	
+	
+	
+	this.Observable=Observable;
+	this.Computed=Computed;
+	this.Subscribeable=Subscribeable;
+})();
+
 
 (function(){
 	var ctor=function(){};
@@ -464,17 +619,17 @@
 		
 		constructor: function(models,attributes)
 		{
-			//Model.call(this,attributes);
-			//this._super(attributes);
 			this.itself=new itself(this);
 			this.models=[];
 			this.length=0;
-			
-			if(models&&models.length)
+
+			// хэш вида  id : глобальный индекс
+			this._hashId = [];
+			if(models)
 			{
 				this.reset(models);
 			}
-			this.initialize();
+			this.initialize(attributes);
 			
 		},
 		models: [],
@@ -509,35 +664,20 @@
 			{
 				this.models=[];
 				this.length=0;
+				this._hashId = [];
 			}
 			if(!json)
 			{
 				this.fire('reset');
-				return;
+				return this;
 			}
 				
 				
 			var modelsArr=this.parse(json);
-			
-			if(modelsArr instanceof Array)
-			{
-				for(var i=0,l=modelsArr.length;i<l;i++)
-				{
-					this.add(modelsArr[i],'end',true);
-				}
-				if(options.add)
-					this.fire('add',modelsArr,0);
-				else
-					this.fire('reset');
-			}
-			else
-			{
-				this.add(modelsArr,'end',true);
-				if(options.add)
-					this.fire('add',[modelsArr],0);
-				else
-					this.fire('reset');
-			}
+			this.add(modelsArr,'end',!options.add);
+			if(!options.add)
+				this.fire('reset');			
+			return this;
 		},
 		push: function(model){
 			return this.add(model);
@@ -545,20 +685,68 @@
 		unshift: function(model){
 			return this.add(model,0);
 		},
-		add: function(model,index,silent){
-			typeof index=='number'||(index=this.length);
-			if(!(model instanceof Model))
-			{
-				model=Model.createOrUpdate(this.model, model);
+		add: function ( models, index, silent ) {
+
+			var me = this,
+				hashIndex,
+				addedModels = [];
+
+			if ( !(models instanceof Array) ) {
+				models = [models];
 			}
-			var me=this;
-			model.one('remove',function(){
-				me.cutByCid(this.cid);
-			})
-			this.models.splice(index, 0, model);
-			this.length=this.models.length;
-			if(!silent)
-				this.fire('add',[model],index);
+
+			if (typeof index !== 'number') {
+				index = this.length
+			}
+
+			function addHashIndex ( model, index ) {
+				if ( index === 0 && me.length ) {
+					// берем наименьший порядковый индекс из первого элемента хэша
+					hashIndex = me._hashId[0].index - 1;
+					// добавляем элемент в начало хэша
+					me._hashId.unshift({
+						id: model.id,
+						index: hashIndex
+					});
+				}
+				else {
+					var length = me._hashId.length;
+					// проверка для пустого хэша
+					if ( length === 0 ) {
+						hashIndex = 1;
+					}
+					else {
+						// берем порядковый индекс из последнего элемента в хэше
+						hashIndex = me._hashId[length - 1].index + 1;
+					}
+					// добавляем элемент в конец хэша
+					me._hashId.push({
+						id: model.id,
+						index: hashIndex
+					});
+				}
+			}
+
+			_.each(models, function ( model, ind ) {
+				if ( !(model instanceof Model) ) {
+					model = Model.createOrUpdate(me.model, model);
+				}
+				addedModels.push(model);
+
+				addHashIndex(model, (index + ind));
+
+				model.one('remove', function () {
+					me.cutByCid(this.cid);
+				});
+
+				me.models.splice(index + ind, 0, model);
+
+			});
+
+			this.length = this.models.length;
+			if ( !silent ) {
+				this.fire('add', addedModels, index);
+			}
 			return this;
 		},
 		cut: function(id){
@@ -569,7 +757,7 @@
 					found=this.cutAt(index);
 					return false;
 				}
-			})
+			});
 			return found;
 		},
 		cutByCid: function(cid){
@@ -593,6 +781,8 @@
 		cutAt: function(index){
 			index!==undefined||(index=this.models.length-1);
 			var model=this.models.splice(index, 1)[0];
+			// удаление элемента из хеша
+			this._hashId.splice(index, 1);
 			this.length=this.models.length;
 			this.fire('cut',model,index);
 			return model;
@@ -627,6 +817,16 @@
 				}
 			})
 			return found;
+		},
+		/**
+		 * Возвращение порядкового индекса модели
+		 * во всей коллекции
+		 * @param model
+		 * @return {Number}
+		 */
+		getIndex: function ( model ) {
+			var i = this.indexOf(model);
+			return this._hashId[i].index;
 		}
 	});
 	
@@ -710,142 +910,6 @@
 	
 	this.Collection=Collection;
 })();
-(function(){
-	(function() {
-		var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
-		window.webkitRequestAnimationFrame || window.msRequestAnimationFrame 
-		|| (function(){
-			var calls=[];
-			var timoutIsset=false;
-			return function(callback){
-				calls.push(callback);
-				if(!timoutIsset)
-				{
-					setTimeout(function(){
-						_.each(calls,function(c){
-							c();
-						});
-						calls=[];
-						timoutIsset=false;
-					}, 1000/60);
-				}	
-			};
-		})();
-		window.requestAnimationFrame = requestAnimationFrame;
-	})();
-	
-	var Subscribeable=function(fn){
-		fn._listeners=[];
-		fn.subscribe=function(callback){
-			fn._listeners.push(callback);
-		}
-		fn.unsubscribe=function(callback){
-			for(var i=0,l=fn._listeners.length;i<l;i++)
-				if(fn._listeners[i]===callback)
-					fn._listeners.splice(i, 1);
-		}
-		fn.fire=function(){
-			for(var i=0,l=fn._listeners.length;i<l;i++)
-				fn._listeners[i].call(fn);
-		}
-		fn._notSimple=true;
-		return fn;
-	}
-	var computedInit=false;
-	
-	var Observable=function(initial)
-	{
-		var value=initial;
-		var fn=function(set){
-			if(arguments.length>0)
-			{
-				if(value!==set||_.isObject(set))
-				{
-					fn.lastValue=value;
-					value=set;
-					fn.fire();
-				}
-			}
-			else if(computedInit)
-			{
-				computedInit.subscribeTo(fn);
-			}
-			return value;
-		}
-		Subscribeable(fn);
-		
-		fn.lastValue=undefined;
-		fn.valueOf=fn.toString=function(){
-			return this();
-		}
-		fn.__observable=true;
-		return fn;
-	}
-	Observable.isObservable=function(fn){
-		if(typeof fn != 'function')
-			return false;
-		return fn.__observable||false;
-	}
-	
-	var Computed=function(fn,context,async){
-		
-		var value=fn.call(context);
-		
-		var resfn=function(){
-			//console.log(computableInit);
-			if(computedInit)
-			{
-				computedInit.subscribeTo(resfn);
-			}
-			return value;
-		}
-		var waitForUpdate=false;
-		resfn.async=async||false;
-		resfn.subscribeTo=function(obs)
-		{
-			obs.subscribe(function(){
-				resfn.refresh();
-				if(resfn.async)
-				{
-					if(!waitForUpdate)
-					{
-						waitForUpdate=true;
-						window.requestAnimationFrame(function(){
-							resfn.fire();
-							waitForUpdate=false;
-						});
-					}
-				}
-				else
-				{
-					resfn.fire();
-				}
-			});
-		}
-		Subscribeable(resfn);
-		resfn.refresh=function(){
-			value=fn.call(context);
-		}
-		
-		
-		resfn.__observable=true;
-		
-		resfn.valueOf=resfn.toString=function(){
-			return this();
-		}
-		computedInit=resfn;
-		fn.call(context);
-		computedInit=false;
-		return resfn;
-	}
-	
-	
-	
-	this.Observable=Observable;
-	this.Computed=Computed;
-	this.Subscribeable=Subscribeable;
-})();
-
 (function() {
 	var $ = this.$;
 
@@ -889,7 +953,7 @@
 			}
 			me.initialize();
 
-			if(me.autoinit)
+			if(me.autoParseBinds)
 				me.parse();
 			me.delegateEvents();
 		},
@@ -936,7 +1000,7 @@
 							if(!mod) {
 								return '';
 							}
-							return (this['format_' + prop]) ? this['format_' + prop](mod.get(prop)) : mod.get(prop);
+							return mod.prop(prop);
 
 						}, context)
 					})(prop, this);
@@ -944,7 +1008,7 @@
 			this._bindedToModel=true;
 			return oModel;
 		},
-		autoinit: false,
+		autoParseBinds: false,
 		initialize: function(){},
 		delegateEvents: function(events){
 			events||(events=this.events);
@@ -1045,10 +1109,10 @@
 	}
 	
 	ViewModel.findBinds = function(element, context, addArgs) {
-		var children, curBindsString, binds, i, newctx;
-
-		curBindsString = $(element).attr('data-bind');
-		$(element).removeAttr('data-bind');
+		var children, curBindsString, binds, i, newctx,l;
+		var $el=$(element);
+		curBindsString = $el.attr('data-bind');
+		$el.removeAttr('data-bind');
 
 		if(curBindsString) {
 			/*
@@ -1057,7 +1121,7 @@
 				 })*/
 			//alert(curBindsString.value)
 			binds = curBindsString.split(bindSplitter);
-			for(i = binds.length - 1; i >= 0; i--) {
+			for(i=0, l=binds.length; i < l; i++) {
 				if(!binds[i])
 					continue;
 				var arr = binds[i].match(/^\s*(\S+)\s*:\s*(\S[\s\S]*\S)\s*$/);
@@ -1080,11 +1144,9 @@
 			}
 		}
 		if(element) {
-			children = element.childNodes;
-			if(children) {
-				for(i = children.length - 1; i >= 0; i--) {
-					ViewModel.findBinds(children[i], context, addArgs);
-				}
+			children = $el.children();
+			for(i=0, l=children.length; i < l; i++) {
+				ViewModel.findBinds(children[i], context, addArgs);
 			}
 		}
 	}
@@ -1270,11 +1332,12 @@
 		},
 		display: function(elem, value, context, addArgs) {
 			var comp = this.findObservable(context, value, addArgs);
+			var $el=$(elem);
 			var fn = function() {
-				if(comp()) {
-					$(elem).show();
+				if(!!comp()) {
+					$el.show();
 				} else {
-					$(elem).hide();
+					$el.hide();
 				}
 			}
 			fn();
@@ -1288,4 +1351,64 @@
 			});
 		}
 	};
+})();
+(function(){
+	var rawTemplates={};
+	var templates={};
+	ViewModel.tmpl={
+		getRawTemplate:function(name){
+			return rawTemplates[name];
+		},
+		getTemplate:function(name){
+			return templates[name];
+		},
+		create: function(name,rawText,selfObservable,addArgs,parentTagName){
+			var tempDiv = document.createElement(parentTagName||'div');
+			addArgs=addArgs||{};
+			tempDiv.innerHTML=rawText;
+			
+			var self=selfObservable();
+			var dummySelfObject={};
+			selfObservable.subscribe(function(){
+				_.each(dummySelfObject,function(observ,key){
+					observ(this()[key]);
+				});
+			});
+			
+			_.each(selfObservable(),function(val,key){
+				dummySelfObject[key]=Observable(val);
+			});
+			
+			ViewModel.findBinds(tempDiv, dummySelfObject, addArgs);
+			
+			templates[name]=function(self,newAddArgs){
+				
+				selfObservable(self);
+				_.each(newAddArgs,function(val,key){
+					if(addArgs[key]&&Observable.isObservable(addArgs[key]))
+						addArgs[key](val);
+				});
+				
+				return tempDiv.innerHTML;
+			};
+			templates[name].childrenLength=$(tempDiv).children().length;
+			
+			return templates[name];
+		}
+	}
+	
+	ViewModel.binds.template=function(elem,value,context,addArgs){
+		var $el=$(elem);
+		var vals=value.split(/\s*,\s*/);
+		var raw=$el.html();
+		rawTemplates[vals[0]]=raw;
+		if(vals[1])
+		{
+			var self=this.findObservable(context, vals[1], addArgs);
+			this.tmpl.create(vals[0],raw,self,addArgs,elem.tagName.toLowerCase());
+		}
+		$el.remove();
+		return false;
+	}
+	
 })();

@@ -6,17 +6,17 @@
 		
 		constructor: function(models,attributes)
 		{
-			//Model.call(this,attributes);
-			//this._super(attributes);
 			this.itself=new itself(this);
 			this.models=[];
 			this.length=0;
-			
-			if(models&&models.length)
+
+			// хэш вида  id : глобальный индекс
+			this._hashId = [];
+			if(models)
 			{
 				this.reset(models);
 			}
-			this.initialize();
+			this.initialize(attributes);
 			
 		},
 		models: [],
@@ -51,35 +51,20 @@
 			{
 				this.models=[];
 				this.length=0;
+				this._hashId = [];
 			}
 			if(!json)
 			{
 				this.fire('reset');
-				return;
+				return this;
 			}
 				
 				
 			var modelsArr=this.parse(json);
-			
-			if(modelsArr instanceof Array)
-			{
-				for(var i=0,l=modelsArr.length;i<l;i++)
-				{
-					this.add(modelsArr[i],'end',true);
-				}
-				if(options.add)
-					this.fire('add',modelsArr,0);
-				else
-					this.fire('reset');
-			}
-			else
-			{
-				this.add(modelsArr,'end',true);
-				if(options.add)
-					this.fire('add',[modelsArr],0);
-				else
-					this.fire('reset');
-			}
+			this.add(modelsArr,'end',!options.add);
+			if(!options.add)
+				this.fire('reset');			
+			return this;
 		},
 		push: function(model){
 			return this.add(model);
@@ -87,20 +72,68 @@
 		unshift: function(model){
 			return this.add(model,0);
 		},
-		add: function(model,index,silent){
-			typeof index=='number'||(index=this.length);
-			if(!(model instanceof Model))
-			{
-				model=Model.createOrUpdate(this.model, model);
+		add: function ( models, index, silent ) {
+
+			var me = this,
+				hashIndex,
+				addedModels = [];
+
+			if ( !(models instanceof Array) ) {
+				models = [models];
 			}
-			var me=this;
-			model.one('remove',function(){
-				me.cutByCid(this.cid);
-			})
-			this.models.splice(index, 0, model);
-			this.length=this.models.length;
-			if(!silent)
-				this.fire('add',[model],index);
+
+			if (typeof index !== 'number') {
+				index = this.length
+			}
+
+			function addHashIndex ( model, index ) {
+				if ( index === 0 && me.length ) {
+					// берем наименьший порядковый индекс из первого элемента хэша
+					hashIndex = me._hashId[0].index - 1;
+					// добавляем элемент в начало хэша
+					me._hashId.unshift({
+						id: model.id,
+						index: hashIndex
+					});
+				}
+				else {
+					var length = me._hashId.length;
+					// проверка для пустого хэша
+					if ( length === 0 ) {
+						hashIndex = 1;
+					}
+					else {
+						// берем порядковый индекс из последнего элемента в хэше
+						hashIndex = me._hashId[length - 1].index + 1;
+					}
+					// добавляем элемент в конец хэша
+					me._hashId.push({
+						id: model.id,
+						index: hashIndex
+					});
+				}
+			}
+
+			_.each(models, function ( model, ind ) {
+				if ( !(model instanceof Model) ) {
+					model = Model.createOrUpdate(me.model, model);
+				}
+				addedModels.push(model);
+
+				addHashIndex(model, (index + ind));
+
+				model.one('remove', function () {
+					me.cutByCid(this.cid);
+				});
+
+				me.models.splice(index + ind, 0, model);
+
+			});
+
+			this.length = this.models.length;
+			if ( !silent ) {
+				this.fire('add', addedModels, index);
+			}
 			return this;
 		},
 		cut: function(id){
@@ -111,7 +144,7 @@
 					found=this.cutAt(index);
 					return false;
 				}
-			})
+			});
 			return found;
 		},
 		cutByCid: function(cid){
@@ -135,6 +168,8 @@
 		cutAt: function(index){
 			index!==undefined||(index=this.models.length-1);
 			var model=this.models.splice(index, 1)[0];
+			// удаление элемента из хеша
+			this._hashId.splice(index, 1);
 			this.length=this.models.length;
 			this.fire('cut',model,index);
 			return model;
@@ -169,6 +204,16 @@
 				}
 			})
 			return found;
+		},
+		/**
+		 * Возвращение порядкового индекса модели
+		 * во всей коллекции
+		 * @param model
+		 * @return {Number}
+		 */
+		getIndex: function ( model ) {
+			var i = this.indexOf(model);
+			return this._hashId[i].index;
 		}
 	});
 	
