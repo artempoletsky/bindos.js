@@ -109,7 +109,7 @@ describe('ViewModel', function(){
 				'Cat',
 				'Dog',
 				'Bird'
-			]),
+				]),
 			chosenId: Observable(-1),
 			reset: function(){
 				this.chosenId(-1);
@@ -217,5 +217,27 @@ describe('ViewModel', function(){
 		
 	});
 	
-	
+	it('parseOptionsObject', function(){
+		expect(function(){
+			ViewModel.parseOptionsObject('{ a : b }')
+		}).not.toThrow();
+		expect(function(){
+			ViewModel.parseOptionsObject('{}')
+		}).not.toThrow();
+		expect(function(){
+			ViewModel.parseOptionsObject('{a:b')
+		}).toThrow();
+		expect(function(){
+			ViewModel.parseOptionsObject('a:b')
+		}).toThrow();
+		expect(function(){
+			ViewModel.parseOptionsObject('{a:}')
+		}).toThrow();
+		expect(ViewModel.parseOptionsObject('{a:b}').a).toBe('b');
+		expect(ViewModel.parseOptionsObject('{asdvccbt:erwer}').asdvccbt).toBe('erwer');
+		expect(ViewModel.parseOptionsObject('{\n\
+											asdvccbt:\n\
+											erwer\n\
+											}').asdvccbt).toBe('erwer');
+	});
 })

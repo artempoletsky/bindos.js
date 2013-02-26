@@ -1152,8 +1152,8 @@
 			}
 		}
 	};
-	var firstColonRegex=/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/;
-	var breakersRegex=/^{([\s\S]+)}$/;
+	var firstColonRegex=/^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/;
+	var breakersRegex=/^{([\s\S]*)}$/;
 	var commaSplitter=/\s*,\s*/
 	ViewModel.parseOptionsObject=function(value){
 		var val=value;
@@ -1161,19 +1161,24 @@
 			return {};
 		
 		var match= val.match(breakersRegex)
-		
-		if(!match||!match[1])
+		//console.log(match);
+		if(!match||match[1]===undefined)
 			throw new Error('Expression: "'+value+'" is not valid object');
 		val = match[1];	
+		
 		
 		var attrs = val.split(commaSplitter);
 		//console.log(attrs);
 		if(!attrs.length)
-			throw new Error('Expression: "'+value+'" is not valid object');
+			return {};
 		
 		var res={};
 		_.each(attrs,function(val){
+			
+			if(!val)
+				return;
 			match = val.match(firstColonRegex);
+			
 			if(!match||!match[1]||!match[2])
 			{
 				throw new Error('Expression: "'+value+'" is not valid object');
