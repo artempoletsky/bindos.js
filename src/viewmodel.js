@@ -5,6 +5,9 @@
 	var eventSplitter = /\s+/;
 	var bindSplitter = /\s*;\s*/;
 	var simpleTagRegex = /^[a-z]+$/;
+	var firstColonRegex=/^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/;
+	var breakersRegex=/^{([\s\S]*)}$/;
+	var commaSplitter=/\s*,\s*/
 	
 	var ViewModel={
 		setElement : function(el) {
@@ -195,36 +198,42 @@
 	}
 	
 	ViewModel.findBinds = function(element, context, addArgs) {
-		var children, curBindsString, binds, i, newctx,l;
+		var children, curBindsString, binds, i, newctx,l,cBind,bindName,bindVal;
 		var $el=$(element);
 		curBindsString = $el.attr('data-bind');
 		$el.removeAttr('data-bind');
 
 		if(curBindsString) {
-			/*
-				 $.each(curBindsString,function(name,val){
-				 alert(name+': '+val);
-				 })*/
-			//alert(curBindsString.value)
 			binds = curBindsString.split(bindSplitter);
 			for(i=0, l=binds.length; i < l; i++) {
-				if(!binds[i])
+				cBind=binds[i];
+				if(!cBind||cBind.charAt(0)=='!')
 					continue;
-				var arr = binds[i].match(/^\s*(\S+)\s*:\s*(\S[\s\S]*\S)\s*$/);
+				var arr = cBind.match(firstColonRegex);
 				if(!arr)
-					arr=[binds[i],binds[i],''];
-				var fn = ViewModel.binds[arr[1]];
-
-				if(fn) {
-					newctx = fn.call(this, element, arr[2], context, addArgs);
+				{
+					bindName=cBind;
+					bindVal='';
+				}
+				else
+				{
+					bindName=arr[1];
+					bindVal=arr[2];
+				}
+				
+				var bindFn = ViewModel.binds[bindName];
+				
+				if(bindFn) {
+					newctx = bindFn.call(this, element, bindVal, context, addArgs);
 					if(newctx === false) {
 						return;
-					} else {
-						if(newctx) {
-							context = newctx;
-						}
+					} else if(newctx) {
+						context = newctx;
 					}
-
+				}
+				else
+				{
+					console.warn('Bind: "'+bindName+'" not exists')
 				}
 
 			}
@@ -232,13 +241,11 @@
 		if(element) {
 			children = $el.children();
 			for(i=0, l=children.length; i < l; i++) {
-				ViewModel.findBinds(children[i], context, addArgs);
+				this.findBinds(children[i], context, addArgs);
 			}
 		}
 	};
-	var firstColonRegex=/^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/;
-	var breakersRegex=/^{([\s\S]*)}$/;
-	var commaSplitter=/\s*,\s*/
+	
 	ViewModel.parseOptionsObject=function(value){
 		var val=value;
 		if(!val)
