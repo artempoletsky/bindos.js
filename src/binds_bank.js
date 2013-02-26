@@ -12,7 +12,10 @@
 			});
 			this.findObservable(context, value, addArgs)
 			.callAndSubscribe(function(){
-				$el.attr('src', this());
+				if(this())
+					$el.show().attr('src', this());
+				else
+					$el.hide();
 			});
 		},
 		html: function(elem, value, context, addArgs) {
