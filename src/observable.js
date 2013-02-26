@@ -36,6 +36,10 @@
 			for(var i=0,l=fn._listeners.length;i<l;i++)
 				fn._listeners[i].call(fn);
 		}
+		fn.callAndSubscribe=function(callback){
+			callback.call(this);
+			this.subscribe(callback)
+		}
 		fn._notSimple=true;
 		return fn;
 	}

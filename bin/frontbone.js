@@ -36,6 +36,10 @@
 			for(var i=0,l=fn._listeners.length;i<l;i++)
 				fn._listeners[i].call(fn);
 		}
+		fn.callAndSubscribe=function(callback){
+			callback.call(this);
+			this.subscribe(callback)
+		}
 		fn._notSimple=true;
 		return fn;
 	}
@@ -911,6 +915,7 @@
 	this.Collection=Collection;
 })();
 (function() {
+	"use strict";
 	var $ = this.$;
 
 	var eventSplitter = /\s+/;
@@ -1068,10 +1073,7 @@
 			
 		var fnEval = function() {
 			try {
-					
-				//with(context)
 				return (Function.apply(context,keys)).apply(context, vals);
-			//return eval(string);
 			} catch(exception) {
 				console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
 			}
@@ -1149,31 +1151,60 @@
 				ViewModel.findBinds(children[i], context, addArgs);
 			}
 		}
-	}
+	};
+	var firstColonRegex=/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/;
+	var breakersRegex=/^{([\s\S]+)}$/;
+	var commaSplitter=/\s*,\s*/
+	ViewModel.parseOptionsObject=function(value){
+		var val=value;
+		if(!val)
+			return {};
+		
+		var match= val.match(breakersRegex)
+		
+		if(!match||!match[1])
+			throw new Error('Expression: "'+value+'" is not valid object');
+		val = match[1];	
+		
+		var attrs = val.split(commaSplitter);
+		//console.log(attrs);
+		if(!attrs.length)
+			throw new Error('Expression: "'+value+'" is not valid object');
+		
+		var res={};
+		_.each(attrs,function(val){
+			match = val.match(firstColonRegex);
+			if(!match||!match[1]||!match[2])
+			{
+				throw new Error('Expression: "'+value+'" is not valid object');
+			}
+			res[match[1]]=match[2];
+		});
+		return res;
+	};
 	
 	this.ViewModel = ViewModel;
-})();
+}).apply(this);
 (function() {
 	ViewModel.binds = {
 		log: function(elem, value, context, addArgs) {
-			var comp = this.findObservable(context, value, addArgs);
-			console.log(context, '.', value, '=', comp());
+			this.findObservable(context, value, addArgs).callAndSubscribe(function(){
+				console.log(context, '.', value, '=', this());
+			})
 		},
 		html: function(elem, value, context, addArgs) {
-			var comp = this.findObservable(context, value, addArgs);
-			var fn = function() {
-				$(elem).html(comp());
-			}
-			fn();
-			comp.subscribe(fn);
+			var $el=$(elem);
+			this.findObservable(context, value, addArgs)
+			.callAndSubscribe(function(){
+				$el.html(this());
+			});
 		},
 		text: function(elem, value, context, addArgs) {
-			var comp = this.findObservable(context, value, addArgs);
-			var fn = function() {
-				$(elem).text(comp());
-			}
-			fn();
-			comp.subscribe(fn);
+			var $el=$(elem);
+			this.findObservable(context, value, addArgs)
+			.callAndSubscribe(function(){
+				$el.text(this());
+			});
 		},
 		'with': function(elem, value, context, addArgs) {
 			return this.findObservable(context, value, addArgs)();
@@ -1183,26 +1214,30 @@
 			var $el = $(elem);
 			var html = $el.html();
 			$el.hide().empty();
-			addArgs||(addArgs={});
-			var fn = function() {
+			
+			if(addArgs)
+				addArgs=_.clone(addArgs);
+			else
+				addArgs={};
+			
+			fArray.callAndSubscribe(function() {
 				$el.hide().empty();
 				var array = fArray();
 				if(array) {
-					$.each(array, function(ind, val) {
+					_.each(fArray(), function(val,ind) {
 						addArgs.$index=ind;
 						addArgs.$parent=array;
 						addArgs.$value=val;
 						var tempDiv = document.createElement('div');
-						$(tempDiv).html(html);
+						tempDiv.innerHTML=html;
 						ViewModel.findBinds(tempDiv, val, addArgs);
 						var $children = $(tempDiv).children();
 						$children.appendTo(elem);
 					});
 				}
 				$el.show();
-			};
-			fn();
-			fArray.subscribe(fn);
+			});
+			
 			return false;
 		},
 		eachModel: function(elem, value, context, addArgs) {
@@ -1269,79 +1304,53 @@
 			return false;
 		},
 		value: function(elem, value, context, addArgs) {
-			var comp = ViewModel.findObservable(context, value, addArgs);
-			var fn = function() {
-				$(elem).val(comp());
-			}
-			fn();
-			comp.subscribe(fn);
+			var $el=$(elem);
+			var obs = ViewModel.findObservable(context, value, addArgs);
+			obs.callAndSubscribe(function(){
+				$el.val(this());
+			});
+			$el.change(function(){
+				obs($el.val());
+			});
 		},
 		attr: function(elem, value, context, addArgs) {
-			value = value.match(/^{([\s\S]+)}$/)[1];
-			var attrs = value.split(/\s*,\s*/);
-			for(var i = attrs.length - 1; i >= 0; i--) {
-				var arr = attrs[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
-				var comp = ViewModel.findObservable(context, arr[2], addArgs);
-				(function(elem,attr,comp){
-					var fn=function(){
-						$(elem).attr(attr,comp());
-					}
-					fn();
-					comp.subscribe(fn);
-				})(elem,arr[1],comp);
-			}
+			var $el=$(elem);
+			_.each(this.parseOptionsObject(value),function(condition,attrName){
+				ViewModel.findObservable(context, condition, addArgs)
+				.callAndSubscribe(function(){
+					$el.attr(attrName,this());
+				});
+			});
 		},
 		style: function(elem, value, context, addArgs) {
-			value = value.match(/^{([\s\S]+)}$/)[1];
-			var attrs = value.split(/\s*,\s*/);
-			for(var i = attrs.length - 1; i >= 0; i--) {
-				var arr = attrs[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
-
-				var comp = ViewModel.findObservable(context, arr[2], addArgs);
-				(function(elem,attr,comp){
-					var fn=function(){
-						$(elem).css(attr,comp());
-					}
-					fn();
-					comp.subscribe(fn);
-				})(elem,arr[1],comp);
-			}
+			var $el=$(elem);
+			_.each(this.parseOptionsObject(value),function(condition,style){
+				ViewModel.findObservable(context, condition, addArgs)
+				.callAndSubscribe(function(){
+					$el.css(style,this());
+				});
+			});
 		},
 		css: function(elem, value, context, addArgs) {
-			value = value.match(/^{([\s\S]+)}$/)[1];
-
-			var attrs = value.split(/\s*,\s*/);
-			for(var i = attrs.length - 1; i >= 0; i--) {
-				var arr = attrs[i].match(/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/);
-				(function(val, className) {
-					var comp = ViewModel.findObservable(context, val, addArgs);
-
-					var fn = function() {
-
-						if(comp()) {
-							$(elem).addClass(className);
-						} else {
-							$(elem).removeClass(className);
-						}
-					}
-					fn();
-					comp.subscribe(fn);
-				})(arr[2], arr[1])
-
-			}
+			var $el=$(elem);
+			_.each(this.parseOptionsObject(value),function(condition,className){
+				ViewModel.findObservable(context, condition, addArgs)
+				.callAndSubscribe(function(){
+					if(this())
+						$el.addClass(className);
+					else
+						$el.removeClass(className);
+				});
+			});
 		},
 		display: function(elem, value, context, addArgs) {
-			var comp = this.findObservable(context, value, addArgs);
 			var $el=$(elem);
-			var fn = function() {
-				if(!!comp()) {
+			this.findObservable(context, value, addArgs).callAndSubscribe(function(){
+				if(this())
 					$el.show();
-				} else {
+				else
 					$el.hide();
-				}
-			}
-			fn();
-			comp.subscribe(fn);
+			});
 		},
 		click: function(elem, value, context,addArgs) {
 			var fn = this.findObservable(context, value, addArgs)();

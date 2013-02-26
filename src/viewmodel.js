@@ -1,4 +1,5 @@
 (function() {
+	"use strict";
 	var $ = this.$;
 
 	var eventSplitter = /\s+/;
@@ -156,10 +157,7 @@
 			
 		var fnEval = function() {
 			try {
-					
-				//with(context)
 				return (Function.apply(context,keys)).apply(context, vals);
-			//return eval(string);
 			} catch(exception) {
 				console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
 			}
@@ -237,7 +235,37 @@
 				ViewModel.findBinds(children[i], context, addArgs);
 			}
 		}
-	}
+	};
+	var firstColonRegex=/^\s*(\S+?)\s*:\s*(\S[\s\S]*\S)\s*$/;
+	var breakersRegex=/^{([\s\S]+)}$/;
+	var commaSplitter=/\s*,\s*/
+	ViewModel.parseOptionsObject=function(value){
+		var val=value;
+		if(!val)
+			return {};
+		
+		var match= val.match(breakersRegex)
+		
+		if(!match||!match[1])
+			throw new Error('Expression: "'+value+'" is not valid object');
+		val = match[1];	
+		
+		var attrs = val.split(commaSplitter);
+		//console.log(attrs);
+		if(!attrs.length)
+			throw new Error('Expression: "'+value+'" is not valid object');
+		
+		var res={};
+		_.each(attrs,function(val){
+			match = val.match(firstColonRegex);
+			if(!match||!match[1]||!match[2])
+			{
+				throw new Error('Expression: "'+value+'" is not valid object');
+			}
+			res[match[1]]=match[2];
+		});
+		return res;
+	};
 	
 	this.ViewModel = ViewModel;
-})();
+}).apply(this);
