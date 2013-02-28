@@ -157,4 +157,49 @@ describe('Observable', function(){
 		expect(topIndex()).toBe(1);
 		expect(index()).toBe(8);
 	});
+	
+	it('computed subscribes to observables only once', function(){
+		var obs=Observable(0);
+		var comp=Computed(function(){
+			return obs()+obs();
+		});
+		var comp2=Computed(function(){
+			return comp()+comp()+obs()+obs()+obs();
+		});
+		var spy=jasmine.createSpy();
+		var spy2=jasmine.createSpy();
+		comp.subscribe(spy);
+		comp2.subscribe(spy2);
+		expect(spy.calls.length).toBe(0);
+		obs(1);
+		expect(spy.calls.length).toBe(1);
+		expect(spy2.calls.length).toBe(1);
+		
+		obs(0);
+		expect(spy.calls.length).toBe(2);
+		
+		expect(spy2.calls.length).toBe(2);
+	});
+	
+	it('async computed steals value change', function(){
+		var obs=Observable(5);
+		var comp=Computed({
+			get: function(){
+				return obs();
+			},
+			async: true
+		});
+		var spy=jasmine.createSpy();
+		comp.subscribe(spy);
+		
+		obs(10);
+		obs(5);
+		
+		waits(100);
+		
+		runs(function(){
+			expect(spy.calls.length).toBe(0);
+			expect(comp()).toBe(5);
+		});
+	});
 });
