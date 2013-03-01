@@ -1,40 +1,43 @@
 (function(){
+	var refreshFn;
 	(function() {
-		var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
-		window.webkitRequestAnimationFrame || window.msRequestAnimationFrame 
-		|| (function(){
-			var calls=[];
-			var timoutIsset=false;
-			return function(callback){
-				calls.push(callback);
-				if(!timoutIsset)
+		
+		var requestAnimFallback=(function(){
+			/*var calls=[];
+			setInterval(function(){
+				for(var i=0,l=calls.length;i<l;i++)
 				{
-					setTimeout(function(){
-						_.each(calls,function(c){
-							c();
-						});
-						calls=[];
-						timoutIsset=false;
-					}, 1000/60);
-				}	
+					calls[i]();
+				}
+				calls=[];
+			},1000/60);*/
+			//fallback - простой синхронный вызов
+			return function(callback){
+				callback();
 			};
-		})();
-		window.requestAnimationFrame = requestAnimationFrame;
+		});
+		//if(window.mozRequestAnimationFrame)
+		//	console.log('refreshFn is requestAnimationFrame');
+		refreshFn=window.requestAnimationFrame
+		||window.webkitRequestAnimationFrame||window.mozRequestAnimationFrame||window.msRequestAnimationFrame||window.oRequestAnimationFrame
+		||requestAnimFallback();
+		//refreshFn=requestAnimFallback()
+	//window.requestAnimationFrame = requestAnimFallback;
 	})();
 	
 	var Subscribeable=function(fn){
 		fn._listeners=[];
-		fn.subscribe=function(callback){
-			fn._listeners.push(callback);
+		fn.subscribe=function(callback,context){
+			fn._listeners.push(arguments);
 		}
 		fn.unsubscribe=function(callback){
 			for(var i=0,l=fn._listeners.length;i<l;i++)
-				if(fn._listeners[i]===callback)
+				if(fn._listeners[i][0]===callback)
 					fn._listeners.splice(i, 1);
 		}
 		fn.fire=function(){
 			for(var i=0,l=fn._listeners.length;i<l;i++)
-				fn._listeners[i].call(fn);
+				fn._listeners[i][0].call(fn._listeners[i][1]||fn);
 		}
 		fn.callAndSubscribe=function(callback){
 			callback.call(this);
@@ -101,37 +104,54 @@
 		var resfn=function(){
 			if(arguments.length==1)
 			{
+				if(!setter)
+					throw new Error('Setter for computed is not defined');
 				setter.call(context,arguments[0]);
 			}
-			//console.log(computableInit);
 			if(computedInit)
 			{
 				computedInit.subscribeTo(resfn);
 			}
 			return value;
 		}
+		var _refreshAndFire=function(){
+			waitForUpdate=false;
+						
+			var oldValue=value;
+			resfn.refresh();
+			//console.log(value,oldValue);
+			if(value!==oldValue||_.isObject(value))
+			{
+				resfn.fire();
+			}
+		}
+		var refreshAndFire=function(){
+			
+			
+			if(resfn.async)
+			{
+				if(!waitForUpdate)
+				{
+					waitForUpdate=true;
+					refreshFn(_refreshAndFire);
+				//window.requestAnimationFrame(_refreshAndFire);
+				}
+			}
+			else
+			{
+				_refreshAndFire();
+			}
+		}
 		var waitForUpdate=false;
 		resfn.async=async||false;
+		var observers=[];
 		resfn.subscribeTo=function(obs)
 		{
-			obs.subscribe(function(){
-				resfn.refresh();
-				if(resfn.async)
-				{
-					if(!waitForUpdate)
-					{
-						waitForUpdate=true;
-						window.requestAnimationFrame(function(){
-							resfn.fire();
-							waitForUpdate=false;
-						});
-					}
-				}
-				else
-				{
-					resfn.fire();
-				}
-			});
+			if(!~observers.indexOf(obs))
+			{
+				observers.push(obs);
+				obs.subscribe(refreshAndFire);
+			}
 		}
 		Subscribeable(resfn);
 		resfn.refresh=function(){
@@ -146,6 +166,7 @@
 		}
 		computedInit=resfn;
 		fn.call(context);
+		delete observers;
 		computedInit=false;
 		return resfn;
 	}
@@ -1083,7 +1104,8 @@
 		}
 		var comp;
 		var obs = fnEval();
-		if(ViewModel.compAsync)
+		//если уже асинхронный, то возвращаем его
+		if(this.compAsync&&obs&&!obs.async)
 		{
 			if(Observable.isObservable(obs)) {
 				comp=Computed(function(){
@@ -1247,17 +1269,16 @@
 			
 			fArray.callAndSubscribe(function() {
 				$el.hide().empty();
-				var array = fArray();
+				var array = this();
 				if(array) {
-					_.each(fArray(), function(val,ind) {
+					_.each(array, function(val,ind) {
 						addArgs.$index=ind;
 						addArgs.$parent=array;
 						addArgs.$value=val;
 						var tempDiv = document.createElement('div');
 						tempDiv.innerHTML=html;
 						ViewModel.findBinds(tempDiv, val, addArgs);
-						var $children = $(tempDiv).children();
-						$children.appendTo(elem);
+						$el.append(tempDiv.innerHTML);
 					});
 				}
 				$el.show();

@@ -48,17 +48,16 @@
 			
 			fArray.callAndSubscribe(function() {
 				$el.hide().empty();
-				var array = fArray();
+				var array = this();
 				if(array) {
-					_.each(fArray(), function(val,ind) {
+					_.each(array, function(val,ind) {
 						addArgs.$index=ind;
 						addArgs.$parent=array;
 						addArgs.$value=val;
 						var tempDiv = document.createElement('div');
 						tempDiv.innerHTML=html;
 						ViewModel.findBinds(tempDiv, val, addArgs);
-						var $children = $(tempDiv).children();
-						$children.appendTo(elem);
+						$el.append(tempDiv.innerHTML);
 					});
 				}
 				$el.show();
