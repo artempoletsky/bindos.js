@@ -167,7 +167,8 @@
 		}
 		var comp;
 		var obs = fnEval();
-		if(ViewModel.compAsync)
+		//если уже асинхронный, то возвращаем его
+		if(this.compAsync&&obs&&!obs.async)
 		{
 			if(Observable.isObservable(obs)) {
 				comp=Computed(function(){
