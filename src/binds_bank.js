@@ -6,16 +6,10 @@
 			})
 		},
 		src: function(elem,value,context,addArgs){
-			var $el=$(elem);
-			$el.on('error',function(){
-				$el.hide();
-			});
 			this.findObservable(context, value, addArgs)
 			.callAndSubscribe(function(){
 				if(this())
-					$el.show().attr('src', this());
-				else
-					$el.hide();
+					elem.src=this();
 			});
 		},
 		html: function(elem, value, context, addArgs) {
