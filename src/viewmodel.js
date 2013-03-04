@@ -157,10 +157,10 @@
 			vals[i]=addArgs[keys[i]];
 		}
 		keys.push('with(this) return '+string+'');
-			
+		var fn=(Function.apply(context,keys));
 		var fnEval = function() {
 			try {
-				return (Function.apply(context,keys)).apply(context, vals);
+				return fn.apply(context, vals);
 			} catch(exception) {
 				console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
 			}

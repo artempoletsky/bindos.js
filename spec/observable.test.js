@@ -35,7 +35,7 @@ describe('Observable', function(){
 		expect(spy.calls.length).toBe(2);
 	});
 	
-	it('Computed async', function(){
+	xit('Computed async', function(){
 		var price=Observable(0);
 		var currency=Observable('UAH');
 		var priceCurrency=Computed(function(){
@@ -80,7 +80,7 @@ describe('Observable', function(){
 		
 	});
 	
-	it('Computed of computed', function(){
+	xit('Computed of computed', function(){
 		var price=Observable(10);
 		var currency=Observable('USD');
 		var priceCurrency=Computed(function(){
@@ -181,7 +181,7 @@ describe('Observable', function(){
 		expect(spy2.calls.length).toBe(2);
 	});
 	
-	it('async computed steals value change', function(){
+	xit('async computed steals value change', function(){
 		var obs=Observable(5);
 		var comp=Computed({
 			get: function(){
