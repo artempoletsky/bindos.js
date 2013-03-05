@@ -189,7 +189,8 @@ describe('Observable', function(){
 		var comp=Computed({
 			get: function(){
 				return obs();
-			}
+			},
+			async: true
 		});
 		var spy=jasmine.createSpy();
 		comp.subscribe(spy);

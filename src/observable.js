@@ -110,10 +110,6 @@
 			async=options.async;
 			setter=options.set;
 		}
-		if(async===undefined)
-		{
-			async=true;
-		}
 		
 		var resfn=function(){
 			if(arguments.length==1)
