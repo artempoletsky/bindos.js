@@ -122,6 +122,15 @@
 	
 	var Events=Class.extend({
 		on: function(events, fn, context){
+			if(_.isObject(events))
+			{
+				var ctx=fn||this;
+				var self=this;
+				_.each(events,function(callback,event_name){
+					self.on(event_name,callback,ctx);
+				});
+				return this;
+			}
 			var aEvents = events.split(eventSplitter), i, bind;
 			if(typeof fn != 'function') {
 				throw TypeError('function expected');
