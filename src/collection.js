@@ -84,6 +84,8 @@
 
 			if (typeof index !== 'number') {
 				index = this.length
+			} else if(index === 0) {
+				var _models = models.reverse();
 			}
 
 			function addHashIndex ( model, index ) {
@@ -120,7 +122,11 @@
 				}
 				addedModels.push(model);
 
-				addHashIndex(model, (index + ind));
+				if(_models) {
+					addHashIndex(_models[ind], 0);
+				} else {
+					addHashIndex(model, (index + ind));
+				}
 
 				model.one('remove', function () {
 					me.cutByCid(this.cid);
