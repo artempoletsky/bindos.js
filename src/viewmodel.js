@@ -142,7 +142,7 @@
 	};
 	ViewModel=Events.extend(ViewModel);
 	
-	ViewModel.compAsync=false;
+	ViewModel.compAsync=true;
 	
 	ViewModel.findObservable = function(context, string, addArgs) {
 		addArgs||(addArgs={});
@@ -152,12 +152,12 @@
 		var keys=_.keys(addArgs);
 			
 		var vals=[];
-		for(var i=0;i<keys.length;i++)
+		for(var i=0,l=keys.length;i<l;i++)
 		{
 			vals[i]=addArgs[keys[i]];
 		}
 		keys.push('with(this) return '+string+'');
-		var fn=(Function.apply(context,keys));
+		var fn=Function.apply(context,keys);
 		var fnEval = function() {
 			try {
 				return fn.apply(context, vals);

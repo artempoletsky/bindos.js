@@ -1,29 +1,41 @@
 (function(){
-	var refreshFn;
-	(function() {
-		
-		var requestAnimFallback=(function(){
-			/*var calls=[];
-			setInterval(function(){
-				for(var i=0,l=calls.length;i<l;i++)
+	var waitForRefresh=[];
+	var refreshActive=false;
+	
+	var refreshFn=window.requestAnimationFrame
+	||window.webkitRequestAnimationFrame
+	||window.mozRequestAnimationFrame
+	||window.msRequestAnimationFrame
+	||window.oRequestAnimationFrame
+	||function(cb){
+		setTimeout(function(){
+			cb();
+		}, 1000/15);
+	};
+	
+	window.ComputedRefresher={
+		refreshAll: function(){
+			_.each(waitForRefresh,function(val){
+				val.refresh();
+			});
+			waitForRefresh=[];
+		},
+		startRefresh:function(){
+			var self=this;
+			refreshActive=true;
+			refreshFn(function(){
+				if(refreshActive)
 				{
-					calls[i]();
+					self.refreshAll();
+					self.startRefresh();
 				}
-				calls=[];
-			},1000/60);*/
-			//fallback - простой синхронный вызов
-			return function(callback){
-				callback();
-			};
-		});
-		//if(window.mozRequestAnimationFrame)
-		//	console.log('refreshFn is requestAnimationFrame');
-		refreshFn=window.requestAnimationFrame
-		||window.webkitRequestAnimationFrame||window.mozRequestAnimationFrame||window.msRequestAnimationFrame||window.oRequestAnimationFrame
-		||requestAnimFallback();
-		//refreshFn=requestAnimFallback()
-	//window.requestAnimationFrame = requestAnimFallback;
-	})();
+			})
+		},
+		stopRefresh: function(){
+			refreshActive=false;
+		}
+	}
+	ComputedRefresher.startRefresh();
 	
 	var Subscribeable=function(fn){
 		fn._listeners=[];
@@ -37,10 +49,10 @@
 		}
 		fn.fire=function(){
 			for(var i=0,l=fn._listeners.length;i<l;i++)
-				fn._listeners[i][0].call(fn._listeners[i][1]||fn);
+				fn._listeners[i][0].call(fn._listeners[i][1]||fn,fn());
 		}
 		fn.callAndSubscribe=function(callback){
-			callback.call(this);
+			callback.call(this,fn());
 			this.subscribe(callback)
 		}
 		fn._notSimple=true;
@@ -83,23 +95,25 @@
 	}
 	
 	var Computed=function(options){
-		var fn,context,async,setter
+		var getter,context,async,setter
 		if(typeof options=='function')
 		{
-			fn=options;
+			getter=options;
 			context=arguments[1];
 			async=arguments[2];
 			setter=arguments[3];
 		}
 		else
 		{
-			fn=options.get;
+			getter=options.get;
 			context=options.context;
 			async=options.async;
 			setter=options.set;
 		}
-			
-		var value=fn.call(context);
+		if(async===undefined)
+		{
+			async=true;
+		}
 		
 		var resfn=function(){
 			if(arguments.length==1)
@@ -108,55 +122,30 @@
 					throw new Error('Setter for computed is not defined');
 				setter.call(context,arguments[0]);
 			}
-			if(computedInit)
-			{
-				computedInit.subscribeTo(resfn);
-			}
-			return value;
+			return getter.call(context);
 		}
-		var _refreshAndFire=function(){
-			waitForUpdate=false;
-						
-			var oldValue=value;
-			resfn.refresh();
-			//console.log(value,oldValue);
-			if(value!==oldValue||_.isObject(value))
-			{
-				resfn.fire();
-			}
-		}
-		var refreshAndFire=function(){
-			
-			
-			if(resfn.async)
-			{
-				if(!waitForUpdate)
-				{
-					waitForUpdate=true;
-					refreshFn(_refreshAndFire);
-				//window.requestAnimationFrame(_refreshAndFire);
-				}
-			}
+		
+		var fireProxy=function(){
+			if(async)
+				waitForRefresh.push(resfn);
 			else
-			{
-				_refreshAndFire();
-			}
+				resfn.refresh();
 		}
-		var waitForUpdate=false;
+		
+		
 		resfn.async=async||false;
-		var observers=[];
+		var dependencies=[];
+		
 		resfn.subscribeTo=function(obs)
 		{
-			if(!~observers.indexOf(obs))
+			if(!~dependencies.indexOf(obs))
 			{
-				observers.push(obs);
-				obs.subscribe(refreshAndFire);
+				dependencies.push(obs);
+				obs.subscribe(fireProxy)
 			}
 		}
+		
 		Subscribeable(resfn);
-		resfn.refresh=function(){
-			value=fn.call(context);
-		}
 		
 		
 		resfn.__observable=true;
@@ -165,9 +154,19 @@
 			return this();
 		}
 		computedInit=resfn;
-		fn.call(context);
-		delete observers;
+		var oldValue=getter.call(context);
 		computedInit=false;
+		
+		resfn.refresh=function(){
+			var val=this();
+			if(oldValue!==val||_.isObject(val))
+			{
+				this.fire();
+			}
+			oldValue=val;
+		}
+		delete dependencies;
+		delete resfn.subscribeTo;
 		return resfn;
 	}
 	
@@ -731,6 +730,8 @@
 
 			if (typeof index !== 'number') {
 				index = this.length
+			} else if(index === 0) {
+				var _models = models.reverse();
 			}
 
 			function addHashIndex ( model, index ) {
@@ -767,7 +768,11 @@
 				}
 				addedModels.push(model);
 
-				addHashIndex(model, (index + ind));
+				if(_models) {
+					addHashIndex(_models[ind], 0);
+				} else {
+					addHashIndex(model, (index + ind));
+				}
 
 				model.one('remove', function () {
 					me.cutByCid(this.cid);
@@ -1088,7 +1093,7 @@
 	};
 	ViewModel=Events.extend(ViewModel);
 	
-	ViewModel.compAsync=false;
+	ViewModel.compAsync=true;
 	
 	ViewModel.findObservable = function(context, string, addArgs) {
 		addArgs||(addArgs={});
@@ -1098,12 +1103,12 @@
 		var keys=_.keys(addArgs);
 			
 		var vals=[];
-		for(var i=0;i<keys.length;i++)
+		for(var i=0,l=keys.length;i<l;i++)
 		{
 			vals[i]=addArgs[keys[i]];
 		}
 		keys.push('with(this) return '+string+'');
-		var fn=(Function.apply(context,keys));
+		var fn=Function.apply(context,keys);
 		var fnEval = function() {
 			try {
 				return fn.apply(context, vals);
@@ -1237,23 +1242,23 @@
 		},
 		src: function(elem,value,context,addArgs){
 			this.findObservable(context, value, addArgs)
-			.callAndSubscribe(function(){
-				if(this())
-					elem.src=this();
+			.callAndSubscribe(function(val){
+				if(val)
+					elem.src=val;
 			});
 		},
 		html: function(elem, value, context, addArgs) {
-			var $el=$(elem);
+			//var $el=$(elem);
 			this.findObservable(context, value, addArgs)
-			.callAndSubscribe(function(){
-				$el.html(this());
+			.callAndSubscribe(function(val){
+				elem.innerHTML=val;
 			});
 		},
 		text: function(elem, value, context, addArgs) {
 			var $el=$(elem);
 			this.findObservable(context, value, addArgs)
-			.callAndSubscribe(function(){
-				$el.text(this());
+			.callAndSubscribe(function(val){
+				$el.text(val);
 			});
 		},
 		'with': function(elem, value, context, addArgs) {
@@ -1263,16 +1268,16 @@
 			var fArray = this.findObservable(context, value, addArgs);
 			var $el = $(elem);
 			var html = $el.html();
-			$el.hide().empty();
+			$el.empty();
 			
 			if(addArgs)
 				addArgs=_.clone(addArgs);
 			else
 				addArgs={};
-			
-			fArray.callAndSubscribe(function() {
-				$el.hide().empty();
-				var array = this();
+			//console.log(elem);
+			fArray.callAndSubscribe(function(array) {
+				$el.empty();
+			//	console.log(array);
 				if(array) {
 					_.each(array, function(val,ind) {
 						addArgs.$index=ind;
@@ -1284,7 +1289,6 @@
 						$el.append(tempDiv.innerHTML);
 					});
 				}
-				$el.show();
 			});
 			
 			return false;
@@ -1355,19 +1359,21 @@
 		value: function(elem, value, context, addArgs) {
 			var $el=$(elem);
 			var obs = ViewModel.findObservable(context, value, addArgs);
-			obs.callAndSubscribe(function(){
-				$el.val(this());
+			obs.callAndSubscribe(function(value){
+				$el.val(value);
 			});
 			$el.change(function(){
 				obs($el.val());
 			});
 		},
 		attr: function(elem, value, context, addArgs) {
-			var $el=$(elem);
 			_.each(this.parseOptionsObject(value),function(condition,attrName){
 				ViewModel.findObservable(context, condition, addArgs)
-				.callAndSubscribe(function(){
-					$el.attr(attrName,this());
+				.callAndSubscribe(function(val){
+					if(val)
+						elem.setAttribute(attrName, val)
+					else
+						elem.removeAttribute(attrName);
 				});
 			});
 		},
@@ -1375,8 +1381,8 @@
 			var $el=$(elem);
 			_.each(this.parseOptionsObject(value),function(condition,style){
 				ViewModel.findObservable(context, condition, addArgs)
-				.callAndSubscribe(function(){
-					$el.css(style,this());
+				.callAndSubscribe(function(value){
+					$el.css(style,value);
 				});
 			});
 		},
@@ -1384,8 +1390,8 @@
 			var $el=$(elem);
 			_.each(this.parseOptionsObject(value),function(condition,className){
 				ViewModel.findObservable(context, condition, addArgs)
-				.callAndSubscribe(function(){
-					if(this())
+				.callAndSubscribe(function(value){
+					if(value)
 						$el.addClass(className);
 					else
 						$el.removeClass(className);
@@ -1394,8 +1400,8 @@
 		},
 		display: function(elem, value, context, addArgs) {
 			var $el=$(elem);
-			this.findObservable(context, value, addArgs).callAndSubscribe(function(){
-				if(this())
+			this.findObservable(context, value, addArgs).callAndSubscribe(function(value){
+				if(value)
 					$el.show();
 				else
 					$el.hide();
@@ -1410,6 +1416,7 @@
 		}
 	};
 })();
+
 (function(){
 	var rawTemplates={};
 	var templates={};

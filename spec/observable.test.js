@@ -22,8 +22,11 @@ describe('Observable', function(){
 	it('Computed', function(){
 		var price=Observable(0);
 		var currency=Observable('UAH');
-		var priceCurrency=Computed(function(){
-			return price()+' '+currency();
+		var priceCurrency=Computed({
+			get: function(){
+				return price()+' '+currency();
+			},
+			async: false
 		});
 		var spy=jasmine.createSpy('spy');
 		priceCurrency.subscribe(spy);
@@ -35,7 +38,7 @@ describe('Observable', function(){
 		expect(spy.calls.length).toBe(2);
 	});
 	
-	xit('Computed async', function(){
+	it('Computed async', function(){
 		var price=Observable(0);
 		var currency=Observable('UAH');
 		var priceCurrency=Computed(function(){
@@ -80,7 +83,7 @@ describe('Observable', function(){
 		
 	});
 	
-	xit('Computed of computed', function(){
+	it('Computed of computed', function(){
 		var price=Observable(10);
 		var currency=Observable('USD');
 		var priceCurrency=Computed(function(){
@@ -162,10 +165,10 @@ describe('Observable', function(){
 		var obs=Observable(0);
 		var comp=Computed(function(){
 			return obs()+obs();
-		});
+		},null,false);
 		var comp2=Computed(function(){
 			return comp()+comp()+obs()+obs()+obs();
-		});
+		},null,false);
 		var spy=jasmine.createSpy();
 		var spy2=jasmine.createSpy();
 		comp.subscribe(spy);
@@ -181,13 +184,12 @@ describe('Observable', function(){
 		expect(spy2.calls.length).toBe(2);
 	});
 	
-	xit('async computed steals value change', function(){
+	it('async computed steals value change', function(){
 		var obs=Observable(5);
 		var comp=Computed({
 			get: function(){
 				return obs();
-			},
-			async: true
+			}
 		});
 		var spy=jasmine.createSpy();
 		comp.subscribe(spy);

@@ -1,29 +1,41 @@
 (function(){
-	var refreshFn;
-	(function() {
-		
-		var requestAnimFallback=(function(){
-			/*var calls=[];
-			setInterval(function(){
-				for(var i=0,l=calls.length;i<l;i++)
+	var waitForRefresh=[];
+	var refreshActive=false;
+	
+	var refreshFn=window.requestAnimationFrame
+	||window.webkitRequestAnimationFrame
+	||window.mozRequestAnimationFrame
+	||window.msRequestAnimationFrame
+	||window.oRequestAnimationFrame
+	||function(cb){
+		setTimeout(function(){
+			cb();
+		}, 1000/15);
+	};
+	
+	window.ComputedRefresher={
+		refreshAll: function(){
+			_.each(waitForRefresh,function(val){
+				val.refresh();
+			});
+			waitForRefresh=[];
+		},
+		startRefresh:function(){
+			var self=this;
+			refreshActive=true;
+			refreshFn(function(){
+				if(refreshActive)
 				{
-					calls[i]();
+					self.refreshAll();
+					self.startRefresh();
 				}
-				calls=[];
-			},1000/60);*/
-			//fallback - простой синхронный вызов
-			return function(callback){
-				callback();
-			};
-		});
-		//if(window.mozRequestAnimationFrame)
-		//	console.log('refreshFn is requestAnimationFrame');
-		refreshFn=window.requestAnimationFrame
-		||window.webkitRequestAnimationFrame||window.mozRequestAnimationFrame||window.msRequestAnimationFrame||window.oRequestAnimationFrame
-		||requestAnimFallback();
-		//refreshFn=requestAnimFallback()
-	//window.requestAnimationFrame = requestAnimFallback;
-	})();
+			})
+		},
+		stopRefresh: function(){
+			refreshActive=false;
+		}
+	}
+	ComputedRefresher.startRefresh();
 	
 	var Subscribeable=function(fn){
 		fn._listeners=[];
@@ -37,10 +49,10 @@
 		}
 		fn.fire=function(){
 			for(var i=0,l=fn._listeners.length;i<l;i++)
-				fn._listeners[i][0].call(fn._listeners[i][1]||fn);
+				fn._listeners[i][0].call(fn._listeners[i][1]||fn,fn());
 		}
 		fn.callAndSubscribe=function(callback){
-			callback.call(this);
+			callback.call(this,fn());
 			this.subscribe(callback)
 		}
 		fn._notSimple=true;
@@ -83,23 +95,25 @@
 	}
 	
 	var Computed=function(options){
-		var fn,context,async,setter
+		var getter,context,async,setter
 		if(typeof options=='function')
 		{
-			fn=options;
+			getter=options;
 			context=arguments[1];
 			async=arguments[2];
 			setter=arguments[3];
 		}
 		else
 		{
-			fn=options.get;
+			getter=options.get;
 			context=options.context;
 			async=options.async;
 			setter=options.set;
 		}
-			
-		var value=fn.call(context);
+		if(async===undefined)
+		{
+			async=true;
+		}
 		
 		var resfn=function(){
 			if(arguments.length==1)
@@ -108,55 +122,30 @@
 					throw new Error('Setter for computed is not defined');
 				setter.call(context,arguments[0]);
 			}
-			if(computedInit)
-			{
-				computedInit.subscribeTo(resfn);
-			}
-			return value;
+			return getter.call(context);
 		}
-		var _refreshAndFire=function(){
-			waitForUpdate=false;
-						
-			var oldValue=value;
-			resfn.refresh();
-			//console.log(value,oldValue);
-			if(value!==oldValue||_.isObject(value))
-			{
-				resfn.fire();
-			}
-		}
-		var refreshAndFire=function(){
-			
-			
-			if(resfn.async)
-			{
-				if(!waitForUpdate)
-				{
-					waitForUpdate=true;
-					refreshFn(_refreshAndFire);
-				//window.requestAnimationFrame(_refreshAndFire);
-				}
-			}
+		
+		var fireProxy=function(){
+			if(async)
+				waitForRefresh.push(resfn);
 			else
-			{
-				_refreshAndFire();
-			}
+				resfn.refresh();
 		}
-		var waitForUpdate=false;
+		
+		
 		resfn.async=async||false;
-		var observers=[];
+		var dependencies=[];
+		
 		resfn.subscribeTo=function(obs)
 		{
-			if(!~observers.indexOf(obs))
+			if(!~dependencies.indexOf(obs))
 			{
-				observers.push(obs);
-				obs.subscribe(refreshAndFire);
+				dependencies.push(obs);
+				obs.subscribe(fireProxy)
 			}
 		}
+		
 		Subscribeable(resfn);
-		resfn.refresh=function(){
-			value=fn.call(context);
-		}
 		
 		
 		resfn.__observable=true;
@@ -165,9 +154,19 @@
 			return this();
 		}
 		computedInit=resfn;
-		fn.call(context);
-		delete observers;
+		var oldValue=getter.call(context);
 		computedInit=false;
+		
+		resfn.refresh=function(){
+			var val=this();
+			if(oldValue!==val||_.isObject(val))
+			{
+				this.fire();
+			}
+			oldValue=val;
+		}
+		delete dependencies;
+		delete resfn.subscribeTo;
 		return resfn;
 	}
 	

@@ -7,23 +7,23 @@
 		},
 		src: function(elem,value,context,addArgs){
 			this.findObservable(context, value, addArgs)
-			.callAndSubscribe(function(){
-				if(this())
-					elem.src=this();
+			.callAndSubscribe(function(val){
+				if(val)
+					elem.src=val;
 			});
 		},
 		html: function(elem, value, context, addArgs) {
-			var $el=$(elem);
+			//var $el=$(elem);
 			this.findObservable(context, value, addArgs)
-			.callAndSubscribe(function(){
-				$el.html(this());
+			.callAndSubscribe(function(val){
+				elem.innerHTML=val;
 			});
 		},
 		text: function(elem, value, context, addArgs) {
 			var $el=$(elem);
 			this.findObservable(context, value, addArgs)
-			.callAndSubscribe(function(){
-				$el.text(this());
+			.callAndSubscribe(function(val){
+				$el.text(val);
 			});
 		},
 		'with': function(elem, value, context, addArgs) {
@@ -33,16 +33,16 @@
 			var fArray = this.findObservable(context, value, addArgs);
 			var $el = $(elem);
 			var html = $el.html();
-			$el.hide().empty();
+			$el.empty();
 			
 			if(addArgs)
 				addArgs=_.clone(addArgs);
 			else
 				addArgs={};
-			
-			fArray.callAndSubscribe(function() {
-				$el.hide().empty();
-				var array = this();
+			//console.log(elem);
+			fArray.callAndSubscribe(function(array) {
+				$el.empty();
+			//	console.log(array);
 				if(array) {
 					_.each(array, function(val,ind) {
 						addArgs.$index=ind;
@@ -54,7 +54,6 @@
 						$el.append(tempDiv.innerHTML);
 					});
 				}
-				$el.show();
 			});
 			
 			return false;
@@ -125,19 +124,21 @@
 		value: function(elem, value, context, addArgs) {
 			var $el=$(elem);
 			var obs = ViewModel.findObservable(context, value, addArgs);
-			obs.callAndSubscribe(function(){
-				$el.val(this());
+			obs.callAndSubscribe(function(value){
+				$el.val(value);
 			});
 			$el.change(function(){
 				obs($el.val());
 			});
 		},
 		attr: function(elem, value, context, addArgs) {
-			var $el=$(elem);
 			_.each(this.parseOptionsObject(value),function(condition,attrName){
 				ViewModel.findObservable(context, condition, addArgs)
-				.callAndSubscribe(function(){
-					$el.attr(attrName,this());
+				.callAndSubscribe(function(val){
+					if(val)
+						elem.setAttribute(attrName, val)
+					else
+						elem.removeAttribute(attrName);
 				});
 			});
 		},
@@ -145,8 +146,8 @@
 			var $el=$(elem);
 			_.each(this.parseOptionsObject(value),function(condition,style){
 				ViewModel.findObservable(context, condition, addArgs)
-				.callAndSubscribe(function(){
-					$el.css(style,this());
+				.callAndSubscribe(function(value){
+					$el.css(style,value);
 				});
 			});
 		},
@@ -154,8 +155,8 @@
 			var $el=$(elem);
 			_.each(this.parseOptionsObject(value),function(condition,className){
 				ViewModel.findObservable(context, condition, addArgs)
-				.callAndSubscribe(function(){
-					if(this())
+				.callAndSubscribe(function(value){
+					if(value)
 						$el.addClass(className);
 					else
 						$el.removeClass(className);
@@ -164,8 +165,8 @@
 		},
 		display: function(elem, value, context, addArgs) {
 			var $el=$(elem);
-			this.findObservable(context, value, addArgs).callAndSubscribe(function(){
-				if(this())
+			this.findObservable(context, value, addArgs).callAndSubscribe(function(value){
+				if(value)
 					$el.show();
 				else
 					$el.hide();
