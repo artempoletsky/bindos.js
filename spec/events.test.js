@@ -173,7 +173,7 @@ describe('Events', function(){
 		expect(spy3.calls.length).toEqual(1);
 	})
 		
-	it('should bind events as from', function(){
+	it('should bind events from object', function(){
 		var disp=new Events();
 		var foo=jasmine.createSpy();
 		var bar=jasmine.createSpy();
