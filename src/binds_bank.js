@@ -8,8 +8,7 @@
 		src: function(elem,value,context,addArgs){
 			this.findObservable(context, value, addArgs)
 			.callAndSubscribe(function(val){
-				if(val)
-					elem.src=val;
+				elem.src=val?val:'';
 			});
 		},
 		html: function(elem, value, context, addArgs) {
