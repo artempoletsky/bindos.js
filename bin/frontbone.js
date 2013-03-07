@@ -1146,7 +1146,7 @@
 	}
 	
 	ViewModel.findBinds = function(element, context, addArgs) {
-		var children, curBindsString, binds, i, newctx,l,cBind,bindName,bindVal;
+		var children, curBindsString, binds, i, j, k, newctx,l,cBind,ccBind,bindName,bindVal,bindFn, self=this;
 		var $el=$(element);
 		curBindsString = $el.attr('data-bind');
 		$el.removeAttr('data-bind');
@@ -1154,9 +1154,9 @@
 		if(curBindsString) {
 			binds = curBindsString.split(bindSplitter);
 			for(i=0, l=binds.length; i < l; i++) {
+				
 				cBind=binds[i];
-				if(!cBind||cBind.charAt(0)=='!')
-					continue;
+				
 				var arr = cBind.match(firstColonRegex);
 				if(!arr)
 				{
@@ -1169,29 +1169,37 @@
 					bindVal=arr[2];
 				}
 				
-				var bindFn = ViewModel.binds[bindName];
+				bindName=bindName.split(commaSplitter);
 				
-				if(bindFn) {
-					newctx = bindFn.call(this, element, bindVal, context, addArgs);
-					if(newctx === false) {
-						return;
-					} else if(newctx) {
-						context = newctx;
+				for(j=0,k=bindName.length;j<k;j++)
+				{
+					ccBind=bindName[j];
+					if(!ccBind||ccBind.charAt(0)=='!')
+						continue;
+					
+					bindFn = ViewModel.binds[ccBind];
+					
+					if(bindFn) {
+						newctx = bindFn.call(self, element, bindVal, context, addArgs);
+						if(newctx === false) {
+							return;
+						} else if(newctx) {
+							context = newctx;
+						}
+					}
+					else
+					{
+						console.warn('Bind: "'+ccBind+'" not exists')
 					}
 				}
-				else
-				{
-					console.warn('Bind: "'+bindName+'" not exists')
-				}
+				
 
 			}
 		}
-		if(element) {
-			children = $el.children();
-			for(i=0, l=children.length; i < l; i++) {
-				this.findBinds(children[i], context, addArgs);
-			}
-		}
+		
+		$el.children().each(function(){
+			self.findBinds(this, context, addArgs);
+		});
 	};
 	
 	ViewModel.parseOptionsObject=function(value){
