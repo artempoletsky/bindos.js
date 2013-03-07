@@ -425,7 +425,7 @@
 				return this;
 			var args = Array.prototype.slice.call(arguments,1);
 			
-			var aEvents,i,j,l,binds,bind,type;
+			var aEvents,i,j,l,k,binds,bind,type;
 			aEvents=typeof events == 'string'? events.split(eventSplitter): [events];
 		
 			for(i=0,l=aEvents.length;i<l;i++)
@@ -434,7 +434,7 @@
 			
 				binds=findBinds(this._listeners,type,false,false);
 				
-				for(j=binds.length-1;j>=0;j--)
+				for(j=0,k=binds.length;j<k;j++)
 				{
 					bind=binds[j];
 					if(bind.s)
@@ -524,15 +524,16 @@
 			else
 				values=key;
 			var self=this;
+			var changed={};
 			_.each(values,function(val,key){
-				self._changed[key]=self.attributes[key]=val;
+				changed[key]=self._changed[key]=self.attributes[key]=val;
 				if(key==self.idAttribute)
 				{
 					self.id=val;
 				}
 				self.fire('change:'+key);
 			});
-			this.fire('change');
+			this.fire('change',changed);
 			return this;
 		},
 		/**
@@ -691,6 +692,7 @@
 			options||(options={});
 			if(!options.add)
 			{
+				this.fire('beforeReset', this.models);
 				this.models=[];
 				this.length=0;
 				this._hashId = [];
@@ -700,8 +702,7 @@
 				this.fire('reset');
 				return this;
 			}
-				
-				
+			
 			var modelsArr=this.parse(json);
 			this.add(modelsArr,'end',!options.add);
 			if(!options.add)
@@ -819,7 +820,9 @@
 			// удаление элемента из хеша
 			this._hashId.splice(index, 1);
 			this.length=this.models.length;
-			this.fire('cut',model,index);
+			var cutted={};
+			cutted[index]=model;
+			this.fire('cut',cutted);
 			return model;
 		},
 		at: function(index){
@@ -913,8 +916,9 @@
 		itself.prototype[method] = function() {
 			var antonym=method=='filter'?'reject':'filter';
 			var self=this.self;
-			var newModels=_[method].apply(_, [self.models].concat(_.toArray(arguments)));
-			var rejectedModels=_[antonym].apply(_, [self.models].concat(_.toArray(arguments)));
+			var args=_.toArray(arguments);
+			var newModels=_[method].apply(_, [self.models].concat(args));
+			var rejectedModels=_[antonym].apply(_, [self.models].concat(args));
 			var indexes={};
 			_.each(rejectedModels,function(model){
 				indexes[self.indexOf(model)]=model;
@@ -922,7 +926,7 @@
 			self.models=newModels;
 			self.length=newModels.length;
 			//console.log(indexes);
-			self.fire('reject', indexes);
+			self.fire('cut', indexes);
 			return self;
 		};
 	});

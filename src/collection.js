@@ -49,6 +49,7 @@
 			options||(options={});
 			if(!options.add)
 			{
+				this.fire('beforeReset', this.models);
 				this.models=[];
 				this.length=0;
 				this._hashId = [];
@@ -58,8 +59,7 @@
 				this.fire('reset');
 				return this;
 			}
-				
-				
+			
 			var modelsArr=this.parse(json);
 			this.add(modelsArr,'end',!options.add);
 			if(!options.add)
@@ -177,7 +177,9 @@
 			// удаление элемента из хеша
 			this._hashId.splice(index, 1);
 			this.length=this.models.length;
-			this.fire('cut',model,index);
+			var cutted={};
+			cutted[index]=model;
+			this.fire('cut',cutted);
 			return model;
 		},
 		at: function(index){
@@ -271,8 +273,9 @@
 		itself.prototype[method] = function() {
 			var antonym=method=='filter'?'reject':'filter';
 			var self=this.self;
-			var newModels=_[method].apply(_, [self.models].concat(_.toArray(arguments)));
-			var rejectedModels=_[antonym].apply(_, [self.models].concat(_.toArray(arguments)));
+			var args=_.toArray(arguments);
+			var newModels=_[method].apply(_, [self.models].concat(args));
+			var rejectedModels=_[antonym].apply(_, [self.models].concat(args));
 			var indexes={};
 			_.each(rejectedModels,function(model){
 				indexes[self.indexOf(model)]=model;
@@ -280,7 +283,7 @@
 			self.models=newModels;
 			self.length=newModels.length;
 			//console.log(indexes);
-			self.fire('reject', indexes);
+			self.fire('cut', indexes);
 			return self;
 		};
 	});

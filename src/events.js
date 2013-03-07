@@ -161,7 +161,7 @@
 				return this;
 			var args = Array.prototype.slice.call(arguments,1);
 			
-			var aEvents,i,j,l,binds,bind,type;
+			var aEvents,i,j,l,k,binds,bind,type;
 			aEvents=typeof events == 'string'? events.split(eventSplitter): [events];
 		
 			for(i=0,l=aEvents.length;i<l;i++)
@@ -170,7 +170,7 @@
 			
 				binds=findBinds(this._listeners,type,false,false);
 				
-				for(j=binds.length-1;j>=0;j--)
+				for(j=0,k=binds.length;j<k;j++)
 				{
 					bind=binds[j];
 					if(bind.s)

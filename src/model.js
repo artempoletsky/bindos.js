@@ -50,15 +50,16 @@
 			else
 				values=key;
 			var self=this;
+			var changed={};
 			_.each(values,function(val,key){
-				self._changed[key]=self.attributes[key]=val;
+				changed[key]=self._changed[key]=self.attributes[key]=val;
 				if(key==self.idAttribute)
 				{
 					self.id=val;
 				}
 				self.fire('change:'+key);
 			});
-			this.fire('change');
+			this.fire('change',changed);
 			return this;
 		},
 		/**
