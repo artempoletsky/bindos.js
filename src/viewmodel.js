@@ -1,292 +1,296 @@
-(function() {
-	"use strict";
-	var $ = this.$;
+(function (window) {
+    "use strict";
+    /*global _, Computed, Observable, Model, Events */
+    var $ = window.$,
+        eventSplitter = /\s+/,
+        bindSplitter = /\s*;\s*/,
+        simpleTagRegex = /^[a-z]+$/,
+        firstColonRegex = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/,
+        breakersRegex = /^\{([\s\S]*)\}$/,
+        commaSplitter = /\s*,\s*/,
+        ViewModel = {
+            setElement: function (el) {
+                this.undelegateEvents();
+                this.el = el;
+                this.$el = $(el);
+                this.parse().delegateEvents();
+                return this;
+            },
+            constructor: function (options) {
+                options = options || {};
+                this.options = options;
+                if (options.collection) {
+                    this.collection = options.collection;
+                }
+                this.model = options.model;
+                if (options.el) {
+                    this.el = options.el;
+                }
 
-	var eventSplitter = /\s+/;
-	var bindSplitter = /\s*;\s*/;
-	var simpleTagRegex = /^[a-z]+$/;
-	var firstColonRegex=/^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/;
-	var breakersRegex=/^{([\s\S]*)}$/;
-	var commaSplitter=/\s*,\s*/
-	
-	var ViewModel={
-		setElement : function(el) {
-			this.undelegateEvents();
-			this.el = el;
-			this.$el = $(el);
-			this.parse().delegateEvents();
-			return this;
-		},
-		constructor: function(options){
-			options||(options={});
-			this.options=options;
-			if(options.collection)
-				this.collection=options.collection;
-			this.model=options.model;
-			if(options.el)
-				this.el=options.el;
-			var me=this;
-			if(!me._cid)
-			{
-				me._cid=_.uniqueId('vm');
-			}
-			if(!me.el)
-				me.el='div';
-			if(typeof me.el == 'string')
-			{
-				if(simpleTagRegex.test(me.el)&&me.el!='html'&&me.el!='body')
-					me.el=document.createElement(me.el);
-				else
-					me.el=$(me.el)[0];
-			}
-			me.$el=$(me.el);
-			me.$=function(selector){
-				return me.$el.find(selector);
-			}
-			me.initialize();
+                var me = this;
+                if (!me._cid) {
+                    me._cid = _.uniqueId('vm');
+                }
+                if (!me.el) {
+                    me.el = 'div';
+                }
 
-			if(me.autoParseBinds)
-				me.parse();
-			me.delegateEvents();
-		},
-		remove: function() {
-			this.$el.remove();
-			return this;
-		},
-		parse: function(){
-			ViewModel.findBinds(this.el, this);
-			return this;
-		},
-		bindToModel: function(json) {
-			var oModel = Observable(new Model(json));
-			var model = oModel();
-			var doReplace = true;
-			var ctx = {};
+                if (typeof me.el === 'string') {
+                    if (simpleTagRegex.test(me.el) && me.el !== 'html' && me.el !== 'body') {
+                        me.el = document.createElement(me.el);
+                    } else {
+                        me.el = $(me.el)[0];
+                    }
 
-			var replace = function(newModel) {
-				if(model) {
-					model.off(0, 0, ctx);
-				}
-				model = newModel;
-				if(newModel) {
-					newModel.on('change', function() {
-						doReplace = false;
-						oModel.fire();
-						doReplace = true;
-					}, ctx);
-				}
-			};
-			replace(model);
-			oModel.subscribe(function() {
-				if(doReplace) {
-					replace(this());
-				}
-			});
-			if(!this._bindedToModel) 
-				for(var prop in model.attributes) {
-					this[prop] = (function(prop, context) {
+                }
+                me.$el = $(me.el);
+                me.$ = function (selector) {
+                    return me.$el.find(selector);
+                };
+                me.initialize();
 
-						return Computed(function() {
+                if (me.autoParseBinds) {
+                    me.parse();
+                }
 
-							var mod = oModel();
-							if(!mod) {
-								return '';
-							}
-							return mod.prop(prop);
+                me.delegateEvents();
+            },
+            remove: function () {
+                this.$el.remove();
+                return this;
+            },
+            parse: function () {
+                ViewModel.findBinds(this.el, this);
+                return this;
+            },
+            bindToModel: function (json) {
+                var oModel = Observable(new Model(json)),
+                    model = oModel(),
+                    doReplace = true,
+                    ctx = {},
+                    replace = function (newModel) {
+                        if (model) {
+                            model.off(0, 0, ctx);
+                        }
+                        model = newModel;
+                        if (newModel) {
+                            newModel.on('change', function () {
+                                doReplace = false;
+                                oModel.fire();
+                                doReplace = true;
+                            }, ctx);
+                        }
+                    },
+                    me = this;
+                replace(model);
+                oModel.subscribe(function () {
+                    if (doReplace) {
+                        replace(this());
+                    }
+                });
+                if (!this._bindedToModel) {
+                    _.each(model.attributes, function (value, prop) {
+                        me[prop] = Computed(function () {
 
-						}, context)
-					})(prop, this);
-				}
-			this._bindedToModel=true;
-			return oModel;
-		},
-		autoParseBinds: false,
-		initialize: function(){},
-		delegateEvents: function(events){
-			events||(events=this.events);
-			this.undelegateEvents();
-			var fnName, fn, name, eventsPath, eventName, me = this;
-			for(name in events) {
+                            var mod = oModel();
+                            if (!mod) {
+                                return '';
+                            }
+                            return mod.prop(prop);
 
-				fnName = events[name];
-				//если это простая функция, содержится в VM или глобальная функция
-				fn = (typeof fnName == 'function')?fnName: me[fnName]||Function('return '+fnName)();
-				if(typeof fn != 'function') {
-					throw TypeError(fnName + ' is not a function');
-				}
-				eventsPath = name.split(eventSplitter);
-				//меняем запятые в имени события на пробелы и неймспейс
-				eventName = eventsPath.shift().split(',').join('.' + me._cid+' ') + '.' + me._cid;
-				
-				var proxy = (function(fn) {
-					return function() {
-						fn.apply(me, arguments);
-					}
-				})(fn);
-				
-				if(eventsPath.length) {
-					me.$el.delegate(eventsPath.join(' '), eventName, proxy);
-				} else {
-					me.$el.bind(eventName, proxy);
-				}
-			}
-			return this;
-		},
-		undelegateEvents : function() {
-			this.$el.unbind('.' + this._cid);
-			return this;
-		},
-		render: function() {
-			return this;
-		}
-	};
-	ViewModel=Events.extend(ViewModel);
-	
-	ViewModel.compAsync=true;
-	
-	ViewModel.findObservable = function(context, string, addArgs) {
-		addArgs||(addArgs={});
-		if(Observable.isObservable(context)) {
-			context = context();
-		}
-		var keys=_.keys(addArgs);
-			
-		var vals=[];
-		for(var i=0,l=keys.length;i<l;i++)
-		{
-			vals[i]=addArgs[keys[i]];
-		}
-		keys.push('with(this) return '+string+'');
-		var fn=Function.apply(context,keys);
-		var fnEval = function() {
-			try {
-				return fn.apply(context, vals);
-			} catch(exception) {
-				console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
-			}
-		}
-		var comp;
-		var obs = fnEval();
-		//если уже асинхронный, то возвращаем его
-		if(this.compAsync&&obs&&!obs.async)
-		{
-			if(Observable.isObservable(obs)) {
-				comp=Computed(function(){
-					return obs();
-				},context,true);
-			}
-			else
-			{
-				comp = Computed(function() {
-					return fnEval();
-				}, context,true);	
-			}
-		}
-		else
-		{
-			
-			if(Observable.isObservable(obs)) {
-				comp=obs;
-			}
-			else
-				comp = Computed(function() {
-					return fnEval();
-				}, context);
-			
-			
-		}
-		return comp;
-	}
-	
-	ViewModel.findBinds = function(element, context, addArgs) {
-		var children, curBindsString, binds, i, j, k, newctx,l,cBind,ccBind,bindName,bindVal,bindFn, self=this;
-		var $el=$(element);
-		curBindsString = $el.attr('data-bind');
-		$el.removeAttr('data-bind');
+                        });
+                    });
+                }
+                this._bindedToModel = true;
+                return oModel;
+            },
+            autoParseBinds: false,
+            initialize: function () {
+            },
+            delegateEvents: function (events) {
+                events = events || this.events;
+                this.undelegateEvents();
+                var eventsPath, eventName, me = this;
+                _.each(events, function (fnName, name) {
+                    //если это простая функция, содержится в VM или глобальная функция
+                    var fn = (typeof fnName === 'function') ? fnName : me[fnName],
+                        proxy = function () {
+                            fn.apply(me, arguments);
+                        };
 
-		if(curBindsString) {
-			binds = curBindsString.split(bindSplitter);
-			for(i=0, l=binds.length; i < l; i++) {
-				
-				cBind=binds[i];
-				
-				var arr = cBind.match(firstColonRegex);
-				if(!arr)
-				{
-					bindName=cBind;
-					bindVal='';
-				}
-				else
-				{
-					bindName=arr[1];
-					bindVal=arr[2];
-				}
-				
-				bindName=bindName.split(commaSplitter);
-				
-				for(j=0,k=bindName.length;j<k;j++)
-				{
-					ccBind=bindName[j];
-					if(!ccBind||ccBind.charAt(0)=='!')
-						continue;
-					
-					bindFn = ViewModel.binds[ccBind];
-					
-					if(bindFn) {
-						newctx = bindFn.call(self, element, bindVal, context, addArgs);
-						if(newctx === false) {
-							return;
-						} else if(newctx) {
-							context = newctx;
-						}
-					}
-					else
-					{
-						console.warn('Bind: "'+ccBind+'" not exists')
-					}
-				}
-				
+                    if (typeof fn !== 'function') {
+                        throw TypeError(fnName + ' is not a function');
+                    }
+                    eventsPath = name.split(eventSplitter);
+                    //меняем запятые в имени события на пробелы и неймспейс
+                    eventName = eventsPath.shift().split(',').join('.' + me._cid + ' ') + '.' + me._cid;
 
-			}
-		}
-		
-		$el.children().each(function(){
-			self.findBinds(this, context, addArgs);
-		});
-	};
-	
-	ViewModel.parseOptionsObject=function(value){
-		var val=value;
-		if(!val)
-			return {};
-		
-		var match= val.match(breakersRegex)
-		//console.log(match);
-		if(!match||match[1]===undefined)
-			throw new Error('Expression: "'+value+'" is not valid object');
-		val = match[1];	
-		
-		
-		var attrs = val.split(commaSplitter);
-		//console.log(attrs);
-		if(!attrs.length)
-			return {};
-		
-		var res={};
-		_.each(attrs,function(val){
-			
-			if(!val)
-				return;
-			match = val.match(firstColonRegex);
-			
-			if(!match||!match[1]||!match[2])
-			{
-				throw new Error('Expression: "'+value+'" is not valid object');
-			}
-			res[match[1]]=match[2];
-		});
-		return res;
-	};
-	
-	this.ViewModel = ViewModel;
-}).apply(this);
+
+                    if (eventsPath.length) {
+                        me.$el.delegate(eventsPath.join(' '), eventName, proxy);
+                    } else {
+                        me.$el.bind(eventName, proxy);
+                    }
+                });
+                return this;
+            },
+            undelegateEvents: function () {
+                this.$el.unbind('.' + this._cid);
+                return this;
+            },
+            render: function () {
+                return this;
+            }
+        };
+    ViewModel = Events.extend(ViewModel);
+
+    ViewModel.compAsync = true;
+
+    ViewModel.findObservable = function (context, string, addArgs) {
+
+        addArgs = addArgs || {};
+        if (Observable.isObservable(context)) {
+            context = context();
+        }
+        var keys = _.keys(addArgs),
+            vals = [],
+            i,
+            l,
+            fn,
+            comp,
+            fnEval,
+            obs;
+        for (i = 0, l = keys.length; i < l; i++) {
+            vals[i] = addArgs[keys[i]];
+        }
+        keys.push('with(this) return ' + string);
+        fn = Function.apply(context, keys);
+        fnEval = function () {
+            try {
+                return fn.apply(context, vals);
+            } catch (exception) {
+                console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
+            }
+        };
+
+        obs = fnEval();
+        //если уже асинхронный, то возвращаем его
+        if (this.compAsync && obs && !obs.async) {
+            if (Observable.isObservable(obs)) {
+                comp = Computed(function () {
+                    return obs();
+                }, context, true);
+            } else {
+                comp = Computed(function () {
+                    return fnEval();
+                }, context, true);
+            }
+        } else {
+
+            if (Observable.isObservable(obs)) {
+                comp = obs;
+            } else {
+                comp = Computed(function () {
+                    return fnEval();
+                }, context);
+            }
+
+
+        }
+        return comp;
+    };
+
+    ViewModel.findBinds = function (element, context, addArgs) {
+        var children, curBindsString, binds, i, j, k, newctx, l, cBind, ccBind, bindName, bindVal, bindFn, arr,
+            breakContextIsSent = false,
+            self = this,
+            $el = $(element);
+        curBindsString = $el.attr('data-bind');
+        $el.removeAttr('data-bind');
+
+        if (curBindsString) {
+            binds = curBindsString.split(bindSplitter);
+            for (i = 0, l = binds.length; i < l; i++) {
+
+                cBind = binds[i];
+
+                arr = cBind.match(firstColonRegex);
+
+                if (!arr) {
+                    bindName = cBind;
+                    bindVal = '';
+                } else {
+                    bindName = arr[1];
+                    bindVal = arr[2];
+                }
+
+                bindName = bindName.split(commaSplitter);
+
+                for (j = 0, k = bindName.length; j < k; j++) {
+                    ccBind = bindName[j];
+                    //если бинд не пустой и не закомментирован с помощью !
+                    if (ccBind && ccBind.charAt(0) !== '!') {
+                        bindFn = ViewModel.binds[ccBind];
+
+                        if (bindFn) {
+                            newctx = bindFn.call(self, element, bindVal, context, addArgs);
+                            if (newctx === false) {
+                                breakContextIsSent = true;
+                            } else if (newctx) {
+                                context = newctx;
+                            }
+                        } else {
+                            console.warn('Bind: "' + ccBind + '" not exists');
+                        }
+                    }
+
+
+                }
+
+
+            }
+        }
+        if (!breakContextIsSent) {
+            $el.children().each(function () {
+                self.findBinds(this, context, addArgs);
+            });
+        }
+    };
+
+    ViewModel.parseOptionsObject = function (value) {
+        var match, attrs, res;
+        if (!value) {
+            return {};
+        }
+
+        match = value.match(breakersRegex);
+        //console.log(match);
+        if (!match || match[1] === undefined) {
+            throw new Error('Expression: "' + value + '" is not valid object');
+        }
+
+
+        attrs = match[1].split(commaSplitter);
+        //console.log(attrs);
+        if (!attrs.length) {
+            return {};
+        }
+
+        res = {};
+        _.each(attrs, function (val) {
+
+            if (!val) {
+                return;
+            }
+            match = val.match(firstColonRegex);
+
+            if (!match || !match[1] || !match[2]) {
+                throw new Error('Expression: "' + value + '" is not valid object');
+            }
+            res[match[1]] = match[2];
+        });
+        return res;
+    };
+
+    window.ViewModel = ViewModel;
+}(this));
