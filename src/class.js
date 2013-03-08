@@ -6,8 +6,8 @@
         Class = function () {
 
         },
-        fnTest = /alert/.test(function () {
-            alert();
+        fnTest = /xyz/.test(function () {
+            alert('xyz');
         }) ? /\b_super\b/ : /.*/;
     Class.prototype._constructor = Object;
     Class.prototype.constructor = Class;

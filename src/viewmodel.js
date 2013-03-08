@@ -66,28 +66,24 @@
             bindToModel: function (json) {
                 var oModel = Observable(new Model(json)),
                     model = oModel(),
-                    doReplace = true,
                     ctx = {},
-                    replace = function (newModel) {
-                        if (model) {
-                            model.off(0, 0, ctx);
-                        }
-                        model = newModel;
-                        if (newModel) {
-                            newModel.on('change', function () {
-                                doReplace = false;
-                                oModel.fire();
-                                doReplace = true;
-                            }, ctx);
-                        }
-                    },
                     me = this;
-                replace(model);
-                oModel.subscribe(function () {
-                    if (doReplace) {
-                        replace(this());
+
+                oModel.callAndSubscribe(function (newModel) {
+                    if (model) {
+                        model.off(0, 0, ctx);
+                    }
+                    model = newModel;
+                    if (newModel) {
+                        newModel.on('change', function (changed) {
+                            _.each(changed, function (val, key) {
+                                me[key].fire();
+                            });
+
+                        }, ctx);
                     }
                 });
+
                 if (!this._bindedToModel) {
                     _.each(model.attributes, function (value, prop) {
                         me[prop] = Computed(function () {
@@ -201,7 +197,7 @@
     };
 
     ViewModel.findBinds = function (element, context, addArgs) {
-        var children, curBindsString, binds, i, j, k, newctx, l, cBind, ccBind, bindName, bindVal, bindFn, arr,
+        var curBindsString, binds, i, j, k, newctx, l, cBind, ccBind, bindName, bindVal, bindFn, arr,
             breakContextIsSent = false,
             self = this,
             $el = $(element);
