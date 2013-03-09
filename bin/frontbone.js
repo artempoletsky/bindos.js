@@ -408,10 +408,8 @@
                 }
                 //все кроме events передается аргументами в каждый колбек
                 var args = _.rest(arguments, 1),
-                    aEvents = typeof events === 'string' ? events.split(eventSplitter) : [events],
-                    type, me = this;
-                _.each(aEvents, function (event) {
-                    type = typeof event === 'string' ? event : event.type;
+                    me = this;
+                _.each(events.split(eventSplitter), function (type) {
 
                     _.each(findBinds(me._listeners, type, false, false), function (bind) {
                         //если забинден через one  удаляем
@@ -1068,8 +1066,6 @@
         }
         var keys = [],
             vals = [],
-            i,
-            l,
             fn,
             comp,
             fnEval,

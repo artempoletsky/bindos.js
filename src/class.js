@@ -28,7 +28,7 @@
             Constructor.prototype[key] =
                 //если функция
                 typeof val === 'function' &&
-                    //и не Observable
+                    //не Observable и не конструктор
                     val._notSimple === undefined &&
                     //и содержит _super
                     fnTest.test(val.toString())
@@ -42,6 +42,7 @@
         });//*/
 
         Constructor.prototype.constructor = Constructor;
+        Constructor._notSimple = true;
         Constructor.extend = ParentClass.extend;
         Constructor.create = ParentClass.create;
         return Constructor;

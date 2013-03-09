@@ -1,6 +1,6 @@
 (function (window) {
     "use strict";
-    /*global _, Computed, Observable, Model, Events */
+    /*global _, Computed, Observable, Model, Events, BaseObservable */
     var $ = window.$,
         eventSplitter = /\s+/,
         bindSplitter = /\s*;\s*/,
@@ -149,8 +149,6 @@
         }
         var keys = [],
             vals = [],
-            i,
-            l,
             fn,
             comp,
             fnEval,
@@ -172,16 +170,19 @@
 
         obs = fnEval();
         //если уже асинхронный, то возвращаем его
-        if (this.compAsync && obs && !obs.async) {
-            if (Observable.isObservable(obs)) {
-                comp = Computed(function () {
-                    return obs();
-                }, context, true);
-            } else {
-                comp = Computed(function () {
-                    return fnEval();
-                }, context, true);
+        if (this.compAsync) {
+            if (!Observable.isObservable(obs)) {
+                obs = fnEval;
             }
+            comp = BaseObservable({
+                async: true,
+                get: function () {
+                    return  obs();
+                },
+                set: function (val) {
+                    obs(val);
+                }
+            });
         } else {
 
             if (Observable.isObservable(obs)) {

@@ -1,174 +1,165 @@
-(function(){
-	var waitForRefresh=[];
-	var refreshActive=false;
-	
-	var refreshFn=window.requestAnimationFrame
-	||window.webkitRequestAnimationFrame
-	||window.mozRequestAnimationFrame
-	||window.msRequestAnimationFrame
-	||window.oRequestAnimationFrame
-	||function(cb){
-		setTimeout(function(){
-			cb();
-		}, 1000/15);
-	};
-	
-	window.ComputedRefresher={
-		refreshAll: function(){
-			_.each(waitForRefresh,function(val){
-				val.refresh();
-			});
-			waitForRefresh=[];
-		},
-		startRefresh:function(){
-			var self=this;
-			refreshActive=true;
-			refreshFn(function(){
-				if(refreshActive)
-				{
-					self.refreshAll();
-					self.startRefresh();
-				}
-			})
-		},
-		stopRefresh: function(){
-			refreshActive=false;
-		}
-	}
-	ComputedRefresher.startRefresh();
-	
-	var Subscribeable=function(fn){
-		fn._listeners=[];
-		fn.subscribe=function(callback,context){
-			fn._listeners.push(arguments);
-		}
-		fn.unsubscribe=function(callback){
-			for(var i=0,l=fn._listeners.length;i<l;i++)
-				if(fn._listeners[i][0]===callback)
-					fn._listeners.splice(i, 1);
-		}
-		fn.fire=function(){
-			for(var i=0,l=fn._listeners.length;i<l;i++)
-				fn._listeners[i][0].call(fn._listeners[i][1]||fn,fn());
-		}
-		fn.callAndSubscribe=function(callback){
-			callback.call(this,fn());
-			this.subscribe(callback)
-		}
-		fn._notSimple=true;
-		return fn;
-	}
-	var computedInit=false;
-	
-	var Observable=function(initial)
-	{
-		var value=initial;
-		var fn=function(set){
-			if(arguments.length>0)
-			{
-				if(value!==set||_.isObject(set))
-				{
-					fn.lastValue=value;
-					value=set;
-					fn.fire();
-				}
-			}
-			else if(computedInit)
-			{
-				computedInit.subscribeTo(fn);
-			}
-			return value;
-		}
-		Subscribeable(fn);
-		
-		fn.lastValue=undefined;
-		fn.valueOf=fn.toString=function(){
-			return this();
-		}
-		fn.__observable=true;
-		return fn;
-	}
-	Observable.isObservable=function(fn){
-		if(typeof fn != 'function')
-			return false;
-		return fn.__observable||false;
-	}
-	
-	var Computed=function(options){
-		var getter,context,async,setter
-		if(typeof options=='function')
-		{
-			getter=options;
-			context=arguments[1];
-			async=arguments[2];
-			setter=arguments[3];
-		}
-		else
-		{
-			getter=options.get;
-			context=options.context;
-			async=options.async;
-			setter=options.set;
-		}
-		
-		var resfn=function(){
-			if(arguments.length==1)
-			{
-				if(!setter)
-					throw new Error('Setter for computed is not defined');
-				setter.call(context,arguments[0]);
-			}
-			return getter.call(context);
-		}
-		
-		var fireProxy=function(){
-			if(async)
-				waitForRefresh.push(resfn);
-			else
-				resfn.refresh();
-		}
-		
-		
-		resfn.async=async||false;
-		var dependencies=[];
-		
-		resfn.subscribeTo=function(obs)
-		{
-			if(!~dependencies.indexOf(obs))
-			{
-				dependencies.push(obs);
-				obs.subscribe(fireProxy)
-			}
-		}
-		
-		Subscribeable(resfn);
-		
-		
-		resfn.__observable=true;
-		
-		resfn.valueOf=resfn.toString=function(){
-			return this();
-		}
-		computedInit=resfn;
-		var oldValue=getter.call(context);
-		computedInit=false;
-		
-		resfn.refresh=function(){
-			var val=this();
-			if(oldValue!==val||_.isObject(val))
-			{
-				this.fire();
-			}
-			oldValue=val;
-		}
-		delete dependencies;
-		delete resfn.subscribeTo;
-		return resfn;
-	}
-	
-	
-	
-	this.Observable=Observable;
-	this.Computed=Computed;
-	this.Subscribeable=Subscribeable;
-})();
+(function (window) {
+    "use strict";
+    /*globals _*/
+    var waitForRefresh = [],
+        refreshActive = false,
+        computedInit = false,
+        Observable,
+        Computed,
+        refreshFn = window.requestAnimationFrame
+            || window.webkitRequestAnimationFrame
+            || window.mozRequestAnimationFrame
+            || window.msRequestAnimationFrame
+            || window.oRequestAnimationFrame
+            || function (cb) {
+            setTimeout(function () {
+                cb();
+            }, 1000 / 15);
+        },
+        addToRefresh = function (observable) {
+            if (waitForRefresh.indexOf(observable) === -1) {
+                waitForRefresh.push(observable);
+            }
+        },
+        refresher = window.ComputedRefresher = {
+            refreshAll: function () {
+                _.each(waitForRefresh, function (val) {
+                    val.notify();
+                });
+                waitForRefresh = [];
+            },
+            startRefresh: function () {
+                var self = this;
+                refreshActive = true;
+                refreshFn(function () {
+                    if (refreshActive) {
+                        self.refreshAll();
+                        self.startRefresh();
+                    }
+                });
+            },
+            stopRefresh: function () {
+                refreshActive = false;
+            }
+        }, Subscribeable, observable;
+
+    refresher.startRefresh();
+
+    observable = window.BaseObservable = function (params) {
+        params = params || {};
+        var value = params.initial,
+            oldValue = value,
+            getter = params.get,
+            setter = params.set,
+            ctx = params.context,
+            async = params.async,
+            dependencies = [],
+            listeners = [],
+            fn = function (newValue) {
+                if (arguments.length === 0) {
+                    if (getter) {
+                        value = getter.call(ctx);
+                    } else if (computedInit) {
+                        computedInit.dependsOn(fn);
+                    }
+                } else {
+                    if (value !== newValue || _.isObject(newValue)) {
+                        if (setter) {
+                            setter.call(ctx, newValue);
+                        } else if (getter) {
+                            throw new Error('Setter for computed is not defined');
+                        } else {
+                            value = newValue;
+                        }
+                        if (!async) {
+                            fn.notify();
+                        } else {
+                            addToRefresh(fn);
+                        }
+                    }
+                }
+                return value;
+            };
+        _.extend(fn, {
+            dependsOn: function (obs) {
+                var me = this;
+                if (dependencies.indexOf(obs) === -1) {
+                    dependencies.push(obs);
+                    obs.subscribe(function () {
+                        if (!async) {
+                            fn.notify();
+                        } else {
+                            addToRefresh(fn);
+                        }
+                    });
+                }
+                return me;
+            },
+            subscribe: function (callback) {
+                listeners.push(callback);
+                return this;
+            },
+            unsubscribe: function (callback) {
+                listeners = _.filter(listeners, function (listener) {
+                    return listener === callback;
+                });
+                return this;
+            },
+            notify: function () {
+                var me = this,
+                    value = me();
+                if (oldValue !== value || _.isObject(value)) {
+                    _.each(listeners, function (callback) {
+                        callback.call(me, value);
+                    });
+                }
+                oldValue = value;
+                return me;
+            },
+            callAndSubscribe: function (callback) {
+                callback.call(this, this());
+                this.subscribe(callback);
+                return this;
+            },
+            _notSimple: true,
+            __observable: true
+        });
+        fn.fire = fn.notify;
+        fn.valueOf = fn.toString = function () {
+            return this();
+        };
+        if (getter) {
+            computedInit = fn;
+            value = oldValue = getter.call(ctx);
+            computedInit = false;
+        }
+        delete fn.dependsOn;
+        dependencies = undefined;
+        return fn;
+    };
+    Observable = function (initial) {
+        return observable({
+            initial: initial
+        });
+    };
+    Observable.isObservable = function (fn) {
+        if (typeof fn !== 'function') {
+            return false;
+        }
+        return fn.__observable || false;
+    };
+
+    Computed = function (getter, context, async, setter) {
+        return observable(typeof getter === 'function' ? {
+            get: getter,
+            context: context,
+            set: setter,
+            async: async
+        } : getter);
+    };
+
+
+    window.Observable = Observable;
+    window.Computed = Computed;
+    //window.Subscribeable = Subscribeable;
+}(this));
