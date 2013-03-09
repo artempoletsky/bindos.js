@@ -259,216 +259,183 @@
     };
     window.Class = Class;
 }(this));
-(function(){
-	var eventSplitter = /\s+/;
-	var namespaceSplitter = '.';
-	if(!Array.prototype.indexOf)
-		Array.prototype.indexOf = function (searchElement, fromIndex ) {
-			return _.indexOf(this, searchElement, fromIndex);
-		};
-	
-	function parse(event) {
-		var arr = ('' + event).split(namespaceSplitter);
-		return {
-			n: arr[0],
-			ns: arr.slice(1),
-			o: event
-		}
-	}
+(function (window) {
+    "use strict";
+    /*globals _, Class*/
 
-	function compareNames(arr1, arr2) {
-		for(var i = arr1.length - 1; i >= 0; i--) {
-			if(!~arr2.indexOf(arr1[i])) {
-				return false;
-			}
-		}
-		return true;
-	}
+    if (!Array.prototype.indexOf) {
+        Array.prototype.indexOf = function (searchElement, fromIndex) {
+            return _.indexOf(this, searchElement, fromIndex);
+        };
+    }
 
-	function compareBinds(bind1, bind2, nsInvert) {
-		if(bind1.n && bind1.n != bind2.n) {
-			return false;
-		}
-		if(bind1.fn && bind1.fn !== bind2.fn) {
-			return false;
-		}
+    var eventSplitter = /\s+/,
+        namespaceSplitter = '.',
 
-		if(bind1.c && bind1.c !== bind2.c) {
-			return false;
-		}
-		if(bind1.ns.length && !compareNames(bind1.ns, bind2.ns)) {
-			return false;
-		}
-		return true;
-	}
 
-	function makeBind(event, fn, context,isSignal) {
-		var bind = parse(event);
-		bind.fn = fn;
-		bind.c = context;
-		bind.s=isSignal;
-		return bind;
-	}
+        makeBind = function (event, fn, context, isSignal) {
+            event = String(event);
+            var arr = event.split(namespaceSplitter);
+            return {
+                c: context,
+                s: isSignal,
+                fn: fn,
+                n: arr[0],
+                ns: arr.slice(1),
+                o: event
+            };
+        },
 
-	function add(self, bind) {
-		var binds, curBind;
+        add = function (self, bind) {
+            var binds, curBind;
 
-		binds = self._listeners || {}
+            binds = self._listeners || {};
 
-		curBind = binds[bind.n] || [];
+            curBind = binds[bind.n] || [];
 
-		curBind.push(bind);
+            curBind.push(bind);
 
-		binds[bind.n] = curBind;
+            binds[bind.n] = curBind;
 
-		self._listeners = binds;
-	}
+            self._listeners = binds;
+        },
 
-	var findBinds = function (binds, event, fn, context, mode) {
-		var result = [], a, b, bind = makeBind(event, fn, context);
-		if(!mode) {
-			mode = 'filter';
-		}
 
-		for(a in binds) {
+        findBinds = function (binds, event, fn, context, mode) {
+            var result = mode === 'any' ? false : [],
+                bind = makeBind(event, fn, context);
+            if (!mode) {
+                mode = 'filter';
+            }
 
-			for(b = binds[a].length - 1; b >= 0; b--) {
-				if(compareBinds(bind, binds[a][b])) {
-					if(mode == 'filter') {
-						result.push(binds[a][b]);
-					} else {
-						if(mode == 'any') {
-							return true;
-						}
-					}
-				} else {
-					if(mode == 'invert') {
-						result.push(binds[a][b]);
-					}
-				}
+            _.each(binds, function (bindsArray) {
+                _.each(bindsArray, function (bindObject) {
+                    var compared = (!bind.fn || bind.fn === bindObject.fn)
+                        && (!bind.n || bind.n === bindObject.n)
+                        && (!bind.c || bind.c === bindObject.c), ns2;
+                    //сравнивает пространсва имен
+                    if (compared && bind.ns.length) {
+                        ns2 = bindObject.ns;
+                        compared = !_.any(bind.ns, function (val) {
+                            return ns2.indexOf(val);
+                        });
+                    }
 
-			}
-		}
-		if(mode != 'any') {
-			return result;
-		} else {
-			return false;
-		}
-	}
+                    if (compared) {
+                        if (mode === 'filter') {
+                            result.push(bindObject);
+                        } else if (mode === 'any') {
+                            result = true;
+                            return false;
+                        }
+                    } else if (mode === 'invert') {
+                        result.push(bindObject);
+                    }
 
-	var remove=function (event, fn, context) {
-		var bind, binds, i;
-		if(!this._listeners) {
-			return;
-		}
-		if(!event && !fn && !context) {
-			delete this._listeners;
-			return;
-		}
 
-		bind = makeBind(event, fn, context);
+                });
+                if (result === true) {
+                    return false;
+                }
+            });
 
-		if(!bind.ns.length && !fn && !context) {
-			delete this._listeners[bind.n];
-			return;
-		}
+            return result;
+        },
 
-		binds = findBinds(this._listeners, event, fn, context, 'invert');
+        remove = function (me, event, fn, context) {
+            var bind, binds, i;
+            if (!me._listeners) {
+                return;
+            }
+            if (!event && !fn && !context) {
+                delete me._listeners;
+                return;
+            }
 
-		delete this._listeners;
-		for(i = binds.length - 1; i >= 0; i--) {
-			add(this, binds[i])
-		}
-	}
-	
-	var Events=Class.extend({
-		on: function(events, fn, context){
-			if(_.isObject(events))
-			{
-				var ctx=fn||this;
-				var self=this;
-				_.each(events,function(callback,event_name){
-					self.on(event_name,callback,ctx);
-				});
-				return this;
-			}
-			var aEvents = events.split(eventSplitter), i, bind;
-			if(typeof fn != 'function') {
-				throw TypeError('function expected');
-			}
+            bind = makeBind(event, fn, context);
 
-			if(!context) {
-				context = this;
-			}
-			for(i = aEvents.length - 1; i >= 0; i--) {
-				bind = makeBind(aEvents[i], fn, context);
-				add(this, bind);
-			}
-			return this;
-		},
-		off: function(events, fn, context) {
-			if(!events) {
-				remove.call(this, '', fn, context);
-				return this;
-			}
-			var aEvents = events.split(eventSplitter), i, l;
-			for(i = 0, l = aEvents.length; i < l; i++) {
-				remove.call(this, aEvents[i], fn, context)
-			}
-			return this;
-		},
-		fire: function(events) {
-			if(!this._listeners) 
-				return this;
-			var args = Array.prototype.slice.call(arguments,1);
-			
-			var aEvents,i,j,l,k,binds,bind,type;
-			aEvents=typeof events == 'string'? events.split(eventSplitter): [events];
-		
-			for(i=0,l=aEvents.length;i<l;i++)
-			{
-				type=typeof aEvents[i] == 'string'? aEvents[i]: aEvents[i].type;
-			
-				binds=findBinds(this._listeners,type,false,false);
-				
-				for(j=0,k=binds.length;j<k;j++)
-				{
-					bind=binds[j];
-					if(bind.s)
-						this.off(undefined, bind.fn)
-					//args.unshift(aEvents[i]);
-					bind.fn.apply(bind.c, args);
-				//args.shift();
-				}
-			}
+            if (!bind.ns.length && !fn && !context) {
+                delete me._listeners[bind.n];
+                return;
+            }
 
-			return this;
-		},
-		one: function(events, fn, context) {
-			var aEvents = events.split(eventSplitter), i, bind;
-			if(typeof fn != 'function') {
-				throw TypeError('function expected');
-			}
+            binds = findBinds(me._listeners, event, fn, context, 'invert');
 
-			if(!context) {
-				context = this;
-			}
-			for(i = aEvents.length - 1; i >= 0; i--) {
-				bind = makeBind(aEvents[i], fn, context,true);
-				add(this, bind);
-			}
-			return this;
-		},
-		hasListener : function(event) {
-			if(!this._listeners) {
-				return false;
-			}
-			return findBinds(this._listeners, event, false, false, 'any');
-		}
-	});
-	Events.prototype.trigger = Events.prototype.fire;
-	this.Events=Events;
-})();
+            delete me._listeners;
+            for (i = binds.length - 1; i >= 0; i--) {
+                add(me, binds[i]);
+            }
+        },
+        Events = Class.extend({
+            on: function (events, fn, context, callOnce) {
+                var self = this,
+                    ctx;
+                if (_.isObject(events)) {
+                    ctx = fn || self;
+                    _.each(events, function (callback, event_name) {
+                        self.on(event_name, callback, ctx, callOnce);
+                    });
+                    return this;
+                }
+
+                if (typeof fn !== 'function') {
+                    throw TypeError('function expected');
+                }
+
+                if (!context) {
+                    context = this;
+                }
+                _.each(events.split(eventSplitter), function (event) {
+                    add(self, makeBind(event, fn, context, callOnce));
+                });
+
+                return self;
+            },
+            off: function (events, fn, context) {
+                var me = this;
+                if (!events) {
+                    remove(me, '', fn, context);
+                    return me;
+                }
+                _.each(events.split(eventSplitter), function (name) {
+                    remove(me, name, fn, context);
+                });
+                return me;
+            },
+            fire: function (events) {
+                if (!this._listeners) {
+                    return this;
+                }
+                //все кроме events передается аргументами в каждый колбек
+                var args = _.rest(arguments, 1),
+                    aEvents = typeof events === 'string' ? events.split(eventSplitter) : [events],
+                    type, me = this;
+                _.each(aEvents, function (event) {
+                    type = typeof event === 'string' ? event : event.type;
+
+                    _.each(findBinds(me._listeners, type, false, false), function (bind) {
+                        //если забинден через one  удаляем
+                        if (bind.s) {
+                            me.off(0, bind.fn);
+                        }
+                        bind.fn.apply(bind.c, args);
+                    });
+                });
+                return me;
+            },
+            one: function (events, fn, context) {
+                return this.on(events, fn, context, true);
+            },
+            hasListener: function (event) {
+                if (!this._listeners) {
+                    return false;
+                }
+                return findBinds(this._listeners, event, false, false, 'any');
+            }
+        });
+    Events.prototype.trigger = Events.prototype.fire;
+    window.Events = Events;
+}(this));
 (function (window) {
     "use strict";
     /*globals Events, _, $*/
@@ -1060,11 +1027,9 @@
                 this.undelegateEvents();
                 var eventsPath, eventName, me = this;
                 _.each(events, function (fnName, name) {
-                    //если это простая функция, содержится в VM или глобальная функция
+                    //если это простая функция или содержится в VM
                     var fn = (typeof fnName === 'function') ? fnName : me[fnName],
-                        proxy = function () {
-                            fn.apply(me, arguments);
-                        };
+                        proxy;
 
                     if (typeof fn !== 'function') {
                         throw TypeError(fnName + ' is not a function');
@@ -1073,6 +1038,7 @@
                     //меняем запятые в имени события на пробелы и неймспейс
                     eventName = eventsPath.shift().split(',').join('.' + me._cid + ' ') + '.' + me._cid;
 
+                    proxy = _.bind(fn, me);
 
                     if (eventsPath.length) {
                         me.$el.delegate(eventsPath.join(' '), eventName, proxy);
@@ -1100,7 +1066,7 @@
         if (Observable.isObservable(context)) {
             context = context();
         }
-        var keys = _.keys(addArgs),
+        var keys = [],
             vals = [],
             i,
             l,
@@ -1108,9 +1074,11 @@
             comp,
             fnEval,
             obs;
-        for (i = 0, l = keys.length; i < l; i++) {
-            vals[i] = addArgs[keys[i]];
-        }
+        _.each(addArgs, function (key, val) {
+            keys.push(key);
+            vals.push(val);
+        });
+
         keys.push('with(this) return ' + string);
         fn = Function.apply(context, keys);
         fnEval = function () {
