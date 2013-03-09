@@ -1,177 +1,168 @@
-(function(){
-	var waitForRefresh=[];
-	var refreshActive=false;
-	
-	var refreshFn=window.requestAnimationFrame
-	||window.webkitRequestAnimationFrame
-	||window.mozRequestAnimationFrame
-	||window.msRequestAnimationFrame
-	||window.oRequestAnimationFrame
-	||function(cb){
-		setTimeout(function(){
-			cb();
-		}, 1000/15);
-	};
-	
-	window.ComputedRefresher={
-		refreshAll: function(){
-			_.each(waitForRefresh,function(val){
-				val.refresh();
-			});
-			waitForRefresh=[];
-		},
-		startRefresh:function(){
-			var self=this;
-			refreshActive=true;
-			refreshFn(function(){
-				if(refreshActive)
-				{
-					self.refreshAll();
-					self.startRefresh();
-				}
-			})
-		},
-		stopRefresh: function(){
-			refreshActive=false;
-		}
-	}
-	ComputedRefresher.startRefresh();
-	
-	var Subscribeable=function(fn){
-		fn._listeners=[];
-		fn.subscribe=function(callback,context){
-			fn._listeners.push(arguments);
-		}
-		fn.unsubscribe=function(callback){
-			for(var i=0,l=fn._listeners.length;i<l;i++)
-				if(fn._listeners[i][0]===callback)
-					fn._listeners.splice(i, 1);
-		}
-		fn.fire=function(){
-			for(var i=0,l=fn._listeners.length;i<l;i++)
-				fn._listeners[i][0].call(fn._listeners[i][1]||fn,fn());
-		}
-		fn.callAndSubscribe=function(callback){
-			callback.call(this,fn());
-			this.subscribe(callback)
-		}
-		fn._notSimple=true;
-		return fn;
-	}
-	var computedInit=false;
-	
-	var Observable=function(initial)
-	{
-		var value=initial;
-		var fn=function(set){
-			if(arguments.length>0)
-			{
-				if(value!==set||_.isObject(set))
-				{
-					fn.lastValue=value;
-					value=set;
-					fn.fire();
-				}
-			}
-			else if(computedInit)
-			{
-				computedInit.subscribeTo(fn);
-			}
-			return value;
-		}
-		Subscribeable(fn);
-		
-		fn.lastValue=undefined;
-		fn.valueOf=fn.toString=function(){
-			return this();
-		}
-		fn.__observable=true;
-		return fn;
-	}
-	Observable.isObservable=function(fn){
-		if(typeof fn != 'function')
-			return false;
-		return fn.__observable||false;
-	}
-	
-	var Computed=function(options){
-		var getter,context,async,setter
-		if(typeof options=='function')
-		{
-			getter=options;
-			context=arguments[1];
-			async=arguments[2];
-			setter=arguments[3];
-		}
-		else
-		{
-			getter=options.get;
-			context=options.context;
-			async=options.async;
-			setter=options.set;
-		}
-		
-		var resfn=function(){
-			if(arguments.length==1)
-			{
-				if(!setter)
-					throw new Error('Setter for computed is not defined');
-				setter.call(context,arguments[0]);
-			}
-			return getter.call(context);
-		}
-		
-		var fireProxy=function(){
-			if(async)
-				waitForRefresh.push(resfn);
-			else
-				resfn.refresh();
-		}
-		
-		
-		resfn.async=async||false;
-		var dependencies=[];
-		
-		resfn.subscribeTo=function(obs)
-		{
-			if(!~dependencies.indexOf(obs))
-			{
-				dependencies.push(obs);
-				obs.subscribe(fireProxy)
-			}
-		}
-		
-		Subscribeable(resfn);
-		
-		
-		resfn.__observable=true;
-		
-		resfn.valueOf=resfn.toString=function(){
-			return this();
-		}
-		computedInit=resfn;
-		var oldValue=getter.call(context);
-		computedInit=false;
-		
-		resfn.refresh=function(){
-			var val=this();
-			if(oldValue!==val||_.isObject(val))
-			{
-				this.fire();
-			}
-			oldValue=val;
-		}
-		delete dependencies;
-		delete resfn.subscribeTo;
-		return resfn;
-	}
-	
-	
-	
-	this.Observable=Observable;
-	this.Computed=Computed;
-	this.Subscribeable=Subscribeable;
-})();
+(function (window) {
+    "use strict";
+    /*globals _*/
+    var waitForRefresh = [],
+        refreshActive = false,
+        computedInit = false,
+        Observable,
+        Computed,
+        refreshFn = window.requestAnimationFrame
+            || window.webkitRequestAnimationFrame
+            || window.mozRequestAnimationFrame
+            || window.msRequestAnimationFrame
+            || window.oRequestAnimationFrame
+            || function (cb) {
+            setTimeout(function () {
+                cb();
+            }, 1000 / 15);
+        },
+        addToRefresh = function (observable) {
+            if (waitForRefresh.indexOf(observable) === -1) {
+                waitForRefresh.push(observable);
+            }
+        },
+        refresher = window.ComputedRefresher = {
+            refreshAll: function () {
+                _.each(waitForRefresh, function (val) {
+                    val.notify();
+                });
+                waitForRefresh = [];
+            },
+            startRefresh: function () {
+                var self = this;
+                refreshActive = true;
+                refreshFn(function () {
+                    if (refreshActive) {
+                        self.refreshAll();
+                        self.startRefresh();
+                    }
+                });
+            },
+            stopRefresh: function () {
+                refreshActive = false;
+            }
+        }, Subscribeable, observable;
+
+    refresher.startRefresh();
+
+    observable = window.BaseObservable = function (params) {
+        params = params || {};
+        var value = params.initial,
+            oldValue = value,
+            getter = params.get,
+            setter = params.set,
+            ctx = params.context,
+            async = params.async,
+            dependencies = [],
+            listeners = [],
+            fn = function (newValue) {
+                if (arguments.length === 0) {
+                    if (getter) {
+                        value = getter.call(ctx);
+                    } else if (computedInit) {
+                        computedInit.dependsOn(fn);
+                    }
+                } else {
+                    if (value !== newValue || _.isObject(newValue)) {
+                        if (setter) {
+                            setter.call(ctx, newValue);
+                        } else if (getter) {
+                            throw new Error('Setter for computed is not defined');
+                        } else {
+                            value = newValue;
+                        }
+                        if (!async) {
+                            fn.notify();
+                        } else {
+                            addToRefresh(fn);
+                        }
+                    }
+                }
+                return value;
+            };
+        _.extend(fn, {
+            dependsOn: function (obs) {
+                var me = this;
+                if (dependencies.indexOf(obs) === -1) {
+                    dependencies.push(obs);
+                    obs.subscribe(function () {
+                        if (!async) {
+                            fn.notify();
+                        } else {
+                            addToRefresh(fn);
+                        }
+                    });
+                }
+                return me;
+            },
+            subscribe: function (callback) {
+                listeners.push(callback);
+                return this;
+            },
+            unsubscribe: function (callback) {
+                listeners = _.filter(listeners, function (listener) {
+                    return listener === callback;
+                });
+                return this;
+            },
+            notify: function () {
+                var me = this,
+                    value = me();
+                if (oldValue !== value || _.isObject(value)) {
+                    _.each(listeners, function (callback) {
+                        callback.call(me, value);
+                    });
+                }
+                oldValue = value;
+                return me;
+            },
+            callAndSubscribe: function (callback) {
+                callback.call(this, this());
+                this.subscribe(callback);
+                return this;
+            },
+            _notSimple: true,
+            __observable: true
+        });
+        fn.fire = fn.notify;
+        fn.valueOf = fn.toString = function () {
+            return this();
+        };
+        if (getter) {
+            computedInit = fn;
+            value = oldValue = getter.call(ctx);
+            computedInit = false;
+        }
+        delete fn.dependsOn;
+        dependencies = undefined;
+        return fn;
+    };
+    Observable = function (initial) {
+        return observable({
+            initial: initial
+        });
+    };
+    Observable.isObservable = function (fn) {
+        if (typeof fn !== 'function') {
+            return false;
+        }
+        return fn.__observable || false;
+    };
+
+    Computed = function (getter, context, async, setter) {
+        return observable(typeof getter === 'function' ? {
+            get: getter,
+            context: context,
+            set: setter,
+            async: async
+        } : getter);
+    };
+
+
+    window.Observable = Observable;
+    window.Computed = Computed;
+    //window.Subscribeable = Subscribeable;
+}(this));
 
 (function (window) {
     "use strict";
@@ -203,7 +194,7 @@
             Constructor.prototype[key] =
                 //если функция
                 typeof val === 'function' &&
-                    //и не Observable
+                    //не Observable и не конструктор
                     val._notSimple === undefined &&
                     //и содержит _super
                     fnTest.test(val.toString())
@@ -217,6 +208,7 @@
         });//*/
 
         Constructor.prototype.constructor = Constructor;
+        Constructor._notSimple = true;
         Constructor.extend = ParentClass.extend;
         Constructor.create = ParentClass.create;
         return Constructor;
@@ -607,317 +599,307 @@
     window.Model = Model;
 }(this));
 
-(function(){
-	var itself=function(self){
-		this.self=self;
-	}
-	var Collection=Model.extend({
-		
-		constructor: function(models,attributes)
-		{
-			this.itself=new itself(this);
-			this.models=[];
-			this.length=0;
+(function () {
+    "use strict";
+    /*globals Model, _*/
+    var itself = function (self) {
+            this.self = self;
+        },
+        Collection = Model.extend({
 
-			// хэш вида  id : глобальный индекс
-			this._hashId = [];
-			if(models)
-			{
-				this.reset(models);
-			}
-			this.initialize(attributes);
-			
-		},
-		models: [],
-		model: Model,
-		url: function(){
-			return this.baseURL+this.model.prototype.mapping+'/';
-		},
-		fetch: function(options){
-			var me=this;
-			options||(options={});
-			var opt={
-				success: function(data){
-					me.reset(data,options);
-					if(typeof options.success == 'function')
-					{
-						options.success.apply(me,arguments);
-					}
-				},
-				error: function(){
-					if(typeof options.error == 'function')
-					{
-						options.error.apply(me,arguments);
-					}
-				}
-			}
-			var resOpt=_.extend({},options,opt);
-			Model.sync('GET', this.url(), resOpt);
-		},
-		reset: function(json,options){
-			options||(options={});
-			if(!options.add)
-			{
-				this.fire('beforeReset', this.models);
-				this.models=[];
-				this.length=0;
-				this._hashId = [];
-			}
-			if(!json)
-			{
-				this.fire('reset');
-				return this;
-			}
-			
-			var modelsArr=this.parse(json);
-			this.add(modelsArr,'end',!options.add);
-			if(!options.add)
-				this.fire('reset');			
-			return this;
-		},
-		push: function(model){
-			return this.add(model);
-		},
-		unshift: function(model){
-			return this.add(model,0);
-		},
-		add: function ( models, index, silent ) {
+            constructor: function (models, attributes) {
+                this.itself = new itself(this);
+                this.models = [];
+                this.length = 0;
 
-			var me = this,
-				hashIndex,
-				addedModels = [];
+                // хэш вида  id : глобальный индекс
+                this._hashId = [];
+                if (models) {
+                    this.reset(models);
+                }
+                this.initialize(attributes);
 
-			if ( !(models instanceof Array) ) {
-				models = [models];
-			}
+            },
+            models: [],
+            model: Model,
+            url: function () {
+                return this.baseURL + this.model.prototype.mapping + '/';
+            },
+            fetch: function (options) {
+                options = options || {};
+                var me = this;
+                Model.sync('GET', this.url(), _.defaults(options, {
+                    success: function (data) {
+                        me.reset(data, options);
+                        if (typeof options.success === 'function') {
+                            options.success.apply(me, arguments);
+                        }
+                    },
+                    error: function () {
+                        if (typeof options.error === 'function') {
+                            options.error.apply(me, arguments);
+                        }
+                    }
+                }));
+                return me;
+            },
+            reset: function (json, options) {
+                options = options || {};
+                if (!options.add) {
+                    this.fire('beforeReset', this.models);
+                    this.models = [];
+                    this.length = 0;
+                    this._hashId = [];
+                }
+                if (!json) {
+                    this.fire('reset');
+                    return this;
+                }
 
-			if (typeof index !== 'number') {
-				index = this.length
-			} else if(index === 0) {
-				var _models = models.reverse();
-			}
+                var modelsArr = this.parse(json);
+                this.add(modelsArr, 'end', !options.add);
+                if (!options.add) {
+                    this.fire('reset');
+                }
+                return this;
+            },
+            push: function (model) {
+                return this.add(model);
+            },
+            unshift: function (model) {
+                return this.add(model, 0);
+            },
+            add: function (models, index, silent) {
 
-			function addHashIndex ( model, index ) {
-				if ( index === 0 && me.length ) {
-					// берем наименьший порядковый индекс из первого элемента хэша
-					hashIndex = me._hashId[0].index - 1;
-					// добавляем элемент в начало хэша
-					me._hashId.unshift({
-						id: model.id,
-						index: hashIndex
-					});
-				}
-				else {
-					var length = me._hashId.length;
-					// проверка для пустого хэша
-					if ( length === 0 ) {
-						hashIndex = 1;
-					}
-					else {
-						// берем порядковый индекс из последнего элемента в хэше
-						hashIndex = me._hashId[length - 1].index + 1;
-					}
-					// добавляем элемент в конец хэша
-					me._hashId.push({
-						id: model.id,
-						index: hashIndex
-					});
-				}
-			}
+                var me = this,
+                    hashIndex,
+                    addedModels = [],
+                    _models;
 
-			_.each(models, function ( model, ind ) {
-				if ( !(model instanceof Model) ) {
-					model = Model.createOrUpdate(me.model, model);
-				}
-				addedModels.push(model);
+                if (!(models instanceof Array)) {
+                    models = [models];
+                }
 
-				if(_models) {
-					addHashIndex(_models[ind], 0);
-				} else {
-					addHashIndex(model, (index + ind));
-				}
+                if (typeof index !== 'number') {
+                    index = this.length;
+                } else if (index === 0) {
+                    _models = models.reverse();
+                }
 
-				model.one('remove', function () {
-					me.cutByCid(this.cid);
-				});
+                function addHashIndex(model, index) {
+                    if (index === 0 && me.length) {
+                        // берем наименьший порядковый индекс из первого элемента хэша
+                        hashIndex = me._hashId[0].index - 1;
+                        // добавляем элемент в начало хэша
+                        me._hashId.unshift({
+                            id: model.id,
+                            index: hashIndex
+                        });
+                    }
+                    else {
+                        var length = me._hashId.length;
+                        // проверка для пустого хэша
+                        if (length === 0) {
+                            hashIndex = 1;
+                        }
+                        else {
+                            // берем порядковый индекс из последнего элемента в хэше
+                            hashIndex = me._hashId[length - 1].index + 1;
+                        }
+                        // добавляем элемент в конец хэша
+                        me._hashId.push({
+                            id: model.id,
+                            index: hashIndex
+                        });
+                    }
+                }
 
-				me.models.splice(index + ind, 0, model);
+                _.each(models, function (model, ind) {
+                    if (!(model instanceof Model)) {
+                        model = Model.createOrUpdate(me.model, model);
+                    }
+                    addedModels.push(model);
 
-			});
+                    if (_models) {
+                        addHashIndex(_models[ind], 0);
+                    } else {
+                        addHashIndex(model, (index + ind));
+                    }
 
-			this.length = this.models.length;
-			if ( !silent ) {
-				this.fire('add', addedModels, index);
-			}
-			return this;
-		},
-		cut: function(id){
-			var found;
-			this.each(function(model,index){
-				if(model.id==id)
-				{
-					found=this.cutAt(index);
-					return false;
-				}
-			});
-			return found;
-		},
-		cutByCid: function(cid){
-			var found;
-			var self=this;
-			this.each(function(model,index){
-				if(model.cid==cid)
-				{
-					found=self.cutAt(index);
-					return false;
-				}
-			})
-			return found;
-		},
-		shift: function(){
-			return this.cutAt(0);
-		},
-		pop: function(){
-			return this.cutAt();
-		},
-		cutAt: function(index){
-			index!==undefined||(index=this.models.length-1);
-			var model=this.models.splice(index, 1)[0];
-			// удаление элемента из хеша
-			this._hashId.splice(index, 1);
-			this.length=this.models.length;
-			var cutted={};
-			cutted[index]=model;
-			this.fire('cut',cutted);
-			return model;
-		},
-		at: function(index){
-			return this.models[index];
-		},
-		/**
-		 * DEPRECATED since 26.01.2013
-		 */
-		get: function(){
-			return this.getByID.apply(this, arguments);
-		},
-		getByID: function(id){
-			var found;
-			this.each(function(model){
-				if(model.id==id)
-				{
-					found=model;
-					return false;
-				}
-			})
-			return found;
-		},
-		getByCid: function(cid){
-			var found;
-			this.each(function(model){
-				if(model.cid==cid)
-				{
-					found=model;
-					return false;
-				}
-			})
-			return found;
-		},
-		/**
-		 * Возвращение порядкового индекса модели
-		 * во всей коллекции
-		 * @param model
-		 * @return {Number}
-		 */
-		getIndex: function ( model ) {
-			var i = this.indexOf(model);
-			return this._hashId[i].index;
-		}
-	});
-	
-	// Underscore methods that we want to implement on the Collection.
-	var methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'find',
-	'detect', 'filter', 'select', 'reject', 'every', 'all', 'some', 'any',
-	'include', 'contains', 'invoke', 'max', 'min', 'sortBy', 'sortByDesc', 'sortedIndex',
-	'toArray', 'size', 'first', 'initial', 'rest', 'last', 'without', 'indexOf',
-	'shuffle', 'lastIndexOf', 'isEmpty', 'groupBy'];
-	
-	// An internal function to generate lookup iterators.
-	var lookupIterator = function(value) {
-		return _.isFunction(value) ? value : function(obj){
-			return obj[value];
-		};
-	};
+                    model.one('remove', function () {
+                        me.cutByCid(this.cid);
+                    });
 
-	// Sort the object's values by a criterion produced by an iterator.
-	_.sortByDesc = function(obj, value, context) {
-		var iterator = lookupIterator(value);
-		return _.pluck(_.map(obj, function(value, index, list) {
-			return {
-				value : value,
-				index : index,
-				criteria : iterator.call(context, value, index, list)
-			};
-		}).sort(function(left, right) {
-			var a = left.criteria;
-			var b = right.criteria;
-			if (a !== b) {
-				if (a > b || a === void 0) return -1;
-				if (a < b || b === void 0) return 1;
-			}
-			return left.index < right.index ? -1 : 1;
-		}), 'value');
-	};
-	
-	// Mix in each Underscore method as a proxy to `Collection#models`.
-	_.each(methods, function(method) {
-		Collection.prototype[method] = function() {
-			return _[method].apply(_, [this.models].concat(_.toArray(arguments)));
-		};
-	});
-	
-	var filterMethods = ['filter', 'reject'];
-	var sortMethods = ['sortBy','sortByDesc','shuffle'];
+                    me.models.splice(index + ind, 0, model);
 
-	_.each(filterMethods, function(method) {
-		itself.prototype[method] = function() {
-			var antonym=method=='filter'?'reject':'filter';
-			var self=this.self;
-			var args=_.toArray(arguments);
-			var newModels=_[method].apply(_, [self.models].concat(args));
-			var rejectedModels=_[antonym].apply(_, [self.models].concat(args));
-			var indexes={};
-			_.each(rejectedModels,function(model){
-				indexes[self.indexOf(model)]=model;
-			});
-			self.models=newModels;
-			self.length=newModels.length;
-			//console.log(indexes);
-			self.fire('cut', indexes);
-			return self;
-		};
-	});
-	
-	_.each(sortMethods, function(method) {
-		itself.prototype[method] = function() {
-			var self=this.self;
-			var newModels=_[method].apply(_, [self.models].concat(_.toArray(arguments)));
-			var indexes={};
-			_.each(newModels,function(model,index){
-				indexes[self.indexOf(model)]=index;
-			});
-			self.models=newModels;
-			self.length=newModels.length;
-			//console.log(indexes);
-			self.fire('sort', indexes);
-			return self;
-		};
-	});
-	
-	this.Collection=Collection;
-})();
+                });
+
+                this.length = this.models.length;
+                if (!silent) {
+                    this.fire('add', addedModels, index);
+                }
+                return this;
+            },
+            cut: function (id) {
+                var found, self = this;
+                self.each(function (model, index) {
+                    if (model.id === id) {
+                        found = self.cutAt(index);
+                        return false;
+                    }
+                });
+                return found;
+            },
+            cutByCid: function (cid) {
+                var found, self = this;
+                this.each(function (model, index) {
+                    if (model.cid === cid) {
+                        found = self.cutAt(index);
+                        return false;
+                    }
+                });
+                return found;
+            },
+            shift: function () {
+                return this.cutAt(0);
+            },
+            pop: function () {
+                return this.cutAt();
+            },
+            cutAt: function (index) {
+                if (index === undefined) {
+                    index = this.models.length - 1;
+                }
+                var model = this.models.splice(index, 1)[0], cutted;
+                // удаление элемента из хеша
+                this._hashId.splice(index, 1);
+                this.length = this.models.length;
+                cutted = {};
+                cutted[index] = model;
+                this.fire('cut', cutted);
+                return model;
+            },
+            at: function (index) {
+                return this.models[index];
+            },
+            /**
+             *
+             * @returns {Model}
+             * @deprecated
+             */
+            get: function () {
+                return this.getByID.apply(this, arguments);
+            },
+            getByID: function (id) {
+                return this.find(function (model) {
+                    return model.id === id;
+                });
+            },
+            getByCid: function (cid) {
+                return this.find(function (model) {
+                    return model.cid === cid;
+                });
+            },
+            /**
+             * Возвращение порядкового индекса модели
+             * во всей коллекции
+             * @param model
+             * @return {Number}
+             */
+            getIndex: function (model) {
+                var i = this.indexOf(model);
+                return this._hashId[i].index;
+            }
+        }),
+    // Underscore methods that we want to implement on the Collection.
+        methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'find',
+            'detect', 'filter', 'select', 'reject', 'every', 'all', 'some', 'any',
+            'include', 'contains', 'invoke', 'max', 'min', 'sortBy', 'sortByDesc', 'sortedIndex',
+            'toArray', 'size', 'first', 'initial', 'rest', 'last', 'without', 'indexOf',
+            'shuffle', 'lastIndexOf', 'isEmpty', 'groupBy'],
+    //itself методы вызывающие событие cut
+        filterMethods = ['filter', 'reject'],
+    //itself методы вызывающие событие sort
+        sortMethods = ['sortBy', 'sortByDesc', 'shuffle'],
+    // An internal function to generate lookup iterators.
+        lookupIterator = function (value) {
+            return _.isFunction(value) ? value : function (obj) {
+                return obj[value];
+            };
+        };
+
+    // Sort the object's values by a criterion produced by an iterator.
+    _.sortByDesc = function (obj, value, context) {
+        var iterator = lookupIterator(value);
+        return _.pluck(_.map(obj,function (value, index, list) {
+            return {
+                value: value,
+                index: index,
+                criteria: iterator.call(context, value, index, list)
+            };
+        }).sort(function (left, right) {
+                var a = left.criteria,
+                    b = right.criteria;
+                if (a !== b) {
+                    if (a > b || a === undefined) {
+                        return -1;
+                    }
+                    if (a < b || b === undefined) {
+                        return 1;
+                    }
+                }
+                return left.index < right.index ? -1 : 1;
+            }), 'value');
+    };
+
+    // Mix in each Underscore method as a proxy to `Collection#models`.
+    _.each(methods, function (method) {
+        Collection.prototype[method] = function () {
+            return _[method].apply(_, [this.models].concat(_.toArray(arguments)));
+        };
+    });
+
+
+    _.each(filterMethods, function (method) {
+        itself.prototype[method] = function () {
+            var antonym = method === 'filter' ? 'reject' : 'filter',
+                self = this.self,
+                args = _.toArray(arguments),
+                newModels = _[method].apply(_, [self.models].concat(args)),
+                rejectedModels = _[antonym].apply(_, [self.models].concat(args)),
+                indexes = {};
+            _.each(rejectedModels, function (model) {
+                indexes[self.indexOf(model)] = model;
+            });
+            self.models = newModels;
+            self.length = newModels.length;
+            //console.log(indexes);
+            self.fire('cut', indexes);
+            return self;
+        };
+    });
+
+    _.each(sortMethods, function (method) {
+        itself.prototype[method] = function () {
+            var self = this.self,
+                newModels = _[method].apply(_, [self.models].concat(_.toArray(arguments))),
+                indexes = {};
+            _.each(newModels, function (model, index) {
+                indexes[self.indexOf(model)] = index;
+            });
+            self.models = newModels;
+            self.length = newModels.length;
+            //console.log(indexes);
+            self.fire('sort', indexes);
+            return self;
+        };
+    });
+
+    window.Collection = Collection;
+}(this));
 (function (window) {
     "use strict";
-    /*global _, Computed, Observable, Model, Events */
+    /*global _, Computed, Observable, Model, Events, BaseObservable */
     var $ = window.$,
         eventSplitter = /\s+/,
         bindSplitter = /\s*;\s*/,
@@ -1087,16 +1069,19 @@
 
         obs = fnEval();
         //если уже асинхронный, то возвращаем его
-        if (this.compAsync && obs && !obs.async) {
-            if (Observable.isObservable(obs)) {
-                comp = Computed(function () {
-                    return obs();
-                }, context, true);
-            } else {
-                comp = Computed(function () {
-                    return fnEval();
-                }, context, true);
+        if (this.compAsync) {
+            if (!Observable.isObservable(obs)) {
+                obs = fnEval;
             }
+            comp = BaseObservable({
+                async: true,
+                get: function () {
+                    return  obs();
+                },
+                set: function (val) {
+                    obs(val);
+                }
+            });
         } else {
 
             if (Observable.isObservable(obs)) {
@@ -1206,188 +1191,134 @@
 
     window.ViewModel = ViewModel;
 }(this));
-(function() {
-	ViewModel.binds = {
-		log: function(elem, value, context, addArgs) {
-			this.findObservable(context, value, addArgs).callAndSubscribe(function(){
-				console.log(context, '.', value, '=', this());
-			})
-		},
-		src: function(elem,value,context,addArgs){
-			this.findObservable(context, value, addArgs)
-			.callAndSubscribe(function(val){
-				elem.src=val?val:'';
-			});
-		},
-		html: function(elem, value, context, addArgs) {
-			//var $el=$(elem);
-			this.findObservable(context, value, addArgs)
-			.callAndSubscribe(function(val){
-				elem.innerHTML=val;
-			});
-		},
-		text: function(elem, value, context, addArgs) {
-			var $el=$(elem);
-			this.findObservable(context, value, addArgs)
-			.callAndSubscribe(function(val){
-				$el.text(val);
-			});
-		},
-		'with': function(elem, value, context, addArgs) {
-			return this.findObservable(context, value, addArgs)();
-		},
-		each: function(elem, value, context, addArgs) {
-			var fArray = this.findObservable(context, value, addArgs);
-			var $el = $(elem);
-			var html = $el.html();
-			$el.empty();
-			
-			if(addArgs)
-				addArgs=_.clone(addArgs);
-			else
-				addArgs={};
-			//console.log(elem);
-			fArray.callAndSubscribe(function(array) {
-				$el.empty();
-			//	console.log(array);
-				if(array) {
-					_.each(array, function(val,ind) {
-						addArgs.$index=ind;
-						addArgs.$parent=array;
-						addArgs.$value=val;
-						var tempDiv = document.createElement('div');
-						tempDiv.innerHTML=html;
-						ViewModel.findBinds(tempDiv, val, addArgs);
-						$el.append(tempDiv.innerHTML);
-					});
-				}
-			});
-			
-			return false;
-		},
-		eachModel: function(elem, value, context, addArgs) {
-			var collectionObs=this.findObservable(context, value, addArgs);
-			var html = $(elem).html();
-				
-			var rebindCollection=function(collection){
-				var i = 0;
-				addArgs||(addArgs={});
-				var renderModel = function(model, index) {
-					var tempDiv = document.createElement('div');
-					$(tempDiv).html(html);
-					
-					//model.__index__ = collection.getIndex(model);
+(function () {
+    "use strict";
+    /*globals ViewModel, $, _*/
+    ViewModel.binds = {
+        log: function (elem, value, context, addArgs) {
+            this.findObservable(context, value, addArgs).callAndSubscribe(function () {
+                console.log(context, '.', value, '=', this());
+            });
+        },
+        src: function (elem, value, context, addArgs) {
+            this.findObservable(context, value, addArgs)
+                .callAndSubscribe(function (val) {
+                    elem.src = val || '';
+                });
+        },
+        html: function (elem, value, context, addArgs) {
+            //var $el=$(elem);
+            this.findObservable(context, value, addArgs)
+                .callAndSubscribe(function (val) {
+                    elem.innerHTML = val;
+                });
+        },
+        text: function (elem, value, context, addArgs) {
+            var $el = $(elem);
+            this.findObservable(context, value, addArgs)
+                .callAndSubscribe(function (val) {
+                    $el.text(val);
+                });
+        },
+        'with': function (elem, value, context, addArgs) {
+            return this.findObservable(context, value, addArgs)();
+        },
+        each: function (elem, value, context, addArgs) {
+            var fArray = this.findObservable(context, value, addArgs),
+                $el = $(elem),
+                html = $el.html();
+            $el.empty();
 
-					var obs = Observable(model);
-					addArgs.$index=index;
-					addArgs.$parent=collection;
-					ViewModel.findBinds(tempDiv, obs, addArgs);
+            if (addArgs) {
+                addArgs = _.clone(addArgs);
+            }
+            else {
+                addArgs = {};
+            }
+            //console.log(elem);
+            fArray.callAndSubscribe(function (array) {
+                $el.empty();
+                //	console.log(array);
+                if (array) {
+                    _.each(array, function (val, ind) {
+                        addArgs.$index = ind;
+                        addArgs.$parent = array;
+                        addArgs.$value = val;
+                        var tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = html;
+                        ViewModel.findBinds(tempDiv, val, addArgs);
+                        $el.append(tempDiv.innerHTML);
+                    });
+                }
+            });
 
-					var $children = $(tempDiv).children();
-					if(index == 0) {
-						$children.prependTo(elem);
-					} else if($children.length && $(elem).children().eq(index*$children.length).length) {
-						$children.insertBefore($(elem).children().eq(index*$children.length));
-					} else {
-						$children.appendTo(elem);
-					}
-
-					var ctx = {};
-					model.on('change',function(e) {
-						obs.fire();
-					}, ctx).on('cut',function(from) {
-						if(from === collection) {
-							$children.empty().remove();
-							collection.fire('cut', model);
-						}
-						model.off(0, 0, ctx);
-						obs.destroy();
-						delete obs;
-					}, ctx);
-					i++;
-				};
-				if(collection.length) {
-					collection.each(renderModel)
-				}
-				collection.on('add', renderModel);
-				$(elem).show();
-			}
-				
-				
-			var fn=function(){
-				$(elem).hide();
-				$(elem).empty();
-				var collection = collectionObs();
-				if(collection)
-				{
-					rebindCollection(collection);
-				}
-			}
-			fn();
-			collectionObs.subscribe(fn);
-				
-			return false;
-		},
-		value: function(elem, value, context, addArgs) {
-			var $el=$(elem);
-			var obs = ViewModel.findObservable(context, value, addArgs);
-			obs.callAndSubscribe(function(value){
-				$el.val(value);
-			});
-			$el.change(function(){
-				obs($el.val());
-			});
-		},
-		attr: function(elem, value, context, addArgs) {
-			_.each(this.parseOptionsObject(value),function(condition,attrName){
-				ViewModel.findObservable(context, condition, addArgs)
-				.callAndSubscribe(function(val){
-					if(val)
-						elem.setAttribute(attrName, val)
-					else
-						elem.removeAttribute(attrName);
-				});
-			});
-		},
-		style: function(elem, value, context, addArgs) {
-			var $el=$(elem);
-			_.each(this.parseOptionsObject(value),function(condition,style){
-				ViewModel.findObservable(context, condition, addArgs)
-				.callAndSubscribe(function(value){
-					$el.css(style,value);
-				});
-			});
-		},
-		css: function(elem, value, context, addArgs) {
-			var $el=$(elem);
-			_.each(this.parseOptionsObject(value),function(condition,className){
-				ViewModel.findObservable(context, condition, addArgs)
-				.callAndSubscribe(function(value){
-					if(value)
-						$el.addClass(className);
-					else
-						$el.removeClass(className);
-				});
-			});
-		},
-		display: function(elem, value, context, addArgs) {
-			var $el=$(elem);
-			this.findObservable(context, value, addArgs).callAndSubscribe(function(value){
-				if(value)
-					$el.show();
-				else
-					$el.hide();
-			});
-		},
-		click: function(elem, value, context,addArgs) {
-			var fn = this.findObservable(context, value, addArgs)();
-			var $el = $(elem);
-			$el.click(function() {
-				fn.apply(context,arguments);
-			});
-		}
-	};
-})();
+            return false;
+        },
+        value: function (elem, value, context, addArgs) {
+            var $el = $(elem),
+                obs = this.findObservable(context, value, addArgs)
+                    .callAndSubscribe(function (value) {
+                        $el.val(value);
+                    });
+            $el.change(function () {
+                obs($el.val());
+            });
+        },
+        attr: function (elem, value, context, addArgs) {
+            _.each(this.parseOptionsObject(value), function (condition, attrName) {
+                ViewModel.findObservable(context, condition, addArgs)
+                    .callAndSubscribe(function (val) {
+                        if (val) {
+                            elem.setAttribute(attrName, val);
+                        } else {
+                            elem.removeAttribute(attrName);
+                        }
+                    });
+            });
+        },
+        style: function (elem, value, context, addArgs) {
+            var $el = $(elem);
+            _.each(this.parseOptionsObject(value), function (condition, style) {
+                ViewModel.findObservable(context, condition, addArgs)
+                    .callAndSubscribe(function (value) {
+                        $el.css(style, value);
+                    });
+            });
+        },
+        css: function (elem, value, context, addArgs) {
+            var $el = $(elem);
+            _.each(this.parseOptionsObject(value), function (condition, className) {
+                ViewModel.findObservable(context, condition, addArgs)
+                    .callAndSubscribe(function (value) {
+                        if (value) {
+                            $el.addClass(className);
+                        }
+                        else {
+                            $el.removeClass(className);
+                        }
+                    });
+            });
+        },
+        display: function (elem, value, context, addArgs) {
+            var $el = $(elem);
+            this.findObservable(context, value, addArgs).callAndSubscribe(function (value) {
+                if (value) {
+                    $el.show();
+                }
+                else {
+                    $el.hide();
+                }
+            });
+        },
+        click: function (elem, value, context, addArgs) {
+            var fn = this.findObservable(context, value, addArgs)(),
+                $el = $(elem);
+            $el.click(function () {
+                fn.apply(context, arguments);
+            });
+        }
+    };
+}());
 
 (function(){
 	var rawTemplates={};
