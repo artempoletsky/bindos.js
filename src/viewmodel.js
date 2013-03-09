@@ -108,11 +108,9 @@
                 this.undelegateEvents();
                 var eventsPath, eventName, me = this;
                 _.each(events, function (fnName, name) {
-                    //если это простая функция, содержится в VM или глобальная функция
+                    //если это простая функция или содержится в VM
                     var fn = (typeof fnName === 'function') ? fnName : me[fnName],
-                        proxy = function () {
-                            fn.apply(me, arguments);
-                        };
+                        proxy;
 
                     if (typeof fn !== 'function') {
                         throw TypeError(fnName + ' is not a function');
@@ -121,6 +119,7 @@
                     //меняем запятые в имени события на пробелы и неймспейс
                     eventName = eventsPath.shift().split(',').join('.' + me._cid + ' ') + '.' + me._cid;
 
+                    proxy = _.bind(fn, me);
 
                     if (eventsPath.length) {
                         me.$el.delegate(eventsPath.join(' '), eventName, proxy);
@@ -148,7 +147,7 @@
         if (Observable.isObservable(context)) {
             context = context();
         }
-        var keys = _.keys(addArgs),
+        var keys = [],
             vals = [],
             i,
             l,
@@ -156,9 +155,11 @@
             comp,
             fnEval,
             obs;
-        for (i = 0, l = keys.length; i < l; i++) {
-            vals[i] = addArgs[keys[i]];
-        }
+        _.each(addArgs, function (key, val) {
+            keys.push(key);
+            vals.push(val);
+        });
+
         keys.push('with(this) return ' + string);
         fn = Function.apply(context, keys);
         fnEval = function () {

@@ -40,46 +40,43 @@ describe('ViewModel', function () {
     })
 
     it('can delegate events', function () {
-        var called = false;
+
         var dom = $('<div id="grand"><div class="father"><div class="child"></div></div></div>');
+        var spy = jasmine.createSpy();
         var vm = ViewModel.create({
             el: dom,
             events: {
                 'click .child': 'onClick'
             },
-            onClick: function (e) {
-                called = true;
-                expect(this).toBe(vm);
-                expect(e.currentTarget).toBe(dom.find('.child')[0]);
-            }
+            onClick: spy
         });
-        expect(called).toBe(false);
+        expect(spy.calls.length).toBe(0);
         vm.$el.click();
-        expect(called).toBe(false);
+        expect(spy.calls.length).toBe(0);
         vm.$el.find('.child').click();
-        expect(called).toBe(true);
+        expect(spy.calls.length).toBe(1);
+        expect(spy.calls[0].args[0].type).toBe('click');
+        expect(spy.calls[0].object).toBe(vm);
     })
     it('can undelegate events', function () {
-        var called = 0;
         var dom = $('<div id="grand"><div class="father"><div class="child"></div></div></div>');
+        var spy = jasmine.createSpy();
         var vm = ViewModel.create({
             el: dom,
             events: {
                 'click .child': 'onClick'
             },
-            onClick: function () {
-                called++;
-            }
+            onClick: spy
         });
         var $child = vm.$el.find('.child');
         $child.click();
-        expect(called).toBe(1);
+        expect(spy.calls.length).toBe(1);
         vm.undelegateEvents();
         $child.click();
-        expect(called).toBe(1);
+        expect(spy.calls.length).toBe(1);
         vm.delegateEvents();
         $child.click();
-        expect(called).toBe(2);
+        expect(spy.calls.length).toBe(2);
     })
     it('can parse binds from html', function () {
 
