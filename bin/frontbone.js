@@ -1052,7 +1052,7 @@
             comp,
             fnEval,
             obs;
-        _.each(addArgs, function (key, val) {
+        _.each(addArgs, function (val, key) {
             keys.push(key);
             vals.push(val);
         });

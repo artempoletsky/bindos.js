@@ -9,7 +9,7 @@
 		<script type="text/javascript" src="lib/lodash.min.js"></script>
 		<script type="text/javascript" src="bin/frontbone.js"></script>
 
-		<script type="text/javascript" src="example/eachmodeldeep.js"></script>
+		<script type="text/javascript" src="src/eachmodel.js"></script>
 		<script type="text/javascript" src="example/eachmodel_example.js"></script>
 		<style type="text/css">
 			table{
@@ -55,7 +55,7 @@
 					<td>rating</td>
 				</tr>
 			</thead>
-			<tbody data-bind="eachModelDeep: collection">
+			<tbody data-bind="eachModel: collection">
 				<tr>
 					<td data-bind="html: $index"></td>
 					<td data-bind="html: idFilm"></td>
