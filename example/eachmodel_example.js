@@ -62,9 +62,11 @@ jQuery(function ($) {
     var parsed = JSON.parse(data);
     //console.log(new Collection().itself);
 
-    var vm = ViewModel.create({
+    ViewModel.create({
         el: 'body',
         initialize: function () {
+
+            window.vm=this;
             this.collection = Observable(Collection.create({
                 model: Film,
                 parse: function (data) {

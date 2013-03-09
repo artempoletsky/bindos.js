@@ -127,8 +127,10 @@
                                 initial: $parent
                             })
                         };
-
+                        oldAsync = ViewModel.compAsync;
+                        ViewModel.compAsync = false;
                         ViewModel.findBinds(tempDiv, context, addArgs);
+                        ViewModel.compAsync = oldAsync;
 
                         observers.splice($index, 0, {
                             addArgs: addArgs,
@@ -180,6 +182,7 @@
                 if (innerBinds) {
                     collection.each(function (model) {
                         $el.append(template(model, i++, collection));
+                        listenModel(model);
                     });
                 }
                 else {
