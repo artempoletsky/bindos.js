@@ -64,14 +64,22 @@ jQuery(function ($) {
 
     var vm = ViewModel.create({
         el: 'body',
+        initialize: function () {
+            this.collection = Observable(Collection.create({
+                model: Film,
+                parse: function (data) {
+                    return _.toArray(data);
+                }
+            }).reset(parsed));
+        },
         events: {
             'click thead td': 'click'
         },
         autoParseBinds: true,
         click: function (e) {
-            var $tgt = $(e.currentTarget);
-            var prop = $tgt.html();
-            var fn = 'sortBy'
+            var $tgt = $(e.currentTarget),
+                prop = $tgt.html(),
+                fn = 'sortBy';
             if (!$tgt.hasClass('cur')) {
                 $tgt.addClass('cur').siblings().removeClass('cur desc');
             }
@@ -87,18 +95,9 @@ jQuery(function ($) {
             //console.log(this.collection().itself.sortByDesc);
             this.collection().itself[fn](function (m) {
                 return m.get(prop);
-            })
-        }
-    }, {
-        collection: Observable()
-    });
-    var col = Collection.create({
-        model: Film,
-        parse: function (data) {
-            return _.toArray(data);
+            });
         }
     });
-    vm.collection(col).reset(parsed);
 
 //console.log(vm.collection);
 });
