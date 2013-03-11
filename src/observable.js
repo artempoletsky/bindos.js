@@ -48,7 +48,6 @@
     BaseObservable = function (params) {
         params = params || {};
         var value = params.initial,
-            oldValue = value,
             getter = params.get,
             setter = params.set,
             ctx = params.context,
@@ -108,12 +107,20 @@
             notify: function () {
                 var me = this,
                     value = me();
-                if (oldValue !== value || _.isObject(value)) {
+                if (me.lastValue !== value || _.isObject(value)) {
                     _.each(listeners, function (callback) {
                         callback.call(me, value);
                     });
                 }
-                oldValue = value;
+                me.lastValue = value;
+                return me;
+            },
+            fire: function () {
+                var me = this,
+                    value = me();
+                _.each(listeners, function (callback) {
+                    callback.call(me, value);
+                });
                 return me;
             },
             callAndSubscribe: function (callback) {
@@ -124,15 +131,16 @@
             _notSimple: true,
             __observable: true
         });
-        fn.fire = fn.notify;
+        //fn.fire = fn.notify;
         fn.valueOf = fn.toString = function () {
             return this();
         };
         if (getter) {
             computedInit = fn;
-            value = oldValue = getter.call(ctx);
+            value = getter.call(ctx);
             computedInit = false;
         }
+        fn.lastValue = value;
         delete fn.dependsOn;
         dependencies = undefined;
         return fn;
