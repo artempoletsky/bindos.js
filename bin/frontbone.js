@@ -645,7 +645,7 @@
                 Model.sync('GET', this.url(), resOpt);
             },
             reset: function (json, options) {
-                options || (options = {});
+                options = options || {};
                 if (!options.add) {
                     this.fire('beforeReset', this.models);
                     this.models = [];
@@ -659,8 +659,9 @@
 
                 var modelsArr = this.parse(json);
                 this.add(modelsArr, 'end', !options.add);
-                if (!options.add)
+                if (!options.add) {
                     this.fire('reset');
+                }
                 return this;
             },
             push: function (model) {
@@ -673,16 +674,16 @@
 
                 var me = this,
                     hashIndex,
-                    addedModels = [];
+                    addedModels = [], _models;
 
                 if (!(models instanceof Array)) {
                     models = [models];
                 }
 
                 if (typeof index !== 'number') {
-                    index = this.length
+                    index = this.length;
                 } else if (index === 0) {
-                    var _models = models.reverse();
+                    _models = models.reverse();
                 }
 
                 function addHashIndex(model, index) {
