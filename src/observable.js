@@ -115,6 +115,14 @@
                 me.lastValue = value;
                 return me;
             },
+            fire: function () {
+                var me = this,
+                    value = me();
+                _.each(listeners, function (callback) {
+                    callback.call(me, value);
+                });
+                return me;
+            },
             callAndSubscribe: function (callback) {
                 callback.call(this, this());
                 this.subscribe(callback);
@@ -123,7 +131,7 @@
             _notSimple: true,
             __observable: true
         });
-        fn.fire = fn.notify;
+        //fn.fire = fn.notify;
         fn.valueOf = fn.toString = function () {
             return this();
         };
