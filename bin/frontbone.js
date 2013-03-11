@@ -691,7 +691,7 @@
                 if (typeof index !== 'number') {
                     index = this.length;
                 } else if (index === 0) {
-                    _models = models.reverse();
+					_models = _.clone(models).reverse();
                 }
 
                 function addHashIndex(model, index) {
