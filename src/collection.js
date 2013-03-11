@@ -1,6 +1,6 @@
-(function () {
+(function (window) {
     "use strict";
-    /*globals Model, _*/
+    /*globals _,$, Model*/
     var itself = function (self) {
             this.self = self;
         },
@@ -26,21 +26,22 @@
             },
             fetch: function (options) {
                 options = options || {};
-                var me = this;
-                Model.sync('GET', this.url(), _.defaults(options, {
-                    success: function (data) {
-                        me.reset(data, options);
-                        if (typeof options.success === 'function') {
-                            options.success.apply(me, arguments);
+                var me = this,
+                    opt = {
+                        success: function (data) {
+                            me.reset(data, options);
+                            if (typeof options.success === 'function') {
+                                options.success.apply(me, arguments);
+                            }
+                        },
+                        error: function () {
+                            if (typeof options.error === 'function') {
+                                options.error.apply(me, arguments);
+                            }
                         }
                     },
-                    error: function () {
-                        if (typeof options.error === 'function') {
-                            options.error.apply(me, arguments);
-                        }
-                    }
-                }));
-                return me;
+                    resOpt = _.extend({}, options, opt);
+                Model.sync('GET', this.url(), resOpt);
             },
             reset: function (json, options) {
                 options = options || {};
@@ -72,8 +73,7 @@
 
                 var me = this,
                     hashIndex,
-                    addedModels = [],
-                    _models;
+                    addedModels = [], _models;
 
                 if (!(models instanceof Array)) {
                     models = [models];
@@ -140,17 +140,18 @@
                 return this;
             },
             cut: function (id) {
-                var found, self = this;
-                self.each(function (model, index) {
+                var found;
+                this.each(function (model, index) {
                     if (model.id === id) {
-                        found = self.cutAt(index);
+                        found = this.cutAt(index);
                         return false;
                     }
                 });
                 return found;
             },
             cutByCid: function (cid) {
-                var found, self = this;
+                var found,
+                    self = this;
                 this.each(function (model, index) {
                     if (model.cid === cid) {
                         found = self.cutAt(index);
@@ -169,6 +170,7 @@
                 if (index === undefined) {
                     index = this.models.length - 1;
                 }
+
                 var model = this.models.splice(index, 1)[0], cutted;
                 // удаление элемента из хеша
                 this._hashId.splice(index, 1);
@@ -182,22 +184,30 @@
                 return this.models[index];
             },
             /**
-             *
-             * @returns {Model}
-             * @deprecated
+             * DEPRECATED since 26.01.2013
              */
             get: function () {
                 return this.getByID.apply(this, arguments);
             },
             getByID: function (id) {
-                return this.find(function (model) {
-                    return model.id === id;
+                var found;
+                this.each(function (model) {
+                    if (model.id === id) {
+                        found = model;
+                        return false;
+                    }
                 });
+                return found;
             },
             getByCid: function (cid) {
-                return this.find(function (model) {
-                    return model.cid === cid;
+                var found;
+                this.each(function (model) {
+                    if (model.cid === cid) {
+                        found = model;
+                        return false;
+                    }
                 });
+                return found;
             },
             /**
              * Возвращение порядкового индекса модели
@@ -210,22 +220,22 @@
                 return this._hashId[i].index;
             }
         }),
+
     // Underscore methods that we want to implement on the Collection.
         methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'find',
             'detect', 'filter', 'select', 'reject', 'every', 'all', 'some', 'any',
             'include', 'contains', 'invoke', 'max', 'min', 'sortBy', 'sortByDesc', 'sortedIndex',
             'toArray', 'size', 'first', 'initial', 'rest', 'last', 'without', 'indexOf',
             'shuffle', 'lastIndexOf', 'isEmpty', 'groupBy'],
-    //itself методы вызывающие событие cut
-        filterMethods = ['filter', 'reject'],
-    //itself методы вызывающие событие sort
-        sortMethods = ['sortBy', 'sortByDesc', 'shuffle'],
+
     // An internal function to generate lookup iterators.
         lookupIterator = function (value) {
             return _.isFunction(value) ? value : function (obj) {
                 return obj[value];
             };
-        };
+        },
+        filterMethods = ['filter', 'reject'],
+        sortMethods = ['sortBy', 'sortByDesc', 'shuffle'];
 
     // Sort the object's values by a criterion produced by an iterator.
     _.sortByDesc = function (obj, value, context) {
@@ -250,6 +260,10 @@
                 return left.index < right.index ? -1 : 1;
             }), 'value');
     };
+
+
+
+
 
     // Mix in each Underscore method as a proxy to `Collection#models`.
     _.each(methods, function (method) {
