@@ -1,8 +1,9 @@
-(function(){
+(function(window){
+    "use strict";
 	var itself=function(self){
 		this.self=self;
-	}
-	var Collection=Model.extend({
+    },
+        Collection=Model.extend({
 		
 		constructor: function(models,attributes)
 		{
@@ -304,5 +305,5 @@
 		};
 	});
 	
-	this.Collection=Collection;
-})();
+	window.Collection=Collection;
+}(this));
