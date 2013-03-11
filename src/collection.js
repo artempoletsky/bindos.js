@@ -192,7 +192,7 @@
             getByID: function (id) {
                 var found;
                 this.each(function (model) {
-                    if (model.id === id) {
+                    if (model.id == id) {
                         found = model;
                         return false;
                     }
@@ -202,7 +202,7 @@
             getByCid: function (cid) {
                 var found;
                 this.each(function (model) {
-                    if (model.cid === cid) {
+                    if (model.cid == cid) {
                         found = model;
                         return false;
                     }
