@@ -41,11 +41,11 @@
             stopRefresh: function () {
                 refreshActive = false;
             }
-        }, Subscribeable, observable;
+        }, BaseObservable;
 
     refresher.startRefresh();
 
-    observable = window.BaseObservable = function (params) {
+    BaseObservable = function (params) {
         params = params || {};
         var value = params.initial,
             oldValue = value,
@@ -138,7 +138,7 @@
         return fn;
     };
     Observable = function (initial) {
-        return observable({
+        return BaseObservable({
             initial: initial
         });
     };
@@ -150,7 +150,7 @@
     };
 
     Computed = function (getter, context, async, setter) {
-        return observable(typeof getter === 'function' ? {
+        return BaseObservable(typeof getter === 'function' ? {
             get: getter,
             context: context,
             set: setter,
@@ -158,7 +158,7 @@
         } : getter);
     };
 
-
+    window.BaseObservable = BaseObservable;
     window.Observable = Observable;
     window.Computed = Computed;
     //window.Subscribeable = Subscribeable;

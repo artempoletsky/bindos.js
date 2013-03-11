@@ -1,177 +1,168 @@
-(function(){
-	var waitForRefresh=[];
-	var refreshActive=false;
-	
-	var refreshFn=window.requestAnimationFrame
-	||window.webkitRequestAnimationFrame
-	||window.mozRequestAnimationFrame
-	||window.msRequestAnimationFrame
-	||window.oRequestAnimationFrame
-	||function(cb){
-		setTimeout(function(){
-			cb();
-		}, 1000/15);
-	};
-	
-	window.ComputedRefresher={
-		refreshAll: function(){
-			_.each(waitForRefresh,function(val){
-				val.refresh();
-			});
-			waitForRefresh=[];
-		},
-		startRefresh:function(){
-			var self=this;
-			refreshActive=true;
-			refreshFn(function(){
-				if(refreshActive)
-				{
-					self.refreshAll();
-					self.startRefresh();
-				}
-			})
-		},
-		stopRefresh: function(){
-			refreshActive=false;
-		}
-	}
-	ComputedRefresher.startRefresh();
-	
-	var Subscribeable=function(fn){
-		fn._listeners=[];
-		fn.subscribe=function(callback,context){
-			fn._listeners.push(arguments);
-		}
-		fn.unsubscribe=function(callback){
-			for(var i=0,l=fn._listeners.length;i<l;i++)
-				if(fn._listeners[i][0]===callback)
-					fn._listeners.splice(i, 1);
-		}
-		fn.fire=function(){
-			for(var i=0,l=fn._listeners.length;i<l;i++)
-				fn._listeners[i][0].call(fn._listeners[i][1]||fn,fn());
-		}
-		fn.callAndSubscribe=function(callback){
-			callback.call(this,fn());
-			this.subscribe(callback)
-		}
-		fn._notSimple=true;
-		return fn;
-	}
-	var computedInit=false;
-	
-	var Observable=function(initial)
-	{
-		var value=initial;
-		var fn=function(set){
-			if(arguments.length>0)
-			{
-				if(value!==set||_.isObject(set))
-				{
-					fn.lastValue=value;
-					value=set;
-					fn.fire();
-				}
-			}
-			else if(computedInit)
-			{
-				computedInit.subscribeTo(fn);
-			}
-			return value;
-		}
-		Subscribeable(fn);
-		
-		fn.lastValue=undefined;
-		fn.valueOf=fn.toString=function(){
-			return this();
-		}
-		fn.__observable=true;
-		return fn;
-	}
-	Observable.isObservable=function(fn){
-		if(typeof fn != 'function')
-			return false;
-		return fn.__observable||false;
-	}
-	
-	var Computed=function(options){
-		var getter,context,async,setter
-		if(typeof options=='function')
-		{
-			getter=options;
-			context=arguments[1];
-			async=arguments[2];
-			setter=arguments[3];
-		}
-		else
-		{
-			getter=options.get;
-			context=options.context;
-			async=options.async;
-			setter=options.set;
-		}
-		
-		var resfn=function(){
-			if(arguments.length==1)
-			{
-				if(!setter)
-					throw new Error('Setter for computed is not defined');
-				setter.call(context,arguments[0]);
-			}
-			return getter.call(context);
-		}
-		
-		var fireProxy=function(){
-			if(async)
-				waitForRefresh.push(resfn);
-			else
-				resfn.refresh();
-		}
-		
-		
-		resfn.async=async||false;
-		var dependencies=[];
-		
-		resfn.subscribeTo=function(obs)
-		{
-			if(!~dependencies.indexOf(obs))
-			{
-				dependencies.push(obs);
-				obs.subscribe(fireProxy)
-			}
-		}
-		
-		Subscribeable(resfn);
-		
-		
-		resfn.__observable=true;
-		
-		resfn.valueOf=resfn.toString=function(){
-			return this();
-		}
-		computedInit=resfn;
-		var oldValue=getter.call(context);
-		computedInit=false;
-		
-		resfn.refresh=function(){
-			var val=this();
-			if(oldValue!==val||_.isObject(val))
-			{
-				this.fire();
-			}
-			oldValue=val;
-		}
-		delete dependencies;
-		delete resfn.subscribeTo;
-		return resfn;
-	}
-	
-	
-	
-	this.Observable=Observable;
-	this.Computed=Computed;
-	this.Subscribeable=Subscribeable;
-})();
+(function (window) {
+    "use strict";
+    /*globals _*/
+    var waitForRefresh = [],
+        refreshActive = false,
+        computedInit = false,
+        Observable,
+        Computed,
+        refreshFn = window.requestAnimationFrame
+            || window.webkitRequestAnimationFrame
+            || window.mozRequestAnimationFrame
+            || window.msRequestAnimationFrame
+            || window.oRequestAnimationFrame
+            || function (cb) {
+            setTimeout(function () {
+                cb();
+            }, 1000 / 15);
+        },
+        addToRefresh = function (observable) {
+            if (waitForRefresh.indexOf(observable) === -1) {
+                waitForRefresh.push(observable);
+            }
+        },
+        refresher = window.ComputedRefresher = {
+            refreshAll: function () {
+                _.each(waitForRefresh, function (val) {
+                    val.notify();
+                });
+                waitForRefresh = [];
+            },
+            startRefresh: function () {
+                var self = this;
+                refreshActive = true;
+                refreshFn(function () {
+                    if (refreshActive) {
+                        self.refreshAll();
+                        self.startRefresh();
+                    }
+                });
+            },
+            stopRefresh: function () {
+                refreshActive = false;
+            }
+        }, BaseObservable;
+
+    refresher.startRefresh();
+
+    BaseObservable = function (params) {
+        params = params || {};
+        var value = params.initial,
+            oldValue = value,
+            getter = params.get,
+            setter = params.set,
+            ctx = params.context,
+            async = params.async,
+            dependencies = [],
+            listeners = [],
+            fn = function (newValue) {
+                if (arguments.length === 0) {
+                    if (getter) {
+                        value = getter.call(ctx);
+                    } else if (computedInit) {
+                        computedInit.dependsOn(fn);
+                    }
+                } else {
+                    if (value !== newValue || _.isObject(newValue)) {
+                        if (setter) {
+                            setter.call(ctx, newValue);
+                        } else if (getter) {
+                            throw new Error('Setter for computed is not defined');
+                        } else {
+                            value = newValue;
+                        }
+                        if (!async) {
+                            fn.notify();
+                        } else {
+                            addToRefresh(fn);
+                        }
+                    }
+                }
+                return value;
+            };
+        _.extend(fn, {
+            dependsOn: function (obs) {
+                var me = this;
+                if (dependencies.indexOf(obs) === -1) {
+                    dependencies.push(obs);
+                    obs.subscribe(function () {
+                        if (!async) {
+                            fn.notify();
+                        } else {
+                            addToRefresh(fn);
+                        }
+                    });
+                }
+                return me;
+            },
+            subscribe: function (callback) {
+                listeners.push(callback);
+                return this;
+            },
+            unsubscribe: function (callback) {
+                listeners = _.filter(listeners, function (listener) {
+                    return listener === callback;
+                });
+                return this;
+            },
+            notify: function () {
+                var me = this,
+                    value = me();
+                if (oldValue !== value || _.isObject(value)) {
+                    _.each(listeners, function (callback) {
+                        callback.call(me, value);
+                    });
+                }
+                oldValue = value;
+                return me;
+            },
+            callAndSubscribe: function (callback) {
+                callback.call(this, this());
+                this.subscribe(callback);
+                return this;
+            },
+            _notSimple: true,
+            __observable: true
+        });
+        fn.fire = fn.notify;
+        fn.valueOf = fn.toString = function () {
+            return this();
+        };
+        if (getter) {
+            computedInit = fn;
+            value = oldValue = getter.call(ctx);
+            computedInit = false;
+        }
+        delete fn.dependsOn;
+        dependencies = undefined;
+        return fn;
+    };
+    Observable = function (initial) {
+        return BaseObservable({
+            initial: initial
+        });
+    };
+    Observable.isObservable = function (fn) {
+        if (typeof fn !== 'function') {
+            return false;
+        }
+        return fn.__observable || false;
+    };
+
+    Computed = function (getter, context, async, setter) {
+        return BaseObservable(typeof getter === 'function' ? {
+            get: getter,
+            context: context,
+            set: setter,
+            async: async
+        } : getter);
+    };
+
+    window.BaseObservable = BaseObservable;
+    window.Observable = Observable;
+    window.Computed = Computed;
+    //window.Subscribeable = Subscribeable;
+}(this));
 
 (function (window) {
     "use strict";
@@ -203,7 +194,7 @@
             Constructor.prototype[key] =
                 //если функция
                 typeof val === 'function' &&
-                    //и не Observable
+                    //не Observable и не конструктор
                     val._notSimple === undefined &&
                     //и содержит _super
                     fnTest.test(val.toString())
@@ -217,6 +208,7 @@
         });//*/
 
         Constructor.prototype.constructor = Constructor;
+        Constructor._notSimple = true;
         Constructor.extend = ParentClass.extend;
         Constructor.create = ParentClass.create;
         return Constructor;
@@ -917,7 +909,7 @@
 })();
 (function (window) {
     "use strict";
-    /*global _, Computed, Observable, Model, Events */
+    /*global _, Computed, Observable, Model, Events, BaseObservable */
     var $ = window.$,
         eventSplitter = /\s+/,
         bindSplitter = /\s*;\s*/,
@@ -1070,7 +1062,7 @@
             comp,
             fnEval,
             obs;
-        _.each(addArgs, function (key, val) {
+        _.each(addArgs, function (val, key) {
             keys.push(key);
             vals.push(val);
         });
@@ -1087,16 +1079,19 @@
 
         obs = fnEval();
         //если уже асинхронный, то возвращаем его
-        if (this.compAsync && obs && !obs.async) {
-            if (Observable.isObservable(obs)) {
-                comp = Computed(function () {
-                    return obs();
-                }, context, true);
-            } else {
-                comp = Computed(function () {
-                    return fnEval();
-                }, context, true);
+        if (this.compAsync) {
+            if (!Observable.isObservable(obs)) {
+                obs = fnEval;
             }
+            comp = BaseObservable({
+                async: true,
+                get: function () {
+                    return  obs();
+                },
+                set: function (val) {
+                    obs(val);
+                }
+            });
         } else {
 
             if (Observable.isObservable(obs)) {
@@ -1206,246 +1201,179 @@
 
     window.ViewModel = ViewModel;
 }(this));
-(function() {
-	ViewModel.binds = {
-		log: function(elem, value, context, addArgs) {
-			this.findObservable(context, value, addArgs).callAndSubscribe(function(){
-				console.log(context, '.', value, '=', this());
-			})
-		},
-		src: function(elem,value,context,addArgs){
-			this.findObservable(context, value, addArgs)
-			.callAndSubscribe(function(val){
-				elem.src=val?val:'';
-			});
-		},
-		html: function(elem, value, context, addArgs) {
-			//var $el=$(elem);
-			this.findObservable(context, value, addArgs)
-			.callAndSubscribe(function(val){
-				elem.innerHTML=val;
-			});
-		},
-		text: function(elem, value, context, addArgs) {
-			var $el=$(elem);
-			this.findObservable(context, value, addArgs)
-			.callAndSubscribe(function(val){
-				$el.text(val);
-			});
-		},
-		'with': function(elem, value, context, addArgs) {
-			return this.findObservable(context, value, addArgs)();
-		},
-		each: function(elem, value, context, addArgs) {
-			var fArray = this.findObservable(context, value, addArgs);
-			var $el = $(elem);
-			var html = $el.html();
-			$el.empty();
-			
-			if(addArgs)
-				addArgs=_.clone(addArgs);
-			else
-				addArgs={};
-			//console.log(elem);
-			fArray.callAndSubscribe(function(array) {
-				$el.empty();
-			//	console.log(array);
-				if(array) {
-					_.each(array, function(val,ind) {
-						addArgs.$index=ind;
-						addArgs.$parent=array;
-						addArgs.$value=val;
-						var tempDiv = document.createElement('div');
-						tempDiv.innerHTML=html;
-						ViewModel.findBinds(tempDiv, val, addArgs);
-						$el.append(tempDiv.innerHTML);
-					});
-				}
-			});
-			
-			return false;
-		},
-		eachModel: function(elem, value, context, addArgs) {
-			var collectionObs=this.findObservable(context, value, addArgs);
-			var html = $(elem).html();
-				
-			var rebindCollection=function(collection){
-				var i = 0;
-				addArgs||(addArgs={});
-				var renderModel = function(model, index) {
-					var tempDiv = document.createElement('div');
-					$(tempDiv).html(html);
-					
-					//model.__index__ = collection.getIndex(model);
+(function () {
+    "use strict";
+    /*globals ViewModel, $, _*/
+    ViewModel.binds = {
+        log: function (elem, value, context, addArgs) {
+            this.findObservable(context, value, addArgs).callAndSubscribe(function () {
+                console.log(context, '.', value, '=', this());
+            });
+        },
+        src: function (elem, value, context, addArgs) {
+            this.findObservable(context, value, addArgs)
+                .callAndSubscribe(function (val) {
+                    elem.src = val || '';
+                });
+        },
+        html: function (elem, value, context, addArgs) {
+            //var $el=$(elem);
+            this.findObservable(context, value, addArgs)
+                .callAndSubscribe(function (val) {
+                    elem.innerHTML = val;
+                });
+        },
+        text: function (elem, value, context, addArgs) {
+            var $el = $(elem);
+            this.findObservable(context, value, addArgs)
+                .callAndSubscribe(function (val) {
+                    $el.text(val);
+                });
+        },
+        'with': function (elem, value, context, addArgs) {
+            return this.findObservable(context, value, addArgs)();
+        },
+        each: function (elem, value, context, addArgs) {
+            var fArray = this.findObservable(context, value, addArgs),
+                $el = $(elem),
+                html = $el.html();
+            $el.empty();
 
-					var obs = Observable(model);
-					addArgs.$index=index;
-					addArgs.$parent=collection;
-					ViewModel.findBinds(tempDiv, obs, addArgs);
+            if (addArgs) {
+                addArgs = _.clone(addArgs);
+            }
+            else {
+                addArgs = {};
+            }
+            //console.log(elem);
+            fArray.callAndSubscribe(function (array) {
+                $el.empty();
+                //	console.log(array);
+                if (array) {
+                    _.each(array, function (val, ind) {
+                        addArgs.$index = ind;
+                        addArgs.$parent = array;
+                        addArgs.$value = val;
+                        var tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = html;
+                        ViewModel.findBinds(tempDiv, val, addArgs);
+                        $el.append(tempDiv.innerHTML);
+                    });
+                }
+            });
 
-					var $children = $(tempDiv).children();
-					if(index == 0) {
-						$children.prependTo(elem);
-					} else if($children.length && $(elem).children().eq(index*$children.length).length) {
-						$children.insertBefore($(elem).children().eq(index*$children.length));
-					} else {
-						$children.appendTo(elem);
-					}
+            return false;
+        },
+        value: function (elem, value, context, addArgs) {
+            var $el = $(elem),
+                obs = this.findObservable(context, value, addArgs)
+                    .callAndSubscribe(function (value) {
+                        $el.val(value);
+                    });
+            $el.change(function () {
+                obs($el.val());
+            });
+        },
+        attr: function (elem, value, context, addArgs) {
+            _.each(this.parseOptionsObject(value), function (condition, attrName) {
+                ViewModel.findObservable(context, condition, addArgs)
+                    .callAndSubscribe(function (val) {
+                        if (val) {
+                            elem.setAttribute(attrName, val);
+                        } else {
+                            elem.removeAttribute(attrName);
+                        }
+                    });
+            });
+        },
+        style: function (elem, value, context, addArgs) {
+            var $el = $(elem);
+            _.each(this.parseOptionsObject(value), function (condition, style) {
+                ViewModel.findObservable(context, condition, addArgs)
+                    .callAndSubscribe(function (value) {
+                        $el.css(style, value);
+                    });
+            });
+        },
+        css: function (elem, value, context, addArgs) {
+            var $el = $(elem);
+            _.each(this.parseOptionsObject(value), function (condition, className) {
+                ViewModel.findObservable(context, condition, addArgs)
+                    .callAndSubscribe(function (value) {
+                        if (value) {
+                            $el.addClass(className);
+                        }
+                        else {
+                            $el.removeClass(className);
+                        }
+                    });
+            });
+        },
+        display: function (elem, value, context, addArgs) {
+            var $el = $(elem);
+            this.findObservable(context, value, addArgs).callAndSubscribe(function (value) {
+                if (value) {
+                    $el.show();
+                }
+                else {
+                    $el.hide();
+                }
+            });
+        },
+        click: function (elem, value, context, addArgs) {
+            var fn = this.findObservable(context, value, addArgs)(),
+                $el = $(elem);
+            $el.click(function () {
+                fn.apply(context, arguments);
+            });
+        }
+    };
+}());
 
-					var ctx = {};
-					model.on('change',function(e) {
-						obs.fire();
-					}, ctx).on('cut',function(from) {
-						if(from === collection) {
-							$children.empty().remove();
-							collection.fire('cut', model);
-						}
-						model.off(0, 0, ctx);
-						obs.destroy();
-						delete obs;
-					}, ctx);
-					i++;
-				};
-				if(collection.length) {
-					collection.each(renderModel)
-				}
-				collection.on('add', renderModel);
-				$(elem).show();
-			}
-				
-				
-			var fn=function(){
-				$(elem).hide();
-				$(elem).empty();
-				var collection = collectionObs();
-				if(collection)
-				{
-					rebindCollection(collection);
-				}
-			}
-			fn();
-			collectionObs.subscribe(fn);
-				
-			return false;
-		},
-		value: function(elem, value, context, addArgs) {
-			var $el=$(elem);
-			var obs = ViewModel.findObservable(context, value, addArgs);
-			obs.callAndSubscribe(function(value){
-				$el.val(value);
-			});
-			$el.change(function(){
-				obs($el.val());
-			});
-		},
-		attr: function(elem, value, context, addArgs) {
-			_.each(this.parseOptionsObject(value),function(condition,attrName){
-				ViewModel.findObservable(context, condition, addArgs)
-				.callAndSubscribe(function(val){
-					if(val)
-						elem.setAttribute(attrName, val)
-					else
-						elem.removeAttribute(attrName);
-				});
-			});
-		},
-		style: function(elem, value, context, addArgs) {
-			var $el=$(elem);
-			_.each(this.parseOptionsObject(value),function(condition,style){
-				ViewModel.findObservable(context, condition, addArgs)
-				.callAndSubscribe(function(value){
-					$el.css(style,value);
-				});
-			});
-		},
-		css: function(elem, value, context, addArgs) {
-			var $el=$(elem);
-			_.each(this.parseOptionsObject(value),function(condition,className){
-				ViewModel.findObservable(context, condition, addArgs)
-				.callAndSubscribe(function(value){
-					if(value)
-						$el.addClass(className);
-					else
-						$el.removeClass(className);
-				});
-			});
-		},
-		display: function(elem, value, context, addArgs) {
-			var $el=$(elem);
-			this.findObservable(context, value, addArgs).callAndSubscribe(function(value){
-				if(value)
-					$el.show();
-				else
-					$el.hide();
-			});
-		},
-		click: function(elem, value, context,addArgs) {
-			var fn = this.findObservable(context, value, addArgs)();
-			var $el = $(elem);
-			$el.click(function() {
-				fn.apply(context,arguments);
-			});
-		}
-	};
-})();
+(function () {
+    "use strict";
+    /*globals _, ViewModel, $*/
+    var rawTemplates = {},
+        compiledTemplates = {};
+    /**
+     * Объект для работы с темплейтами
+     * @type {{Object}}
+     */
+    ViewModel.tmpl = {
+        /**
+         * Возвращает сырой текстовый темплейт по имени
+         * @param name {String} имя темплейта
+         * @returns {String} текстовое представление темплейта
+         */
+        getRawTemplate: function (name) {
+            return rawTemplates[name];
+        },
+        /**
+         * Если есть возвращает скомпилированный темплейт,
+         * если нет создает его с помощью constructorFunction
+         * @param {String} rawTemplateName
+         * @param {function} constructorFunction
+         * @returns {function}
+         */
+        get: function (rawTemplateName, constructorFunction) {
+            var template = compiledTemplates[rawTemplateName],
+                rawTemplate;
+            if (!template) {
+                rawTemplate = rawTemplates[rawTemplateName];
+                if (!rawTemplate) {
+                    throw  new Error('Raw tempalte: "' + rawTemplateName + '" is not defined');
+                }
+                compiledTemplates[rawTemplateName] = template = constructorFunction(rawTemplate);
+            }
+            return template;
+        }
+    };
 
-(function(){
-	var rawTemplates={};
-	var templates={};
-	ViewModel.tmpl={
-		getRawTemplate:function(name){
-			return rawTemplates[name];
-		},
-		getTemplate:function(name){
-			return templates[name];
-		},
-		create: function(name,rawText,selfObservable,addArgs,parentTagName){
-			var tempDiv = document.createElement(parentTagName||'div');
-			addArgs=addArgs||{};
-			tempDiv.innerHTML=rawText;
-			
-			var self=selfObservable();
-			var dummySelfObject={};
-			selfObservable.subscribe(function(){
-				_.each(dummySelfObject,function(observ,key){
-					observ(this()[key]);
-				});
-			});
-			
-			_.each(selfObservable(),function(val,key){
-				dummySelfObject[key]=Observable(val);
-			});
-			
-			ViewModel.findBinds(tempDiv, dummySelfObject, addArgs);
-			
-			templates[name]=function(self,newAddArgs){
-				
-				selfObservable(self);
-				_.each(newAddArgs,function(val,key){
-					if(addArgs[key]&&Observable.isObservable(addArgs[key]))
-						addArgs[key](val);
-				});
-				
-				return tempDiv.innerHTML;
-			};
-			templates[name].childrenLength=$(tempDiv).children().length;
-			
-			return templates[name];
-		}
-	}
-	
-	ViewModel.binds.template=function(elem,value,context,addArgs){
-		var $el=$(elem);
-		var vals=value.split(/\s*,\s*/);
-		var raw=$el.html();
-		rawTemplates[vals[0]]=raw;
-		if(vals[1])
-		{
-			var self=this.findObservable(context, vals[1], addArgs);
-			this.tmpl.create(vals[0],raw,self,addArgs,elem.tagName.toLowerCase());
-		}
-		$el.remove();
-		return false;
-	}
-	
-})();
+    ViewModel.binds.template = function (elem, value) {
+        var $el = $(elem);
+        rawTemplates[value] = $el.html();
+        $el.remove();
+        return false;
+    };
+
+}());
