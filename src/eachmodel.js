@@ -1,18 +1,12 @@
 (function () {
     "use strict";
     /*globals _, $, BaseObservable, ViewModel*/
-    var modelToObservables = function (attrs, oModel) {
+    var modelToObservables = function (attrs) {
 
         var observables = {};
         _.each(attrs, function (val, prop) {
             observables[prop] = BaseObservable({
-                get: function () {
-                    var mod = oModel();
-                    if (!mod) {
-                        return '';
-                    }
-                    return mod.attributes[prop];
-                }
+                initial: val
             });
         });
 
@@ -80,6 +74,7 @@
                 templateConstructor,
                 template,
                 listenModel,
+                createRow,
                 onReset;
             if (!collection) {
                 return;
@@ -87,65 +82,57 @@
 
 
             tempChildrenLen = 1;
-            templateConstructor = function (rawTemplate) {
-                var modelClass = collection.model,
+            createRow = function (rawTemplate, newModel, $index, $parent) {
+                var observer,
                     oldAsync = ViewModel.compAsync,
                     tempDiv = document.createElement(elName),
-                    newModel = new modelClass(),
                     modelObservable = BaseObservable({
                         initial: newModel
                     }),
-                    context = modelToObservables(newModel.toJSON(), modelObservable),
+                    context = modelToObservables(newModel.toJSON()),
                     addArgs = {
                         $self: modelObservable,
-                        $index: BaseObservable(),
-                        $parent: BaseObservable()
+                        $index: BaseObservable({
+                            initial: $index
+                        }),
+                        $parent: BaseObservable({
+                            initial: $parent
+                        })
                     };
                 tempDiv.innerHTML = rawTemplate;
 
                 ViewModel.compAsync = false;
                 ViewModel.findBinds(tempDiv, context, addArgs);
                 ViewModel.compAsync = oldAsync;
+                observer = {
+                    addArgs: addArgs,
+                    context: context,
+                    div: tempDiv
+                };
+                return observer;
 
-                tempChildrenLen = $(tempDiv).children().length;
+            };
+            templateConstructor = function (rawTemplate) {
+                var observer = createRow(rawTemplate, new collection.model());
+
+
+                tempChildrenLen = $(observer.div).children().length;
 
                 return function (model, $index, $parent) {
                     if (innerBinds) {
-                        tempDiv = document.createElement(elName);
-                        tempDiv.innerHTML = rawTemplate;
-                        modelObservable = BaseObservable({
-                            initial: model
-                        });
-                        context = modelToObservables(newModel.toJSON(), modelObservable);
-
-                        addArgs = {
-                            $self: modelObservable,
-                            $index: BaseObservable({
-                                initial: $index
-                            }),
-                            $parent: BaseObservable({
-                                initial: $parent
-                            })
-                        };
-                        oldAsync = ViewModel.compAsync;
-                        ViewModel.compAsync = false;
-                        ViewModel.findBinds(tempDiv, context, addArgs);
-                        ViewModel.compAsync = oldAsync;
-
-                        observers.splice($index, 0, {
-                            addArgs: addArgs,
-                            context: context,
-                            children: $(tempDiv).children()
-                        });
-                        return observers[$index].children;
-
+                        observer = createRow(rawTemplate, model, $index, $parent);
+                        observers.splice($index, 0, observer);
+                        return $(observer.div).children();
                     }
-                    addArgs.$index($index);
-                    addArgs.$parent($parent);
-                    modelObservable(model);
-                    //return '<li>'+context.name()+'</li>'
-                    //console.log(context.name());
-                    return tempDiv.innerHTML;
+                    var args = observer.addArgs;
+
+                    args.$index($index);
+                    args.$parent($parent);
+                    args.$self(model);
+                    _.each(observer.context, function (obs, key) {
+                        obs(model.prop(key));
+                    });
+                    return observer.div.innerHTML;
                 };
             };
 
@@ -162,7 +149,7 @@
                     if (innerBinds) {
                         observer = observers[index].context;
                         _.each(changed, function (val, prop) {
-                            observer[prop].fire();
+                            observer[prop](val);
                         });
                     }
                     else {
