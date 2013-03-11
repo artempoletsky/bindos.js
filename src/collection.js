@@ -192,21 +192,21 @@
             getByID: function (id) {
                 var found;
                 this.each(function (model) {
-                    if (model.id == id) {
+                    if (model.id === id) {
                         found = model;
                         return false;
                     }
-                })
+                });
                 return found;
             },
             getByCid: function (cid) {
                 var found;
                 this.each(function (model) {
-                    if (model.cid == cid) {
+                    if (model.cid === cid) {
                         found = model;
                         return false;
                     }
-                })
+                });
                 return found;
             },
             /**
@@ -219,21 +219,23 @@
                 var i = this.indexOf(model);
                 return this._hashId[i].index;
             }
-        });
+        }),
 
     // Underscore methods that we want to implement on the Collection.
-    var methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'find',
-        'detect', 'filter', 'select', 'reject', 'every', 'all', 'some', 'any',
-        'include', 'contains', 'invoke', 'max', 'min', 'sortBy', 'sortByDesc', 'sortedIndex',
-        'toArray', 'size', 'first', 'initial', 'rest', 'last', 'without', 'indexOf',
-        'shuffle', 'lastIndexOf', 'isEmpty', 'groupBy'];
+        methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'find',
+            'detect', 'filter', 'select', 'reject', 'every', 'all', 'some', 'any',
+            'include', 'contains', 'invoke', 'max', 'min', 'sortBy', 'sortByDesc', 'sortedIndex',
+            'toArray', 'size', 'first', 'initial', 'rest', 'last', 'without', 'indexOf',
+            'shuffle', 'lastIndexOf', 'isEmpty', 'groupBy'],
 
     // An internal function to generate lookup iterators.
-    var lookupIterator = function (value) {
-        return _.isFunction(value) ? value : function (obj) {
-            return obj[value];
-        };
-    };
+        lookupIterator = function (value) {
+            return _.isFunction(value) ? value : function (obj) {
+                return obj[value];
+            };
+        },
+        filterMethods = ['filter', 'reject'],
+        sortMethods = ['sortBy', 'sortByDesc', 'shuffle'];
 
     // Sort the object's values by a criterion produced by an iterator.
     _.sortByDesc = function (obj, value, context) {
@@ -245,13 +247,13 @@
                 criteria: iterator.call(context, value, index, list)
             };
         }).sort(function (left, right) {
-                var a = left.criteria;
-                var b = right.criteria;
+                var a = left.criteria,
+                    b = right.criteria;
                 if (a !== b) {
-                    if (a > b || a === void 0) {
+                    if (a > b || a === undefined) {
                         return -1;
                     }
-                    if (a < b || b === void 0) {
+                    if (a < b || b === undefined) {
                         return 1;
                     }
                 }
@@ -266,17 +268,15 @@
         };
     });
 
-    var filterMethods = ['filter', 'reject'];
-    var sortMethods = ['sortBy', 'sortByDesc', 'shuffle'];
 
     _.each(filterMethods, function (method) {
         itself.prototype[method] = function () {
-            var antonym = method == 'filter' ? 'reject' : 'filter';
-            var self = this.self;
-            var args = _.toArray(arguments);
-            var newModels = _[method].apply(_, [self.models].concat(args));
-            var rejectedModels = _[antonym].apply(_, [self.models].concat(args));
-            var indexes = {};
+            var antonym = method === 'filter' ? 'reject' : 'filter',
+                self = this.self,
+                args = _.toArray(arguments),
+                newModels = _[method].apply(_, [self.models].concat(args)),
+                rejectedModels = _[antonym].apply(_, [self.models].concat(args)),
+                indexes = {};
             _.each(rejectedModels, function (model) {
                 indexes[self.indexOf(model)] = model;
             });
@@ -290,9 +290,9 @@
 
     _.each(sortMethods, function (method) {
         itself.prototype[method] = function () {
-            var self = this.self;
-            var newModels = _[method].apply(_, [self.models].concat(_.toArray(arguments)));
-            var indexes = {};
+            var self = this.self,
+                newModels = _[method].apply(_, [self.models].concat(_.toArray(arguments))),
+                indexes = {};
             _.each(newModels, function (model, index) {
                 indexes[self.indexOf(model)] = index;
             });
