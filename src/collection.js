@@ -142,7 +142,7 @@
             cut: function (id) {
                 var found;
                 this.each(function (model, index) {
-                    if (model.id == id) {
+                    if (model.id === id) {
                         found = this.cutAt(index);
                         return false;
                     }
@@ -150,14 +150,14 @@
                 return found;
             },
             cutByCid: function (cid) {
-                var found;
-                var self = this;
+                var found,
+                    self = this;
                 this.each(function (model, index) {
-                    if (model.cid == cid) {
+                    if (model.cid === cid) {
                         found = self.cutAt(index);
                         return false;
                     }
-                })
+                });
                 return found;
             },
             shift: function () {
@@ -167,12 +167,15 @@
                 return this.cutAt();
             },
             cutAt: function (index) {
-                index !== undefined || (index = this.models.length - 1);
-                var model = this.models.splice(index, 1)[0];
+                if (index === undefined) {
+                    index = this.models.length - 1;
+                }
+
+                var model = this.models.splice(index, 1)[0], cutted;
                 // удаление элемента из хеша
                 this._hashId.splice(index, 1);
                 this.length = this.models.length;
-                var cutted = {};
+                cutted = {};
                 cutted[index] = model;
                 this.fire('cut', cutted);
                 return model;
@@ -245,8 +248,12 @@
                 var a = left.criteria;
                 var b = right.criteria;
                 if (a !== b) {
-                    if (a > b || a === void 0) return -1;
-                    if (a < b || b === void 0) return 1;
+                    if (a > b || a === void 0) {
+                        return -1;
+                    }
+                    if (a < b || b === void 0) {
+                        return 1;
+                    }
                 }
                 return left.index < right.index ? -1 : 1;
             }), 'value');
