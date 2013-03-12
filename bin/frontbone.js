@@ -749,10 +749,10 @@
                 return this;
             },
             cut: function (id) {
-                var found;
+                var found, me=this;
                 this.each(function (model, index) {
                     if (model.id === id) {
-                        found = this.cutAt(index);
+                        found = me.cutAt(index);
                         return false;
                     }
                 });
