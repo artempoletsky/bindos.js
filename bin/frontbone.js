@@ -1577,37 +1577,36 @@
             };
             onReset();
 
-            collection.on('add', function (newModels, index) {
-                var i = 0,
-                    html = '';
-                if (innerBinds) {
-                    html = $(document.createElement(elName));
-                    _.each(newModels, function (model) {
-                        html.append(template(model, i++, collection));
-                        listenModel(model);
-                    });
-                    html = html.children();
-                }
-                else {
-                    //склеивает все новые представления всех новых моделей в коллекции
+			collection.on('add', function (newModels, index) {
+				var i = 0,
+					html = '';
+				if (innerBinds) {
+					html = $(document.createElement(elName));
+					_.each(newModels, function (model) {
+						html.append(template(model, index + i++, collection));
+						listenModel(model);
+					});
+					html = html.children();
+				}
+				else {
+					//склеивает все новые представления всех новых моделей в коллекции
+					_.each(newModels, function (model) {
+						html += template(model, index + i++, collection);
+						if (listenModels) {
+							listenModel(model);
+						}
+					});
+				}
 
-                    _.each(newModels, function (model) {
-                        html += template(model, i++, collection);
-                        if (listenModels) {
-                            listenModel(model);
-                        }
-                    });
-                }
 
-
-                if (index === 0) {
-                    $el.prepend(html);
-                } else if (tempChildrenLen && $el.children().eq(index * tempChildrenLen).length) {
-                    $el.children().eq(index * tempChildrenLen).after(html);
-                } else {
-                    $el.append(html);
-                }
-            }, ctx);
+				if (index === 0) {
+					$el.prepend(html);
+				} else if (tempChildrenLen && $el.children().eq(index * tempChildrenLen).length) {
+					$el.children().eq(index * tempChildrenLen).after(html);
+				} else {
+					$el.append(html);
+				}
+			}, ctx);
             if (listenModels) {
                 collection.on('beforeReset', function (models) {
                     _.each(models, function (model) {
