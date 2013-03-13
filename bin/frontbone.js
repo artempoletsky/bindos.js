@@ -984,6 +984,12 @@
                 ViewModel.findBinds(this.el, this);
                 return this;
             },
+            /**
+             *
+             * @param json
+             * @returns {Observable}
+             * @deprecated использовать binds.withModel
+             */
             bindToModel: function (json) {
                 var oModel = Observable(new Model(json)),
                     model = oModel(),
@@ -1066,7 +1072,7 @@
 
         addArgs = addArgs || {};
         if (typeof string !== 'string') {
-            throw  new TypeError('String expected');;
+            throw  new TypeError('String expected');
         }
         if (Observable.isObservable(context)) {
             context = context();
@@ -1395,112 +1401,111 @@
 (function () {
     "use strict";
     /*globals ViewModel, BaseObservable, _, $*/
-    var modelToObservables = function (attrs) {
 
-        var observables = {};
-        _.each(attrs, function (val, prop) {
-            observables[prop] = BaseObservable({
-                initial: val
+    var createRow = function ($children, oModel, context, addArgs, ctx) {
+            if (!oModel()) {
+                throw new Error("Model for withModel must not be empty");
+            }
+
+            var oldCompAsync, model, newContext = {};
+
+
+            _.each(oModel().toJSON(), function (value, key) {
+                newContext[key] = BaseObservable({
+                    initial: value
+                });
             });
-        });
+            //console.log(oModel());
 
-        return observables;
-    };
+            _.extend(addArgs, {
+                $self: oModel,
+                $parent: BaseObservable({
+                    initial: context
+                })
+            });
+
+            oModel.callAndSubscribe(function (value) {
+                if (model) {
+                    //перестает слушать старую модель
+                    model.off(0, 0, ctx);
+                }
+
+                if (value) {
+
+                    //слушает новую
+                    value.on('change', function (changed) {
+                        _.each(changed, function (val, key) {
+                            if (newContext[key]) {
+                                newContext[key](val);
+                            }
+                        });
+                    }, ctx);
+
+                    //обновляет все obserbavles при смене модели
+                    _.each(newContext, function (obs, key) {
+                        newContext[key](value.attributes[key]);
+                    });
+                } else {
+                    //обнуляет все observables
+                    _.each(newContext, function (obs) {
+                        obs('');
+                    });
+                }
+                model = value;
+
+            });
+
+            oldCompAsync = ViewModel.compAsync;
+            ViewModel.compAsync = false;
+            //парсит внутренний html как темплейт
+            $children.each(function () {
+                ViewModel.findBinds(this, newContext, addArgs);
+            });
+            ViewModel.compAsync = oldCompAsync;
+            return addArgs;
+        },
+        cloneRow = function (ctx, rawTemplate, elName, model, collection, index) {
+            var args, $children, tempDiv = document.createElement(elName);
+            tempDiv.innerHTML = rawTemplate;
+            $children = $(tempDiv).children();
+
+            args = createRow($children, BaseObservable({
+                initial: model
+            }), collection, {
+                $index: BaseObservable({
+                    initial: index
+                })
+            }, ctx);
+
+            return {
+                $children: $children,
+                tempDiv: tempDiv,
+                args: args
+            };
+        },
+        listenModel = function ($el, tempChildrenLen, template, collection, ctx, model) {
+            model.on('change', function () {
+                var index = collection.indexOf(model),
+                    $children = $el.children();
+
+                $children.slice(index, index + tempChildrenLen).empty().remove();
+                $children.eq((index - 1) * tempChildrenLen).after(template(model, index, collection));
+            }, ctx);
+        };
 
     ViewModel.binds.withModel = function (elem, value, context, addArgs) {
         addArgs = addArgs || {};
-
-        var oModel,
-            newContext,
-            oldCompAsync,
-            model,
-        //заглушка для удаления событий
-            ctx = {};
-
-        if (typeof value == 'string') {
-            oModel = this.findObservable(context, value, addArgs);
-        }
-        else {
-            //для нестандартного использования, в eachModel
-            oModel = value;
-        }
-        newContext = modelToObservables(oModel().toJSON());
-        //console.log(oModel());
-        if (!oModel()) {
-            throw new Error("Model for withModel must not be empty");
-        }
-        _.extend(addArgs, {
-            $self: oModel,
-            $parent: context
-        });
-
-        oModel.callAndSubscribe(function (value) {
-            if (model) {
-                //перестает слушать старую модель
-                model.off(0, 0, ctx);
-            }
-
-            if (value) {
-
-                //слушает новую
-                value.on('change', function (changed) {
-                    _.each(changed, function (val, key) {
-
-                    }, ctx);
-                });
-
-                //обновляет все obserbavles при смене модели
-                _.each(newContext, function (obs, key) {
-                    //console.log(key+': '+value.attributes[key]);
-                    //console.log(key+': '+value.attributes[key]);
-                    newContext[key](value.attributes[key]);
-                });
-            } else {
-                //обнуляет все observables
-                _.each(newContext, function (obs) {
-                    obs('');
-                });
-            }
-            model = value;
-
-        });
-        oldCompAsync = ViewModel.compAsync;
-        ViewModel.compAsync = false;
-        //парсит внутренний html как темплейт
-        $(elem).children().each(function () {
-            ViewModel.findBinds(this, newContext, addArgs);
-        });
-        ViewModel.compAsync = oldCompAsync;
+        //$children, oModel, context, addArgs, ctx
+        createRow($(elem).children(), this.findObservable(context, value, addArgs), context, addArgs, {});
         //останавливает внешний парсер
         return false;
-    };
-}());
-
-(function () {
-    "use strict";
-    /*globals _, $, BaseObservable, ViewModel*/
-    var modelToObservables = function (attrs) {
-
-        var observables = {};
-        _.each(attrs, function (val, prop) {
-            observables[prop] = BaseObservable({
-                initial: val
-            });
-        });
-
-        return observables;
     };
 
 
     ViewModel.binds.eachModel = function (elem, value, context, addArgs) {
 
         var options,
-            collection,
-            templateName,
-            listenModels,
-            innerBinds,
             values,
-            collectionObs,
             $el = $(elem),
         //заглушка чтобы быстро делать off
             ctx = {},
@@ -1515,30 +1520,21 @@
         //если в value не объект, а массив значений
         if (!options) {
             values = value.split(/\s*,\s*/);
-            collection = values[0];
-            templateName = values[1];
-            listenModels = false;
-            innerBinds = false;
-        }
-        else {
-            collection = options.collection;
-            templateName = options.template;
-            listenModels = options.listenModels;
-            innerBinds = options.innerBinds;
+            options = {};
+            options.collection = values[0];
+            options.templateName = values[1];
         }
 
-        collectionObs = this.findObservable(context, collection, addArgs);
 
-
-        rawTemplate = templateName ? '' : $el.html();
+        rawTemplate = options.templateName ? '' : $el.html();
 
         //console.log(rawTemplate);
         //когда меняется целая коллекция
-        collectionObs.callAndSubscribe(function (collection) {
+        this.findObservable(context, options.collection, addArgs).callAndSubscribe(function (collection) {
 
             if (oldCollection) {
                 oldCollection.off(0, 0, ctx);
-                if (listenModels) {
+                if (options.listenModels) {
                     oldCollection.each(function (model) {
                         model.off(0, 0, ctx);
                     });
@@ -1547,114 +1543,65 @@
 
             oldCollection = collection;
             $el.empty();
-            var observers = [],
-                tempChildrenLen,
+            var tempChildrenLen,
                 templateConstructor,
                 template,
-                listenModel,
-                createRow,
                 onReset;
+
             if (!collection) {
                 return;
             }
 
 
             tempChildrenLen = 1;
-            createRow = function (rawTemplate, newModel, $index, $parent) {
-                var observer,
-                    oldAsync = ViewModel.compAsync,
-                    tempDiv = document.createElement(elName),
-                    modelObservable = BaseObservable({
-                        initial: newModel
-                    }),
-                    context = modelToObservables(newModel.toJSON()),
-                    addArgs = {
-                        $self: modelObservable,
-                        $index: BaseObservable({
-                            initial: $index
-                        }),
-                        $parent: BaseObservable({
-                            initial: $parent
-                        })
+
+
+            if (options.innerBinds) {
+                templateConstructor = function (rawTemplate) {
+                    return function (model, $index, $parent) {
+                        var $children = cloneRow(ctx, rawTemplate, elName, model, $parent, $index).$children;
+                        tempChildrenLen = $children.length;
+                        return $children;
                     };
-                tempDiv.innerHTML = rawTemplate;
-
-                ViewModel.compAsync = false;
-                ViewModel.findBinds(tempDiv, context, addArgs);
-                ViewModel.compAsync = oldAsync;
-                observer = {
-                    addArgs: addArgs,
-                    context: context,
-                    div: tempDiv
                 };
-                return observer;
+            }
+            else {
+                templateConstructor = function (rawTemplate) {
+                    var obj = cloneRow(ctx, rawTemplate, elName, new collection.model(), collection, undefined),
+                        tempDiv = obj.tempDiv,
+                        args = obj.args;
+                    tempChildrenLen = obj.$children.length;
 
-            };
-            templateConstructor = function (rawTemplate) {
-                var observer = createRow(rawTemplate, new collection.model());
-
-
-                tempChildrenLen = $(observer.div).children().length;
-
-                return function (model, $index, $parent) {
-                    if (innerBinds) {
-                        observer = createRow(rawTemplate, model, $index, $parent);
-                        observers.splice($index, 0, observer);
-                        return $(observer.div).children();
-                    }
-                    var args = observer.addArgs;
-
-                    args.$index($index);
-                    args.$parent($parent);
-                    args.$self(model);
-                    _.each(observer.context, function (obs, key) {
-                        obs(model.prop(key));
-                    });
-                    return observer.div.innerHTML;
+                    return function (model, $index, $parent) {
+                        args.$self(model);
+                        args.$index($index);
+                        args.$parent($parent);
+                        return tempDiv.innerHTML;
+                    };
                 };
-            };
+            }
 
             //template принимает модель и возвращает ее текстовое html представление
-            template = templateName ? ViewModel.tmpl.get(templateName, templateConstructor) : templateConstructor(rawTemplate);
+            template = options.templateName ? ViewModel.tmpl.get(options.templateName, templateConstructor) : templateConstructor(rawTemplate);
 
-            listenModel = function (model) {
-                //console.log('listen '+model.prop('name'));
 
-                model.on('change', function (changed) {
-                    var index = collection.indexOf(model),
-                        observer,
-                        $children;
-                    if (innerBinds) {
-                        observer = observers[index].context;
-                        _.each(changed, function (val, prop) {
-                            observer[prop](val);
-                        });
-                    }
-                    else {
-                        $children = $el.children();
-                        $children.slice(index, index + tempChildrenLen).empty().remove();
-                        $children.eq((index - 1) * tempChildrenLen).after(template(model, index, collection));
-                    }
-
-                }, ctx);
-            };
             //склеивает все представления всех моделей в коллекции
             onReset = function () {
                 var i = 0,
                     html = '';
                 $el.empty();
-                observers = [];
-                if (innerBinds) {
+
+
+                if (options.innerBinds) {
                     collection.each(function (model) {
                         $el.append(template(model, i++, collection));
-                        listenModel(model);
                     });
                 }
                 else {
                     collection.each(function (model) {
                         html += template(model, i++, collection);
-                        if (listenModels) {
-                            listenModel(model);
+                        if (options.listenModels) {
+                            listenModel($el, tempChildrenLen, template, collection, ctx, model);
                         }
                     });
 
@@ -1664,37 +1611,36 @@
             };
             onReset();
 
-			collection.on('add', function (newModels, index) {
-				var i = 0,
-					html = '';
-				if (innerBinds) {
-					html = $(document.createElement(elName));
-					_.each(newModels, function (model) {
-						html.append(template(model, index + i++, collection));
-						listenModel(model);
-					});
-					html = html.children();
-				}
-				else {
-					//склеивает все новые представления всех новых моделей в коллекции
-					_.each(newModels, function (model) {
-						html += template(model, index + i++, collection);
-						if (listenModels) {
-							listenModel(model);
-						}
-					});
-				}
+            collection.on('add', function (newModels, index) {
+                var i = 0,
+                    html = '';
+                if (options.innerBinds) {
+                    html = $(document.createElement(elName));
+                    _.each(newModels, function (model) {
+                        html.append(template(model, index + i++, collection));
+                    });
+                    html = html.children();
+                }
+                else {
+                    //склеивает все новые представления всех новых моделей в коллекции
+                    _.each(newModels, function (model) {
+                        html += template(model, index + i++, collection);
+                        if (options.listenModels) {
+                            listenModel($el, tempChildrenLen, template, collection, ctx, model);
+                        }
+                    });
+                }
 
 
-				if (index === 0) {
-					$el.prepend(html);
-				} else if (tempChildrenLen && $el.children().eq(index * tempChildrenLen).length) {
-					$el.children().eq(index * tempChildrenLen).after(html);
-				} else {
-					$el.append(html);
-				}
-			}, ctx);
-            if (listenModels) {
+                if (index === 0) {
+                    $el.prepend(html);
+                } else if (tempChildrenLen && $el.children().eq(index * tempChildrenLen).length) {
+                    $el.children().eq(index * tempChildrenLen).after(html);
+                } else {
+                    $el.append(html);
+                }
+            }, ctx);
+            if (options.listenModels) {
                 collection.on('beforeReset', function (models) {
                     _.each(models, function (model) {
                         model.off(0, 0, ctx);
@@ -1708,14 +1654,7 @@
 
                 _.each(rejectedModels, function (model, index) {
                     index *= 1;
-                    if (listenModels) {
-                        model.off(0, 0, ctx);
-                    }
-
-                    if (innerBinds) {
-                        observers.splice(index, 1);
-                    }
-
+                    model.off(0, 0, ctx);
                     $children.slice(index, index + tempChildrenLen).empty().remove();
                 });
             }, ctx);

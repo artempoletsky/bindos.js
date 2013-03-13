@@ -63,6 +63,12 @@
                 ViewModel.findBinds(this.el, this);
                 return this;
             },
+            /**
+             *
+             * @param json
+             * @returns {Observable}
+             * @deprecated использовать binds.withModel
+             */
             bindToModel: function (json) {
                 var oModel = Observable(new Model(json)),
                     model = oModel(),
@@ -145,7 +151,7 @@
 
         addArgs = addArgs || {};
         if (typeof string !== 'string') {
-            throw  new TypeError('String expected');;
+            throw  new TypeError('String expected');
         }
         if (Observable.isObservable(context)) {
             context = context();
