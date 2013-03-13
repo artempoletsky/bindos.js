@@ -83,7 +83,9 @@
                     if (newModel) {
                         newModel.on('change', function (changed) {
                             _.each(changed, function (val, key) {
-                                me[key].fire();
+                                if (me[key]) {
+                                    me[key].fire();
+                                }
                             });
 
                         }, ctx);
