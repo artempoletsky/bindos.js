@@ -1,5 +1,89 @@
 (function () {
     "use strict";
+    /*globals ViewModel, BaseObservable, _, $*/
+    var modelToObservables = function (attrs) {
+
+        var observables = {};
+        _.each(attrs, function (val, prop) {
+            observables[prop] = BaseObservable({
+                initial: val
+            });
+        });
+
+        return observables;
+    };
+
+    ViewModel.binds.withModel = function (elem, value, context, addArgs) {
+        addArgs = addArgs || {};
+
+        var oModel,
+            newContext,
+            oldCompAsync,
+            model,
+        //заглушка для удаления событий
+            ctx = {};
+
+        if (typeof value == 'string') {
+            oModel = this.findObservable(context, value, addArgs);
+        }
+        else {
+            //для нестандартного использования, в eachModel
+            oModel = value;
+        }
+        newContext = modelToObservables(oModel().toJSON());
+        //console.log(oModel());
+        if (!oModel()) {
+            throw new Error("Model for withModel must not be empty");
+        }
+        _.extend(addArgs, {
+            $self: oModel,
+            $parent: context
+        });
+
+        oModel.callAndSubscribe(function (value) {
+            if (model) {
+                //перестает слушать старую модель
+                model.off(0, 0, ctx);
+            }
+
+            if (value) {
+
+                //слушает новую
+                value.on('change', function (changed) {
+                    _.each(changed, function (val, key) {
+
+                    }, ctx);
+                });
+
+                //обновляет все obserbavles при смене модели
+                _.each(newContext, function (obs, key) {
+                    //console.log(key+': '+value.attributes[key]);
+                    //console.log(key+': '+value.attributes[key]);
+                    newContext[key](value.attributes[key]);
+                });
+            } else {
+                //обнуляет все observables
+                _.each(newContext, function (obs) {
+                    obs('');
+                });
+            }
+            model = value;
+
+        });
+        oldCompAsync = ViewModel.compAsync;
+        ViewModel.compAsync = false;
+        //парсит внутренний html как темплейт
+        $(elem).children().each(function () {
+            ViewModel.findBinds(this, newContext, addArgs);
+        });
+        ViewModel.compAsync = oldCompAsync;
+        //останавливает внешний парсер
+        return false;
+    };
+}());
+
+(function () {
+    "use strict";
     /*globals _, $, BaseObservable, ViewModel*/
     var modelToObservables = function (attrs) {
 

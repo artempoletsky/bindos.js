@@ -144,6 +144,9 @@
     ViewModel.findObservable = function (context, string, addArgs) {
 
         addArgs = addArgs || {};
+        if (typeof string !== 'string') {
+            throw  new TypeError('String expected');;
+        }
         if (Observable.isObservable(context)) {
             context = context();
         }
