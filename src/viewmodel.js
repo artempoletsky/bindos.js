@@ -203,8 +203,6 @@
                     return fnEval();
                 }, context);
             }
-
-
         }
         return comp;
     };
@@ -252,11 +250,7 @@
                             console.warn('Bind: "' + ccBind + '" not exists');
                         }
                     }
-
-
                 }
-
-
             }
         }
         if (!breakContextIsSent) {
@@ -273,14 +267,11 @@
         }
 
         match = value.match(breakersRegex);
-        //console.log(match);
         if (!match || match[1] === undefined) {
             throw new Error('Expression: "' + value + '" is not valid object');
         }
 
-
         attrs = match[1].split(commaSplitter);
-        //console.log(attrs);
         if (!attrs.length) {
             return {};
         }

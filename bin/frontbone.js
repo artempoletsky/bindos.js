@@ -680,19 +680,22 @@
             },
             add: function (models, index, silent) {
 
-                var me = this,
-                    hashIndex,
-                    addedModels = [], _models;
+				var me = this,
+					hashIndex,
+					addedModels = [],
+					_models,
+					_index = 0;
 
                 if (!(models instanceof Array)) {
                     models = [models];
                 }
 
-                if (typeof index !== 'number') {
-                    index = this.length;
-                } else if (index === 0) {
+				if (typeof index !== 'number') {
+					index = this.getIndex(this.models[this.length-1]);
+				} else if (index === 0) {
 					_models = _.clone(models).reverse();
-                }
+					_index = this.getIndex(this.models[0]) - _models.length - 1;
+				}
 
                 function addHashIndex(model, index) {
                     if (index === 0 && me.length) {
@@ -744,7 +747,7 @@
 
                 this.length = this.models.length;
                 if (!silent) {
-                    this.fire('add', addedModels, index);
+					this.fire('add', addedModels, index, _index);
                 }
                 return this;
             },
@@ -825,6 +828,7 @@
              * @return {Number}
              */
             getIndex: function (model) {
+				if(!model) return 0;
                 var i = this.indexOf(model);
                 return this._hashId[i].index;
             }
@@ -895,7 +899,6 @@
             });
             self.models = newModels;
             self.length = newModels.length;
-            //console.log(indexes);
             self.fire('cut', indexes);
             return self;
         };
@@ -911,7 +914,6 @@
             });
             self.models = newModels;
             self.length = newModels.length;
-            //console.log(indexes);
             self.fire('sort', indexes);
             return self;
         };
@@ -1124,8 +1126,6 @@
                     return fnEval();
                 }, context);
             }
-
-
         }
         return comp;
     };
@@ -1173,11 +1173,7 @@
                             console.warn('Bind: "' + ccBind + '" not exists');
                         }
                     }
-
-
                 }
-
-
             }
         }
         if (!breakContextIsSent) {
@@ -1194,14 +1190,11 @@
         }
 
         match = value.match(breakersRegex);
-        //console.log(match);
         if (!match || match[1] === undefined) {
             throw new Error('Expression: "' + value + '" is not valid object');
         }
 
-
         attrs = match[1].split(commaSplitter);
-        //console.log(attrs);
         if (!attrs.length) {
             return {};
         }
@@ -1268,10 +1261,8 @@
             else {
                 addArgs = {};
             }
-            //console.log(elem);
             fArray.callAndSubscribe(function (array) {
                 $el.empty();
-                //	console.log(array);
                 if (array) {
                     _.each(array, function (val, ind) {
                         addArgs.$index = ind;
@@ -1411,13 +1402,11 @@
 
             var oldCompAsync, model, newContext = {};
 
-
             _.each(oModel().toJSON(), function (value, key) {
                 newContext[key] = BaseObservable({
                     initial: value
                 });
             });
-            //console.log(oModel());
 
             _.extend(addArgs, {
                 $self: oModel,
@@ -1503,9 +1492,7 @@
         return false;
     };
 
-
     ViewModel.binds.eachModel = function (elem, value, context, addArgs) {
-
         var options,
             values,
             $el = $(elem),
@@ -1527,10 +1514,8 @@
             options.templateName = values[1];
         }
 
-
         rawTemplate = options.templateName ? '' : $el.html();
 
-        //console.log(rawTemplate);
         //когда меняется целая коллекция
         this.findObservable(context, options.collection, addArgs).callAndSubscribe(function (collection) {
 
@@ -1554,9 +1539,7 @@
                 return;
             }
 
-
             tempChildrenLen = 1;
-
 
             if (options.innerBinds) {
                 templateConstructor = function (rawTemplate) {
@@ -1606,42 +1589,40 @@
                             listenModel($el, tempChildrenLen, template, collection, ctx, model);
                         }
                     });
-
                     $el.html(html);
                 }
 
             };
             onReset();
 
-            collection.on('add', function (newModels, index) {
-                var i = 0,
-                    html = '';
-                if (options.innerBinds) {
-                    html = $(document.createElement(elName));
-                    _.each(newModels, function (model) {
-                        html.append(template(model, index + i++, collection));
-                    });
-                    html = html.children();
-                }
-                else {
-                    //склеивает все новые представления всех новых моделей в коллекции
-                    _.each(newModels, function (model) {
-                        html += template(model, index + i++, collection);
-                        if (options.listenModels) {
-                            listenModel($el, tempChildrenLen, template, collection, ctx, model);
-                        }
-                    });
-                }
+			collection.on('add', function (newModels, index, lastIndex) {
+				var i = 0,
+					html = '';
+				var _index = lastIndex || index;
+				if (options.innerBinds) {
+					html = $(document.createElement(elName));
+					_.each(newModels, function (model) {
+						html.append(template(model, _index + i++, collection));
+					});
+					html = html.children();
+				} else {
+					//склеивает все новые представления всех новых моделей в коллекции
+					_.each(newModels, function (model) {
+						html += template(model, _index + i++, collection);
+						if (options.listenModels) {
+							listenModel($el, tempChildrenLen, template, collection, ctx, model);
+						}
+					});
+				}
 
-
-                if (index === 0) {
-                    $el.prepend(html);
-                } else if (tempChildrenLen && $el.children().eq(index * tempChildrenLen).length) {
-                    $el.children().eq(index * tempChildrenLen).after(html);
-                } else {
-                    $el.append(html);
-                }
-            }, ctx);
+				if (index === 0) {
+					$el.prepend(html);
+				} else if (tempChildrenLen && $el.children().eq(index * tempChildrenLen).length) {
+					$el.children().eq(index * tempChildrenLen).after(html);
+				} else {
+					$el.append(html);
+				}
+			}, ctx);
             if (options.listenModels) {
                 collection.on('beforeReset', function (models) {
                     _.each(models, function (model) {

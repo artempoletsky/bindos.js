@@ -42,10 +42,8 @@
             else {
                 addArgs = {};
             }
-            //console.log(elem);
             fArray.callAndSubscribe(function (array) {
                 $el.empty();
-                //	console.log(array);
                 if (array) {
                     _.each(array, function (val, ind) {
                         addArgs.$index = ind;

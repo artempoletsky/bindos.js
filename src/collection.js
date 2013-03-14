@@ -71,19 +71,22 @@
             },
             add: function (models, index, silent) {
 
-                var me = this,
-                    hashIndex,
-                    addedModels = [], _models;
+				var me = this,
+					hashIndex,
+					addedModels = [],
+					_models,
+					_index = 0;
 
                 if (!(models instanceof Array)) {
                     models = [models];
                 }
 
-                if (typeof index !== 'number') {
-                    index = this.length;
-                } else if (index === 0) {
+				if (typeof index !== 'number') {
+					index = this.getIndex(this.models[this.length-1]);
+				} else if (index === 0) {
 					_models = _.clone(models).reverse();
-                }
+					_index = this.getIndex(this.models[0]) - _models.length - 1;
+				}
 
                 function addHashIndex(model, index) {
                     if (index === 0 && me.length) {
@@ -135,7 +138,7 @@
 
                 this.length = this.models.length;
                 if (!silent) {
-                    this.fire('add', addedModels, index);
+					this.fire('add', addedModels, index, _index);
                 }
                 return this;
             },
@@ -216,6 +219,7 @@
              * @return {Number}
              */
             getIndex: function (model) {
+				if(!model) return 0;
                 var i = this.indexOf(model);
                 return this._hashId[i].index;
             }
@@ -286,7 +290,6 @@
             });
             self.models = newModels;
             self.length = newModels.length;
-            //console.log(indexes);
             self.fire('cut', indexes);
             return self;
         };
@@ -302,7 +305,6 @@
             });
             self.models = newModels;
             self.length = newModels.length;
-            //console.log(indexes);
             self.fire('sort', indexes);
             return self;
         };

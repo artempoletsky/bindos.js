@@ -9,13 +9,11 @@
 
             var oldCompAsync, model, newContext = {};
 
-
             _.each(oModel().toJSON(), function (value, key) {
                 newContext[key] = BaseObservable({
                     initial: value
                 });
             });
-            //console.log(oModel());
 
             _.extend(addArgs, {
                 $self: oModel,
@@ -101,9 +99,7 @@
         return false;
     };
 
-
     ViewModel.binds.eachModel = function (elem, value, context, addArgs) {
-
         var options,
             values,
             $el = $(elem),
@@ -125,10 +121,8 @@
             options.templateName = values[1];
         }
 
-
         rawTemplate = options.templateName ? '' : $el.html();
 
-        //console.log(rawTemplate);
         //когда меняется целая коллекция
         this.findObservable(context, options.collection, addArgs).callAndSubscribe(function (collection) {
 
@@ -152,9 +146,7 @@
                 return;
             }
 
-
             tempChildrenLen = 1;
-
 
             if (options.innerBinds) {
                 templateConstructor = function (rawTemplate) {
@@ -204,42 +196,40 @@
                             listenModel($el, tempChildrenLen, template, collection, ctx, model);
                         }
                     });
-
                     $el.html(html);
                 }
 
             };
             onReset();
 
-            collection.on('add', function (newModels, index) {
-                var i = 0,
-                    html = '';
-                if (options.innerBinds) {
-                    html = $(document.createElement(elName));
-                    _.each(newModels, function (model) {
-                        html.append(template(model, index + i++, collection));
-                    });
-                    html = html.children();
-                }
-                else {
-                    //склеивает все новые представления всех новых моделей в коллекции
-                    _.each(newModels, function (model) {
-                        html += template(model, index + i++, collection);
-                        if (options.listenModels) {
-                            listenModel($el, tempChildrenLen, template, collection, ctx, model);
-                        }
-                    });
-                }
+			collection.on('add', function (newModels, index, lastIndex) {
+				var i = 0,
+					html = '';
+				var _index = lastIndex || index;
+				if (options.innerBinds) {
+					html = $(document.createElement(elName));
+					_.each(newModels, function (model) {
+						html.append(template(model, _index + i++, collection));
+					});
+					html = html.children();
+				} else {
+					//склеивает все новые представления всех новых моделей в коллекции
+					_.each(newModels, function (model) {
+						html += template(model, _index + i++, collection);
+						if (options.listenModels) {
+							listenModel($el, tempChildrenLen, template, collection, ctx, model);
+						}
+					});
+				}
 
-
-                if (index === 0) {
-                    $el.prepend(html);
-                } else if (tempChildrenLen && $el.children().eq(index * tempChildrenLen).length) {
-                    $el.children().eq(index * tempChildrenLen).after(html);
-                } else {
-                    $el.append(html);
-                }
-            }, ctx);
+				if (index === 0) {
+					$el.prepend(html);
+				} else if (tempChildrenLen && $el.children().eq(index * tempChildrenLen).length) {
+					$el.children().eq(index * tempChildrenLen).after(html);
+				} else {
+					$el.append(html);
+				}
+			}, ctx);
             if (options.listenModels) {
                 collection.on('beforeReset', function (models) {
                     _.each(models, function (model) {
