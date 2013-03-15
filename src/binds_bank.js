@@ -17,6 +17,10 @@
             //var $el=$(elem);
             this.findObservable(context, value, addArgs)
                 .callAndSubscribe(function (val) {
+                    //undefined конвертируется в пустую строку
+                    if (!val) {
+                        val = '';
+                    }
                     elem.innerHTML = val;
                 });
         },
