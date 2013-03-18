@@ -202,34 +202,33 @@
             };
             onReset();
 
-			collection.on('add', function (newModels, index, lastIndex) {
-				var i = 0,
-					html = '';
-				var _index = lastIndex || index;
-				if (options.innerBinds) {
-					html = $(document.createElement(elName));
-					_.each(newModels, function (model) {
-						html.append(template(model, _index + i++, collection));
-					});
-					html = html.children();
-				} else {
-					//склеивает все новые представления всех новых моделей в коллекции
-					_.each(newModels, function (model) {
-						html += template(model, _index + i++, collection);
-						if (options.listenModels) {
-							listenModel($el, tempChildrenLen, template, collection, ctx, model);
-						}
-					});
-				}
-
-				if (index === 0) {
-					$el.prepend(html);
-				} else if (tempChildrenLen && $el.children().eq(index * tempChildrenLen).length) {
-					$el.children().eq(index * tempChildrenLen).after(html);
-				} else {
-					$el.append(html);
-				}
-			}, ctx);
+            collection.on('add', function (newModels, index, lastIndex) {
+                var i = 0,
+                    html = '';
+                var _index = lastIndex || index;
+                if (options.innerBinds) {
+                    html = $(document.createElement(elName));
+                    _.each(newModels, function (model) {
+                        html.append(template(model, _index + i++, collection));
+                    });
+                    html = html.children();
+                } else {
+                    //склеивает все новые представления всех новых моделей в коллекции
+                    _.each(newModels, function (model) {
+                        html += template(model, _index + i++, collection);
+                        if (options.listenModels) {
+                            listenModel($el, tempChildrenLen, template, collection, ctx, model);
+                        }
+                    });
+                }
+                if (index === 0) {
+                    $el.prepend(html);
+                } else if (!index || index === collection.length - newModels.length) {
+                    $el.append(html);
+                } else {
+                    $el.children().eq(index * tempChildrenLen).before(html);
+                }
+            }, ctx);
             if (options.listenModels) {
                 collection.on('beforeReset', function (models) {
                     _.each(models, function (model) {
