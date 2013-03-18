@@ -1296,7 +1296,7 @@
             _.each(this.parseOptionsObject(value), function (condition, attrName) {
                 ViewModel.findObservable(context, condition, addArgs)
                     .callAndSubscribe(function (val) {
-                        if (val !== false && val !== undefined) {
+                        if (val !== false && val !== undefined && val != null) {
                             elem.setAttribute(attrName, val);
                         } else {
                             elem.removeAttribute(attrName);
