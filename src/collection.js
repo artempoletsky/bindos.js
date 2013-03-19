@@ -64,29 +64,29 @@
                 return this;
             },
             push: function (model) {
-                return this.add(model);
+                return this.add(model, this.models.length);
             },
             unshift: function (model) {
                 return this.add(model, 0);
             },
             add: function (models, index, silent) {
 
-				var me = this,
-					hashIndex,
-					addedModels = [],
-					_models,
-					_index = 0;
+                var me = this,
+                    hashIndex,
+                    addedModels = [],
+                    _models,
+                    _index = 0;
 
                 if (!(models instanceof Array)) {
                     models = [models];
                 }
 
-				if (typeof index !== 'number') {
-					index = this.getIndex(this.models[this.length-1]);
-				} else if (index === 0) {
-					_models = _.clone(models).reverse();
-					_index = this.getIndex(this.models[0]) - _models.length - 1;
-				}
+                if (typeof index !== 'number') {
+                    index = this.getIndex(this.models[this.length - 1]);
+                } else if (index === 0) {
+                    _models = _.clone(models).reverse();
+                    _index = this.getIndex(this.models[0]) - _models.length - 1;
+                }
 
                 function addHashIndex(model, index) {
                     if (index === 0 && me.length) {
@@ -138,12 +138,12 @@
 
                 this.length = this.models.length;
                 if (!silent) {
-					this.fire('add', addedModels, index, _index);
+                    this.fire('add', addedModels, index, _index);
                 }
                 return this;
             },
             cut: function (id) {
-                var found, me=this;
+                var found, me = this;
                 this.each(function (model, index) {
                     if (model.id === id) {
                         found = me.cutAt(index);
@@ -219,7 +219,9 @@
              * @return {Number}
              */
             getIndex: function (model) {
-				if(!model) return 0;
+                if (!model) {
+                    return 0;
+                }
                 var i = this.indexOf(model);
                 return this._hashId[i].index;
             }
@@ -264,9 +266,6 @@
                 return left.index < right.index ? -1 : 1;
             }), 'value');
     };
-
-
-
 
 
     // Mix in each Underscore method as a proxy to `Collection#models`.
