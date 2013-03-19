@@ -64,7 +64,7 @@
                 return this;
             },
             push: function (model) {
-                return this.add(model, this.models.length);
+                return this.add(model);
             },
             unshift: function (model) {
                 return this.add(model, 0);
@@ -82,11 +82,13 @@
                 }
 
                 if (typeof index !== 'number') {
-                    index = this.getIndex(this.models[this.length - 1]);
+                    index = this.length;
+                    _index = this.getIndex(this.models[this.length - 1]);
                 } else if (index === 0) {
                     _models = _.clone(models).reverse();
                     _index = this.getIndex(this.models[0]) - _models.length - 1;
                 }
+
 
                 function addHashIndex(model, index) {
                     if (index === 0 && me.length) {
