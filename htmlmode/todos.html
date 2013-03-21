@@ -51,7 +51,7 @@ add: добавить новую модель в заданную коллекц
             add: todos | todos.length
         }
     }">
-    <input type="text" name="name"/>
+    <input type="text" name="name" autocomplete="off"/>
     <input type="submit" value="Add one"/>
 </form>
 <h2>Also <input type="checkbox" data-bind="observer,checked: also"/></h2>
@@ -67,7 +67,7 @@ add: добавить новую модель в заданную коллекц
             add: todos | 0
         }
     }">
-        <input type="text" name="name"/>
+        <input type="text" name="name" autocomplete="off"/>
         <input type="submit" value="Add one"/>
     </form>
     <h2>Add to center of list</h2>
@@ -78,7 +78,7 @@ add: добавить новую модель в заданную коллекц
             add: todos | Math.floor(todos.length/2)
         }
     }">
-        <input type="text" name="name"/>
+        <input type="text" name="name" autocomplete="off"/>
         <input type="submit" value="Add one"/>
     </form>
 </div>
