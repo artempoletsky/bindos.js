@@ -1182,37 +1182,47 @@
             });
         }
     };
+    var anotherBreakersRegEx = /\{[\s\S]*\}/;
+    var firstColonRegex2 = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*,/;
+    var parsePairs = function (string) {
+        var result = {};
+        _.each(string.split(commaSplitter), function (value) {
+            var matches = firstColonRegex.exec(value);
+            if (matches) {
+                result[matches[1]] = matches[2];
+            }
+        });
+        return result;
+    }
 
     ViewModel.parseOptionsObject = function (value) {
-        var match, attrs, res;
-        if (!value) {
-            return {};
-        }
+        var parsedSimpleObjects = {};
+        var i = 0;
+        var recursiveParse = function (string) {
+            if (string.match(/\{[^{}]*\}/)) {
+                recursiveParse(string.replace(/\{[^{}]*\}/, function (string) {
 
-        match = value.match(breakersRegex);
-        if (!match || match[1] === undefined) {
-            throw new Error('Expression: "' + value + '" is not valid object');
-        }
-
-        attrs = match[1].split(commaSplitter);
-        if (!attrs.length) {
-            return {};
-        }
-
-        res = {};
-        _.each(attrs, function (val) {
-
-            if (!val) {
-                return;
+                    var name = Math.random() + i++;
+                    parsedSimpleObjects[name] = parsePairs(string.slice(1, -1));
+                    return name;
+                }));
             }
-            match = val.match(firstColonRegex);
+        };
+        recursiveParse(value);
 
-            if (!match || !match[1] || !match[2]) {
-                throw new Error('Expression: "' + value + '" is not valid object');
-            }
-            res[match[1]] = match[2];
+        _.each(parsedSimpleObjects, function (object) {
+            _.each(object, function (value, key) {
+                if (parsedSimpleObjects[value]) {
+                    object[key] = parsedSimpleObjects[value];
+                    delete parsedSimpleObjects[value];
+                }
+            });
         });
-        return res;
+        var result;
+        _.each(parsedSimpleObjects, function (value) {
+            result = value;
+        });
+        return result;
     };
 
     window.ViewModel = ViewModel;
