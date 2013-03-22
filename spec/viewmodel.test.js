@@ -1,5 +1,38 @@
 describe('ViewModel', function () {
+    it('can parse options object', function () {
 
+         var simpleRawOptions = '   {\n\
+         model: Task,\n\
+         add: todos | Math.floor(todos.length/2),\n\
+         foo: bar\n\
+         }\n\
+         ';
+         var simpleOptions = ViewModel.parseOptionsObject(simpleRawOptions);
+
+         expect(simpleOptions.model).toBe('Task');
+         expect(simpleOptions.add).toBe('todos | Math.floor(todos.length/2)');
+         expect(simpleOptions.foo).toBe('bar');
+
+        var rawOptions = '   {\n\
+            model: Task,\n\
+            b: {c: d},\
+            submit: {\n\
+                add: todos | Math.floor(todos.length/2),\n\
+                foo: {\n\
+                    bar: a,\n\
+                    baz: sdfsdf\n\
+                }\n\
+            }\n\
+        }\n\
+           ';
+
+        var options = ViewModel.parseOptionsObject(rawOptions);
+        expect(options.model).toBe('Task');
+        expect(options.submit.add).toBe('todos | Math.floor(todos.length/2)');
+        expect(options.submit.foo.bar).toBe('a');
+        expect(options.submit.foo.baz).toBe('sdfsdf');
+        expect(options.b.c).toBe('d');
+    });
     it('can create VM object', function () {
         var click = jasmine.createSpy('click');
         var obj = {
@@ -216,6 +249,11 @@ describe('ViewModel', function () {
     });
 
     it('parseOptionsObject', function () {
+
+        return;
+        console.log(ViewModel.parseOptionsObject('a:b'));
+        console.log(ViewModel.parseOptionsObject('{a:b'));
+        //ViewModel.parseOptionsObject('{}')
         expect(function () {
             ViewModel.parseOptionsObject('{ a : b }')
         }).not.toThrow();
