@@ -158,7 +158,8 @@
         if (Observable.isObservable(context)) {
             context = context();
         }
-        var keys = [],
+
+        var keys = ['______context__________'],
             vals = [],
             fn,
             comp,
@@ -169,11 +170,33 @@
             vals.push(val);
         });
 
-        keys.push('with(this) return ' + string);
+        if (context) {
+            keys.push('with(______context__________) return ' + string);
+        }
+        else {
+            keys.push('return ' + string);
+        }
         fn = Function.apply(context, keys);
+        vals.unshift(context);
         fnEval = function () {
             try {
-                return fn.apply(context, vals);
+                switch (vals.length) {
+                    case 1:
+                        return fn(context);
+                    case 2:
+                        return fn(context, vals[1]);
+                    case 3:
+                        return fn(context, vals[1], vals[2]);
+                    case 4:
+                        return fn(context, vals[1], vals[2], vals[3]);
+                    case 5:
+                        return fn(context, vals[1], vals[2], vals[3], vals[4]);
+                    case 6:
+                        return fn(context, vals[1], vals[2], vals[3], vals[4], vals[5]);
+                    default:
+                        return fn.apply(undefined, vals);
+                }
+
             } catch (exception) {
                 console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
             }
@@ -187,12 +210,8 @@
             }
             comp = BaseObservable({
                 async: true,
-                get: function () {
-                    return  obs();
-                },
-                set: function (val) {
-                    obs(val);
-                }
+                get: obs,
+                set: obs
             });
         } else {
 
@@ -204,6 +223,7 @@
                 }, context);
             }
         }
+
         return comp;
     };
 
