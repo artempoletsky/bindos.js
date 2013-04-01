@@ -125,6 +125,29 @@
             $el.click(function () {
                 fn.apply(context, arguments);
             });
+        },
+        className: function (elem, value, context, addArgs) {
+            var oldClassName,
+                $el = $(elem);
+            this.findObservable(context, value, addArgs).callAndSubscribe(function (className) {
+                if (oldClassName) {
+                    $el.removeClass(oldClassName);
+                }
+                if (className) {
+                    $el.addClass(className);
+                }
+                oldClassName = className;
+            });
+        },
+        events: function (elem, value, context, addArgs) {
+            var self = this,
+                $el = $(elem);
+            _.each(this.parseOptionsObject(value), function (expr, eventName) {
+                var callback = self.findObservable(context, expr, addArgs)();
+                $el.bind(eventName, function (e) {
+                    callback.call(context, e);
+                });
+            });
         }
     };
 }());
