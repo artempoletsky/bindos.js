@@ -1630,10 +1630,11 @@
 
             //склеивает все представления всех моделей в коллекции
             onReset = function () {
-                var i = 0,
-                    html = '';
-                $el.empty();
+				var i = collection.getIndex(collection.at(0))-1,
+					html = '';
+				$el.empty();
 
+				if(i < 0) i = 0;
 
                 if (options.innerBinds) {
                     collection.each(function (model) {
