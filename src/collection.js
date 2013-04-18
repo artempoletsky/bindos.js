@@ -7,6 +7,8 @@
         Collection = Model.extend({
 
             constructor: function (models, attributes) {
+                this.attributes={};
+                this._changed={};
                 this.itself = new itself(this);
                 this.models = [];
                 this.length = 0;
