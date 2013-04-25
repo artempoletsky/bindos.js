@@ -147,7 +147,6 @@
         };
     ViewModel = Events.extend(ViewModel);
 
-    ViewModel.compAsync = true;
 
     ViewModel.findObservable = function (context, string, addArgs) {
 
@@ -203,26 +202,15 @@
         };
 
         obs = fnEval();
-        //если уже асинхронный, то возвращаем его
-        if (this.compAsync) {
-            if (!Observable.isObservable(obs)) {
-                obs = fnEval;
-            }
-            comp = BaseObservable({
-                async: true,
-                get: obs,
-                set: obs
-            });
-        } else {
 
-            if (Observable.isObservable(obs)) {
-                comp = obs;
-            } else {
-                comp = Computed(function () {
-                    return fnEval();
-                }, context);
-            }
+        if (Observable.isObservable(obs)) {
+            comp = obs;
+        } else {
+            comp = Computed(function () {
+                return fnEval();
+            }, context);
         }
+
 
         return comp;
     };

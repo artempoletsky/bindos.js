@@ -43,7 +43,7 @@
             }
         }, BaseObservable;
 
-    refresher.startRefresh();
+
 
     BaseObservable = function (params) {
         params = params || {};
