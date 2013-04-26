@@ -186,6 +186,11 @@
     Class.prototype._constructor = Object;
     Class.prototype.constructor = Class;
     Class.extend = function (props) {
+        if (typeof props == 'function') {
+            props = {
+                constructor: props
+            };
+        }
         var ParentClass = this,
             Constructor = function () {
                 this._constructor.apply(this, arguments);
@@ -197,8 +202,9 @@
         ctor.prototype = ParentClass.prototype;
         Constructor.prototype = new ctor();
         //_.extend(Constructor.prototype,props);
+
         //*
-        _.each(props, function (val, key) {
+        _.forOwn(props, function (val, key) {
             Constructor.prototype[key] =
                 //если функция
                 typeof val === 'function' &&
