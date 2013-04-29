@@ -1079,9 +1079,7 @@
         };
     ViewModel = Events.extend(ViewModel);
 
-
-    ViewModel.findObservable = function (context, string, addArgs) {
-
+    ViewModel.evil = function (context, string, addArgs) {
         addArgs = addArgs || {};
         if (typeof string !== 'string') {
             throw  new TypeError('String expected');
@@ -1089,27 +1087,24 @@
         if (Observable.isObservable(context)) {
             context = context();
         }
-
-        var keys = ['______context__________'],
+        var contextName = 'context' + Math.floor(Math.random() * 10000000);
+        var keys = [contextName],
             vals = [],
-            fn,
-            comp,
-            fnEval,
-            obs;
+            fn;
         _.each(addArgs, function (val, key) {
             keys.push(key);
             vals.push(val);
         });
 
         if (context) {
-            keys.push('with(______context__________) return ' + string);
+            keys.push('with(' + contextName + ') return ' + string);
         }
         else {
             keys.push('return ' + string);
         }
         fn = Function.apply(context, keys);
         vals.unshift(context);
-        fnEval = function () {
+        return function () {
             try {
                 switch (vals.length) {
                     case 1:
@@ -1132,19 +1127,20 @@
                 console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
             }
         };
+    };
+    ViewModel.findObservable = function (context, string, addArgs) {
 
-        obs = fnEval();
+        var evil = ViewModel.evil(context, string, addArgs);
+        var obs = evil();
 
         if (Observable.isObservable(obs)) {
-            comp = obs;
-        } else {
-            comp = Computed(function () {
-                return fnEval();
-            }, context);
+            return obs;
         }
 
+        return Computed(function () {
+            return evil();
+        }, context);
 
-        return comp;
     };
 
     ViewModel.findBinds = function (element, context, addArgs) {
