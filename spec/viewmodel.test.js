@@ -250,9 +250,8 @@ describe('ViewModel', function () {
 
     it('parseOptionsObject', function () {
 
-        return;
-        console.log(ViewModel.parseOptionsObject('a:b'));
-        console.log(ViewModel.parseOptionsObject('{a:b'));
+        //console.log(ViewModel.parseOptionsObject('a:b'));
+        //console.log(ViewModel.parseOptionsObject('{a:b'));
         //ViewModel.parseOptionsObject('{}')
         expect(function () {
             ViewModel.parseOptionsObject('{ a : b }')
@@ -268,7 +267,7 @@ describe('ViewModel', function () {
         }).toThrow();
         expect(function () {
             ViewModel.parseOptionsObject('{a:}')
-        }).toThrow();
+        }).not.toThrow();
         expect(ViewModel.parseOptionsObject('{a:b}').a).toBe('b');
         expect(ViewModel.parseOptionsObject('{asdvccbt:erwer}').asdvccbt).toBe('erwer');
         expect(ViewModel.parseOptionsObject('{\n\

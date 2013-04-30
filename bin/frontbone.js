@@ -938,7 +938,8 @@
         bindSplitter = /\s*;\s*/,
         simpleTagRegex = /^[a-z]+$/,
         firstColonRegex = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/,
-        breakersRegex = /^\{([\s\S]*)\}$/,
+        //breakersRegex = /^\{([\s\S]*)\}$/,
+        parsePairs,
         commaSplitter = /\s*,\s*/,
         ViewModel = {
             setElement: function (el) {
@@ -1087,8 +1088,8 @@
         if (Observable.isObservable(context)) {
             context = context();
         }
-        var contextName = 'context' + Math.floor(Math.random() * 10000000);
-        var keys = [contextName],
+        var contextName = 'context' + Math.floor(Math.random() * 10000000),
+            keys = [contextName],
             vals = [],
             fn;
         _.each(addArgs, function (val, key) {
@@ -1130,8 +1131,8 @@
     };
     ViewModel.findObservable = function (context, string, addArgs) {
 
-        var evil = ViewModel.evil(context, string, addArgs);
-        var obs = evil();
+        var evil = ViewModel.evil(context, string, addArgs),
+            obs = evil();
 
         if (Observable.isObservable(obs)) {
             return obs;
@@ -1195,9 +1196,9 @@
             });
         }
     };
-    var anotherBreakersRegEx = /\{[\s\S]*\}/;
-    var firstColonRegex2 = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*,/;
-    var parsePairs = function (string) {
+    /*var anotherBreakersRegEx = /\{[\s\S]*\}/;
+    var firstColonRegex2 = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*,/;*/
+    parsePairs = function (string) {
         var result = {};
         _.each(string.split(commaSplitter), function (value) {
             var matches = firstColonRegex.exec(value);
@@ -1206,12 +1207,13 @@
             }
         });
         return result;
-    }
+    };
 
     ViewModel.parseOptionsObject = function (value) {
-        var parsedSimpleObjects = {};
-        var i = 0;
-        var recursiveParse = function (string) {
+        var parsedSimpleObjects = {},
+            result,
+            i = 0,
+            recursiveParse = function (string) {
             if (string.match(/\{[^{}]*\}/)) {
                 recursiveParse(string.replace(/\{[^{}]*\}/, function (string) {
 
@@ -1231,10 +1233,13 @@
                 }
             });
         });
-        var result;
+
         _.each(parsedSimpleObjects, function (value) {
             result = value;
         });
+        if (!result) {
+            throw new Error(value + ' is not valid options object');
+        }
         return result;
     };
 
