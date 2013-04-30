@@ -1303,7 +1303,7 @@
                         var tempDiv = document.createElement('div');
                         tempDiv.innerHTML = html;
                         ViewModel.findBinds(tempDiv, val, addArgs);
-                        $el.append(tempDiv.innerHTML);
+						$el.append($(tempDiv).children());
                     });
                 }
             });
