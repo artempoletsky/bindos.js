@@ -296,4 +296,64 @@ describe('ViewModel', function () {
         expect($div2.text()).toBe('Hello Moe! 12asd');
 
     });
+
+
+    it('support custom tags', function () {
+        //add custom tag
+        ViewModel.tag('smartinput', function ($el, context, addArgs) {
+            //template
+            var $markup = $('<div class="my_cool_style"><input type="text"/></div>');
+
+            //link to input
+            var $input = $markup.find('input');
+
+            //replace markup
+            $el.after($markup).remove();
+
+            //$el.attr('value') == 'name'
+            //bind ctx.name to value of input
+            this.findObservable(context, $el.attr('value'), addArgs)
+                .callAndSubscribe(function (value) {
+                    $input.val(value);
+                });
+        });
+        var $div = $('<div><smartinput value="name"></smartinput></div>');
+        var ctx = {
+            name: 'Moe'
+        };
+        ViewModel.findBinds($div, ctx);
+        expect($div.find('input').val()).toBe('Moe');
+    });
+
+
+    it('support custom attributes', function () {
+        //en locale
+        var lang = Observable({
+            hello: 'Hello friend!',
+            bye: 'Good bye friend!'
+        });
+        //creating new custom attribute
+        ViewModel.customAttributes['lang'] = function ($el, value) {
+            //value now is "hello"
+            //$el now is $div
+
+            //subscribe to change locale
+            lang.callAndSubscribe(function (lang) {
+                $el.html(lang[value]);
+            });
+        };
+        var $div=$('<div lang="hello"></div>');
+        ViewModel.findBinds($div);
+
+        expect($div.html()).toBe('Hello friend!');
+
+        //change locale to fr
+        lang({
+            hello: 'Bonjour ami!',
+            bye: 'Au revoir ami!'
+        });
+
+        expect($div.html()).toBe('Bonjour ami!');
+
+    });
 })
