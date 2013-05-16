@@ -294,5 +294,6 @@ describe('ViewModel', function () {
         var $div2 = $('<div>Hello ${name}! ${value}<div>asd</div></div>');
         ViewModel.findBinds($div2[0], ctx);
         expect($div2.text()).toBe('Hello Moe! 12asd');
+
     });
 })

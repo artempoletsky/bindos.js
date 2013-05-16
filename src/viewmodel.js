@@ -64,51 +64,6 @@
                 ViewModel.findBinds(this.el, this);
                 return this;
             },
-            /**
-             *
-             * @param json
-             * @returns {Observable}
-             * @deprecated использовать binds.withModel
-             */
-            bindToModel: function (json) {
-                var oModel = Observable(new Model(json)),
-                    model = oModel(),
-                    ctx = {},
-                    me = this;
-
-                oModel.callAndSubscribe(function (newModel) {
-                    if (model) {
-                        model.off(0, 0, ctx);
-                    }
-                    model = newModel;
-                    if (newModel) {
-                        newModel.on('change', function (changed) {
-                            _.each(changed, function (val, key) {
-                                if (me[key]) {
-                                    me[key].fire();
-                                }
-                            });
-
-                        }, ctx);
-                    }
-                });
-
-                if (!this._bindedToModel) {
-                    _.each(model.attributes, function (value, prop) {
-                        me[prop] = Computed(function () {
-
-                            var mod = oModel();
-                            if (!mod) {
-                                return '';
-                            }
-                            return mod.prop(prop);
-
-                        });
-                    });
-                }
-                this._bindedToModel = true;
-                return oModel;
-            },
             autoParseBinds: false,
             initialize: function () {
             },
@@ -148,7 +103,7 @@
         };
     ViewModel = Events.extend(ViewModel);
 
-    ViewModel.evil = function (context, string, addArgs) {
+    ViewModel.evil = function (context, string, addArgs, throwError) {
         addArgs = addArgs || {};
         if (typeof string !== 'string') {
             throw  new TypeError('String expected');
@@ -193,7 +148,12 @@
                 }
 
             } catch (exception) {
-                console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
+                if (throwError) {
+                    throw exception;
+                } else {
+                    console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
+                }
+
             }
         };
     };
@@ -258,7 +218,7 @@
                 var el = this;
                 if (this.nodeType == 3) {
                     _.forOwn(self.inlineModificators, function (mod) {
-                        mod.call(this, el, context, addArgs);
+                        mod.call(self, el, context, addArgs);
                     });
                 } else {
                     self.findBinds(el, context, addArgs);

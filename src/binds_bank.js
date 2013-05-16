@@ -154,10 +154,8 @@
     ViewModel.inlineModificators = {
         '{{}}': function (textNode, context, addArgs) {
             var str = textNode.nodeValue,
-                splt,
-                text,
-                val,
-                i,
+                vm = this,
+                evil,
                 breakersRegex = ViewModel.inlineModificators['{{}}'].regex;
 
             if (breakersRegex.test(str)) {
@@ -167,7 +165,15 @@
                     return '"+(' + expr + '||"")+"';
                 }) + '"';
 
-                Computed(ViewModel.evil(context, str, addArgs))
+                evil = vm.evil(context, str, addArgs, true);
+
+                Computed(function () {
+                    try {
+                        return evil();
+                    } catch (e) {
+                        return ' <span style="color: red;">' + e.message + '</span> ';
+                    }
+                })
                     .callAndSubscribe(function (value) {
                         textNode.nodeValue = value;
                     });
