@@ -177,19 +177,19 @@
             try {
                 switch (vals.length) {
                     case 1:
-                        return fn(context);
+                        return fn(context, context);
                     case 2:
-                        return fn(context, vals[1]);
+                        return fn(context, context, vals[1]);
                     case 3:
-                        return fn(context, vals[1], vals[2]);
+                        return fn(context, context, vals[1], vals[2]);
                     case 4:
-                        return fn(context, vals[1], vals[2], vals[3]);
+                        return fn(context, context, vals[1], vals[2], vals[3]);
                     case 5:
-                        return fn(context, vals[1], vals[2], vals[3], vals[4]);
+                        return fn(context, context, vals[1], vals[2], vals[3], vals[4]);
                     case 6:
-                        return fn(context, vals[1], vals[2], vals[3], vals[4], vals[5]);
+                        return fn(context, context, vals[1], vals[2], vals[3], vals[4], vals[5]);
                     default:
-                        return fn.apply(undefined, vals);
+                        return fn.apply(context, vals);
                 }
 
             } catch (exception) {
@@ -206,9 +206,7 @@
             return obs;
         }
 
-        return Computed(function () {
-            return evil();
-        }, context);
+        return Computed(evil, context);
 
     };
 

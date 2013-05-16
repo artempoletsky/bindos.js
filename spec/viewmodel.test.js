@@ -1,17 +1,17 @@
 describe('ViewModel', function () {
     it('can parse options object', function () {
 
-         var simpleRawOptions = '   {\n\
+        var simpleRawOptions = '   {\n\
          model: Task,\n\
          add: todos | Math.floor(todos.length/2),\n\
          foo: bar\n\
          }\n\
          ';
-         var simpleOptions = ViewModel.parseOptionsObject(simpleRawOptions);
+        var simpleOptions = ViewModel.parseOptionsObject(simpleRawOptions);
 
-         expect(simpleOptions.model).toBe('Task');
-         expect(simpleOptions.add).toBe('todos | Math.floor(todos.length/2)');
-         expect(simpleOptions.foo).toBe('bar');
+        expect(simpleOptions.model).toBe('Task');
+        expect(simpleOptions.add).toBe('todos | Math.floor(todos.length/2)');
+        expect(simpleOptions.foo).toBe('bar');
 
         var rawOptions = '   {\n\
             model: Task,\n\
@@ -277,9 +277,9 @@ describe('ViewModel', function () {
     });
 
 
-    it('support {{}}', function(){
+    it('support {{}}', function () {
         var $div = $('<div>Hello {{name}}! {{value}}<div>asd</div></div>');
-        var ctx={
+        var ctx = {
             name: Observable('Moe'),
             value: Observable('')
         };
@@ -288,5 +288,11 @@ describe('ViewModel', function () {
         expect($div.text()).toBe('Hello Moe! asd');
         ctx.value(12);
         expect($div.text()).toBe('Hello Moe! 12asd');
+
+        ViewModel.inlineModificators['{{}}'].regex = /\$\{([\s\S]+?)\}/g;
+
+        var $div2 = $('<div>Hello ${name}! ${value}<div>asd</div></div>');
+        ViewModel.findBinds($div2[0], ctx);
+        expect($div2.text()).toBe('Hello Moe! 12asd');
     });
 })

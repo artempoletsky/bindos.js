@@ -1109,19 +1109,19 @@
             try {
                 switch (vals.length) {
                     case 1:
-                        return fn(context);
+                        return fn(context, context);
                     case 2:
-                        return fn(context, vals[1]);
+                        return fn(context, context, vals[1]);
                     case 3:
-                        return fn(context, vals[1], vals[2]);
+                        return fn(context, context, vals[1], vals[2]);
                     case 4:
-                        return fn(context, vals[1], vals[2], vals[3]);
+                        return fn(context, context, vals[1], vals[2], vals[3]);
                     case 5:
-                        return fn(context, vals[1], vals[2], vals[3], vals[4]);
+                        return fn(context, context, vals[1], vals[2], vals[3], vals[4]);
                     case 6:
-                        return fn(context, vals[1], vals[2], vals[3], vals[4], vals[5]);
+                        return fn(context, context, vals[1], vals[2], vals[3], vals[4], vals[5]);
                     default:
-                        return fn.apply(undefined, vals);
+                        return fn.apply(context, vals);
                 }
 
             } catch (exception) {
@@ -1138,9 +1138,7 @@
             return obs;
         }
 
-        return Computed(function () {
-            return evil();
-        }, context);
+        return Computed(evil, context);
 
     };
 
@@ -1403,24 +1401,22 @@
             });
         }
     };
-    var breakersRegex = /\{\{[^{]+\}\}/g;
+
     ViewModel.inlineModificators = {
         '{{}}': function (textNode, context, addArgs) {
-            var str = textNode.nodeValue, splt, matches;
+            var str = textNode.nodeValue,
+                splt,
+                text,
+                val,
+                i,
+                breakersRegex = ViewModel.inlineModificators['{{}}'].regex;
+
             if (breakersRegex.test(str)) {
-                splt = str.split(breakersRegex);
-                matches = str.match(breakersRegex);
-                str = '';
-
-                _.each(splt, function (text) {
-                    var firstMatch = matches.shift();
-                    str += '+"' + text + '"' + (firstMatch ? '+(' + firstMatch.slice(2, -2) + '||"")' : '');
-                });
 
 
-                if (str.charAt(0) == '+') {
-                    str = str.slice(1);
-                }
+                str = '"' + str.replace(breakersRegex, function (exprWithBreakers, expr) {
+                    return '"+(' + expr + '||"")+"';
+                }) + '"';
 
                 Computed(ViewModel.evil(context, str, addArgs))
                     .callAndSubscribe(function (value) {
@@ -1430,6 +1426,7 @@
 
         }
     };
+    ViewModel.inlineModificators['{{}}'].regex = /\{\{([\s\S]+?)\}\}/g;
 }());
 
 (function () {
