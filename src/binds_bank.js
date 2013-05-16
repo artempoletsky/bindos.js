@@ -171,12 +171,13 @@
                     try {
                         return evil();
                     } catch (e) {
-                        return ' <span style="color: red;">' + e.message + '</span> ';
+                        return ' ' + e.message + ' ';
                     }
                 })
                     .callAndSubscribe(function (value) {
                         textNode.nodeValue = value;
                     });
+
             }
 
         }
