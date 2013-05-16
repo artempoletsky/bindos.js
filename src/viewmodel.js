@@ -6,7 +6,7 @@
         bindSplitter = /\s*;\s*/,
         simpleTagRegex = /^[a-z]+$/,
         firstColonRegex = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/,
-        //breakersRegex = /^\{([\s\S]*)\}$/,
+    //breakersRegex = /^\{([\s\S]*)\}$/,
         parsePairs,
         commaSplitter = /\s*,\s*/,
         ViewModel = {
@@ -213,7 +213,7 @@
     };
 
     ViewModel.findBinds = function (element, context, addArgs) {
-        var curBindsString, binds, i, j, k, newctx, l, cBind, ccBind, bindName, bindVal, bindFn, arr,
+        var curBindsString, binds, newctx, bindName, bindVal, bindFn, arr,
             breakContextIsSent = false,
             self = this,
             $el = $(element);
@@ -222,9 +222,8 @@
 
         if (curBindsString) {
             binds = curBindsString.split(bindSplitter);
-            for (i = 0, l = binds.length; i < l; i++) {
+            _.each(binds, function (cBind) {
 
-                cBind = binds[i];
 
                 arr = cBind.match(firstColonRegex);
 
@@ -237,10 +236,7 @@
                 }
 
                 bindName = bindName.split(commaSplitter);
-
-                for (j = 0, k = bindName.length; j < k; j++) {
-                    ccBind = bindName[j];
-                    //если бинд не пустой и не закомментирован с помощью !
+                _.each(bindName, function (ccBind) {
                     if (ccBind && ccBind.charAt(0) !== '!') {
                         bindFn = ViewModel.binds[ccBind];
 
@@ -255,17 +251,27 @@
                             console.warn('Bind: "' + ccBind + '" not exists');
                         }
                     }
-                }
-            }
+                });
+            });
+
         }
         if (!breakContextIsSent) {
-            $el.children().each(function () {
-                self.findBinds(this, context, addArgs);
+            $el.contents().each(function () {
+                var el = this;
+                if (this.nodeType == 3) {
+                    _.forOwn(self.inlineModificators, function (mod) {
+                        mod.call(this, el, context, addArgs);
+                    });
+                } else {
+                    self.findBinds(el, context, addArgs);
+                }
             });
+
         }
     };
+
     /*var anotherBreakersRegEx = /\{[\s\S]*\}/;
-    var firstColonRegex2 = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*,/;*/
+     var firstColonRegex2 = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*,/;*/
     parsePairs = function (string) {
         var result = {};
         _.each(string.split(commaSplitter), function (value) {
@@ -282,15 +288,15 @@
             result,
             i = 0,
             recursiveParse = function (string) {
-            if (string.match(/\{[^{}]*\}/)) {
-                recursiveParse(string.replace(/\{[^{}]*\}/, function (string) {
+                if (string.match(/\{[^{}]*\}/)) {
+                    recursiveParse(string.replace(/\{[^{}]*\}/, function (string) {
 
-                    var name = Math.random() + i++;
-                    parsedSimpleObjects[name] = parsePairs(string.slice(1, -1));
-                    return name;
-                }));
-            }
-        };
+                        var name = Math.random() + i++;
+                        parsedSimpleObjects[name] = parsePairs(string.slice(1, -1));
+                        return name;
+                    }));
+                }
+            };
         recursiveParse(value);
 
         _.each(parsedSimpleObjects, function (object) {

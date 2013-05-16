@@ -56,7 +56,7 @@
                         var tempDiv = document.createElement('div');
                         tempDiv.innerHTML = html;
                         ViewModel.findBinds(tempDiv, val, addArgs);
-						$el.append($(tempDiv).children());
+                        $el.append($(tempDiv).children());
                     });
                 }
             });
@@ -148,6 +148,33 @@
                     callback.call(context, e);
                 });
             });
+        }
+    };
+    var breakersRegex = /\{\{[^{]+\}\}/g;
+    ViewModel.inlineModificators = {
+        '{{}}': function (textNode, context, addArgs) {
+            var str = textNode.nodeValue, splt, matches;
+            if (breakersRegex.test(str)) {
+                splt = str.split(breakersRegex);
+                matches = str.match(breakersRegex);
+                str = '';
+
+                _.each(splt, function (text) {
+                    var firstMatch = matches.shift();
+                    str += '+"' + text + '"' + (firstMatch ? '+(' + firstMatch.slice(2, -2) + '||"")' : '');
+                });
+
+
+                if (str.charAt(0) == '+') {
+                    str = str.slice(1);
+                }
+
+                Computed(ViewModel.evil(context, str, addArgs))
+                    .callAndSubscribe(function (value) {
+                        textNode.nodeValue = value;
+                    });
+            }
+
         }
     };
 }());

@@ -275,4 +275,18 @@ describe('ViewModel', function () {
 											erwer\n\
 											}').asdvccbt).toBe('erwer');
     });
+
+
+    it('support {{}}', function(){
+        var $div = $('<div>Hello {{name}}! {{value}}<div>asd</div></div>');
+        var ctx={
+            name: Observable('Moe'),
+            value: Observable('')
+        };
+        ViewModel.findBinds($div[0], ctx);
+
+        expect($div.text()).toBe('Hello Moe! asd');
+        ctx.value(12);
+        expect($div.text()).toBe('Hello Moe! 12asd');
+    });
 })
