@@ -278,9 +278,11 @@ describe('ViewModel', function () {
 
 
     it('support {{}}', function () {
+
+
         var $div = $('<div>Hello {{name}}! {{value}}<div>asd</div></div>');
         var ctx = {
-            name: Observable('Moe'),
+            name: Observable('<span style="color: green;">Moe</span>'),
             value: Observable('')
         };
         ViewModel.findBinds($div[0], ctx);
@@ -342,7 +344,7 @@ describe('ViewModel', function () {
                 $el.html(lang[value]);
             });
         };
-        var $div=$('<div lang="hello"></div>');
+        var $div = $('<div lang="hello"></div>');
         ViewModel.findBinds($div);
 
         expect($div.html()).toBe('Hello friend!');
