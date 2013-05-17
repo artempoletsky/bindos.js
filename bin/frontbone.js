@@ -1453,15 +1453,23 @@
                         div.innerHTML = value;
 
                         var newNodeList = _.toArray(div.childNodes);
+                        /*if (!newNodeList.length) {
+                            newNodeList = [document.createTextNode('')];
+                            div.appendChild(newNodeList[0]);
+                        } */
                         var firstNode = nodeList[0];
 
                         while (div.childNodes[0]) {
                             docFragment.appendChild(div.childNodes[0]);
                         }
 
-                        //condition - fix for 2011 Samsung Smart Tv
+
                         if (docFragment.childNodes.length) {
-                            parent.insertBefore(docFragment, firstNode);
+                            try {
+                                parent.insertBefore(docFragment, firstNode);
+                            } catch (e) {
+                                throw  e;
+                            }
                         }
 
 
