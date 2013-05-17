@@ -935,7 +935,7 @@
     /*global _, Computed, Observable, Model, Events, BaseObservable */
     var $ = window.$,
         eventSplitter = /\s+/,
-        bindSplitter = /\s*;\s*/,
+
         simpleTagRegex = /^[a-z]+$/,
         firstColonRegex = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/,
     //breakersRegex = /^\{([\s\S]*)\}$/,
@@ -1038,7 +1038,7 @@
     ViewModel.evil = function (context, string, addArgs, throwError) {
         addArgs = addArgs || {};
         if (typeof string !== 'string') {
-            throw  new TypeError('String expected');
+            throw  new TypeError('String expected in evil function');
         }
         if (Observable.isObservable(context)) {
             context = context();
@@ -1083,6 +1083,8 @@
                 if (throwError) {
                     throw exception;
                 } else {
+                    if(context===window && string=='click')
+                    debugger;
                     console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
                 }
 
@@ -1103,48 +1105,37 @@
     };
 
     ViewModel.findBinds = function (element, context, addArgs) {
-        var curBindsString, binds, newctx, bindName, bindVal, bindFn, arr,
+        var newctx,
             breakContextIsSent = false,
             self = this,
             $el = $(element);
-        curBindsString = $el.attr('data-bind');
-        $el.removeAttr('data-bind');
 
-        if (curBindsString) {
-            binds = curBindsString.split(bindSplitter);
-            _.each(binds, function (cBind) {
+        _.forOwn(self.tags, function (behavior, tagName) {
 
-
-                arr = cBind.match(firstColonRegex);
-
-                if (!arr) {
-                    bindName = cBind;
-                    bindVal = '';
-                } else {
-                    bindName = arr[1];
-                    bindVal = arr[2];
+            if ($el[0].tagName.toLowerCase() == tagName) {
+                newctx = behavior.call(self, $el, context, addArgs);
+                if (newctx === false) {
+                    breakContextIsSent = true;
+                } else if (newctx) {
+                    context = newctx;
                 }
+            }
+        });
 
-                bindName = bindName.split(commaSplitter);
-                _.each(bindName, function (ccBind) {
-                    if (ccBind && ccBind.charAt(0) !== '!') {
-                        bindFn = ViewModel.binds[ccBind];
+        _.forOwn(self.customAttributes, function (attrFn, attrName) {
+            var value = $el.attr(attrName), result;
+            if (value !== undefined) {
 
-                        if (bindFn) {
-                            newctx = bindFn.call(self, element, bindVal, context, addArgs);
-                            if (newctx === false) {
-                                breakContextIsSent = true;
-                            } else if (newctx) {
-                                context = newctx;
-                            }
-                        } else {
-                            console.warn('Bind: "' + ccBind + '" not exists');
-                        }
-                    }
-                });
-            });
+                newctx = attrFn.call(self, $el, value, context, addArgs);
+                if (newctx === false) {
+                    breakContextIsSent = true;
+                } else if (newctx) {
+                    context = newctx;
+                }
+            }
+        });
 
-        }
+
         if (!breakContextIsSent) {
             $el.contents().each(function () {
                 var el = this;
@@ -1361,6 +1352,71 @@
             });
         }
     };
+    var bindSplitter = /\s*;\s*/,
+        firstColonRegex = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/,
+        commaSplitter = /\s*,\s*/;
+
+    var dataBind = function (name, $el, value, context, addArgs) {
+        $el.removeAttr(name);
+        var newCtx, breakContextIsSent;
+        if (value) {
+
+            _.each(value.split(bindSplitter), function (cBind) {
+                var arr = cBind.match(firstColonRegex), bindName, bindVal, bindFn;
+                if (!arr) {
+                    bindName = cBind;
+                    bindVal = '';
+                } else {
+                    bindName = arr[1];
+                    bindVal = arr[2];
+                }
+
+                bindName = bindName.split(commaSplitter);
+
+                _.each(bindName, function (ccBind) {
+                    if (ccBind && ccBind.charAt(0) !== '!') {
+                        bindFn = ViewModel.binds[ccBind];
+
+                        if (bindFn) {
+                            newCtx = bindFn.call(ViewModel, $el[0], bindVal, context, addArgs);
+
+                            if (newCtx === false) {
+                                breakContextIsSent = true;
+                            } else if (newCtx) {
+                                context = newCtx;
+                            }
+                        } else {
+                            console.warn('Bind: "' + ccBind + '" not exists');
+                        }
+                    }
+                });
+            });
+        }
+        if (breakContextIsSent) {
+            return false;
+        }
+        //console.log(newCtx);
+        return context;
+    }
+
+
+    ViewModel.tag = function (tagName, behavior) {
+        document.createElement(tagName);// for IE
+        ViewModel.tags[tagName] = behavior;
+    }
+    ViewModel.removeTag = function (tagName) {
+        delete ViewModel.tags[tagName];
+    }
+    ViewModel.tags = {};
+
+    ViewModel.customAttributes = {
+        'data-bind': function ($el, value, context, addArgs) {
+            return dataBind('data-bind', $el, value, context, addArgs);
+        },
+        'nk': function ($el, value, context, addArgs) {
+            return dataBind('nk', $el, value, context, addArgs);
+        }
+    }
 
     ViewModel.inlineModificators = {
         '{{}}': function (textNode, context, addArgs) {

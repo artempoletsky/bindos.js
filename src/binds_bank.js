@@ -150,6 +150,71 @@
             });
         }
     };
+    var bindSplitter = /\s*;\s*/,
+        firstColonRegex = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/,
+        commaSplitter = /\s*,\s*/;
+
+    var dataBind = function (name, $el, value, context, addArgs) {
+        $el.removeAttr(name);
+        var newCtx, breakContextIsSent;
+        if (value) {
+
+            _.each(value.split(bindSplitter), function (cBind) {
+                var arr = cBind.match(firstColonRegex), bindName, bindVal, bindFn;
+                if (!arr) {
+                    bindName = cBind;
+                    bindVal = '';
+                } else {
+                    bindName = arr[1];
+                    bindVal = arr[2];
+                }
+
+                bindName = bindName.split(commaSplitter);
+
+                _.each(bindName, function (ccBind) {
+                    if (ccBind && ccBind.charAt(0) !== '!') {
+                        bindFn = ViewModel.binds[ccBind];
+
+                        if (bindFn) {
+                            newCtx = bindFn.call(ViewModel, $el[0], bindVal, context, addArgs);
+
+                            if (newCtx === false) {
+                                breakContextIsSent = true;
+                            } else if (newCtx) {
+                                context = newCtx;
+                            }
+                        } else {
+                            console.warn('Bind: "' + ccBind + '" not exists');
+                        }
+                    }
+                });
+            });
+        }
+        if (breakContextIsSent) {
+            return false;
+        }
+        //console.log(newCtx);
+        return context;
+    }
+
+
+    ViewModel.tag = function (tagName, behavior) {
+        document.createElement(tagName);// for IE
+        ViewModel.tags[tagName] = behavior;
+    }
+    ViewModel.removeTag = function (tagName) {
+        delete ViewModel.tags[tagName];
+    }
+    ViewModel.tags = {};
+
+    ViewModel.customAttributes = {
+        'data-bind': function ($el, value, context, addArgs) {
+            return dataBind('data-bind', $el, value, context, addArgs);
+        },
+        'nk': function ($el, value, context, addArgs) {
+            return dataBind('nk', $el, value, context, addArgs);
+        }
+    }
 
     ViewModel.inlineModificators = {
         '{{}}': function (textNode, context, addArgs) {
