@@ -176,7 +176,7 @@
                         bindFn = ViewModel.binds[ccBind];
 
                         if (bindFn) {
-                            newCtx = bindFn.call(self, $el[0], bindVal, context, addArgs);
+                            newCtx = bindFn.call(ViewModel, $el[0], bindVal, context, addArgs);
                         } else {
                             console.warn('Bind: "' + ccBind + '" not exists');
                         }
