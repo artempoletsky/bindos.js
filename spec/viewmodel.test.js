@@ -113,41 +113,31 @@ describe('ViewModel', function () {
     })
     it('can parse binds from html', function () {
 
-        ViewModel.create({
-            el: '#testvm',
-            events: {
-                'change select': 'onChoose',
-                'click #reset': 'reset',
-                'click #add': 'addVariant'
-            },
-            addVariant: function () {
-                var variants = this.variants();
-                variants.length++;
-                var newVal = this.$('input[name=add_new]').val();
-                variants[variants.length] = newVal;
-                this.variants.fire();
-                this.chosenId.fire();
-            },
-            initialize: function () {
-                this.chosen = Computed(function () {
-                    var val = this.chosenId();
-                    return val != -1 ? this.variants()[val] : 0;
-                }, this);
-            },
-            variants: Observable([
-                'Cat',
-                'Dog',
-                'Bird'
-            ]),
-            chosenId: Observable(-1),
-            reset: function () {
-                this.chosenId(-1);
-            },
-            onChoose: function (e) {
-                this.chosenId(parseInt($(e.currentTarget).val(), 10));
+        var $div = $('<div data-bind="html: name"></div>');
+        ViewModel.findBinds($div, {
+            name: 'Moe'
+        });
+        expect($div.html()).toBe('Moe');
+    });
+
+    it('With support', function () {
+
+        var $div = $('<div class="nav_target header-item header-speed-test"' +
+            'data-bind="with: SpeedTest;' +
+            //'voice: speedtest,v_navigation;' +
+            "!css: {voicelink: rating()<2,nav_target: rating()<2};" +
+            'events: {click: click, voice: click}">' +
+            '<b class="l"></b><b class="r"></b>' +
+            '<span class="c"><i class="speedtest_icon" data-bind="className: \'speedtest_icon_\'+rating()"></i></span>' +
+            '</div>');
+        ViewModel.findBinds($div, {
+            SpeedTest :{
+                click: function(){},
+                rating: Observable('1')
             }
         });
 
+        expect($div.find('.speedtest_icon').hasClass('speedtest_icon_1')).toBe(true);
     })
 
     it('each method must return this', function () {
@@ -299,6 +289,19 @@ describe('ViewModel', function () {
 
     });
 
+    it('{{}} empty support', function () {
+        var ctx = {
+            name: Observable('<span style="color: green;">Moe</span>')
+        };
+        var $div3 = $('<div>${name}</div>');
+        ViewModel.findBinds($div3[0], ctx);
+        expect($div3.text()).toBe('Moe');
+        ctx.name('');
+        expect($div3.text()).toBe('');
+        ctx.name('Moe');
+        expect($div3.text()).toBe('Moe');
+    });
+
 
     it('support custom tags', function () {
         //add custom tag
@@ -358,4 +361,6 @@ describe('ViewModel', function () {
         expect($div.html()).toBe('Bonjour ami!');
 
     });
+
+
 })

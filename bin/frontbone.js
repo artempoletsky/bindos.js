@@ -1083,6 +1083,8 @@
                 if (throwError) {
                     throw exception;
                 } else {
+                    if(context===window && string=='click')
+                    debugger;
                     console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
                 }
 
@@ -1356,7 +1358,7 @@
 
     var dataBind = function (name, $el, value, context, addArgs) {
         $el.removeAttr(name);
-        var newCtx;
+        var newCtx, breakContextIsSent;
         if (value) {
 
             _.each(value.split(bindSplitter), function (cBind) {
@@ -1377,6 +1379,12 @@
 
                         if (bindFn) {
                             newCtx = bindFn.call(ViewModel, $el[0], bindVal, context, addArgs);
+
+                            if (newCtx === false) {
+                                breakContextIsSent = true;
+                            } else if (newCtx) {
+                                context = newCtx;
+                            }
                         } else {
                             console.warn('Bind: "' + ccBind + '" not exists');
                         }
@@ -1384,7 +1392,11 @@
                 });
             });
         }
-        return newCtx;
+        if (breakContextIsSent) {
+            return false;
+        }
+        //console.log(newCtx);
+        return context;
     }
 
 
@@ -1436,6 +1448,7 @@
                     }
                 })
                     .callAndSubscribe(function (value) {
+
                         docFragment = document.createDocumentFragment();
                         div.innerHTML = value;
 
@@ -1446,7 +1459,11 @@
                             docFragment.appendChild(div.childNodes[0]);
                         }
 
-                        parent.insertBefore(docFragment, firstNode);
+                        //condition - fix for 2011 Samsung Smart Tv
+                        if (docFragment.childNodes.length) {
+                            parent.insertBefore(docFragment, firstNode);
+                        }
+
 
                         _.each(nodeList, function (node) {
                             parent.removeChild(node);
