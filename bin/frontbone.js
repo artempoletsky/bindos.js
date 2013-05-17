@@ -1138,13 +1138,13 @@
 
         if (!breakContextIsSent) {
             $el.contents().each(function () {
-                var el = this;
+                var node = this;
                 if (this.nodeType == 3) {
                     _.forOwn(self.inlineModificators, function (mod) {
-                        mod.call(self, el, context, addArgs);
+                        mod.call(self, node, context, addArgs);
                     });
                 } else {
-                    self.findBinds(el, context, addArgs);
+                    self.findBinds(node, context, addArgs);
                 }
             });
 
@@ -1423,10 +1423,16 @@
             var str = textNode.nodeValue,
                 vm = this,
                 evil,
+                parent,
+                docFragment,
+                div,
+                nodeList = [textNode],
                 breakersRegex = ViewModel.inlineModificators['{{}}'].regex;
 
             if (breakersRegex.test(str)) {
 
+                parent = textNode.parentNode;
+                div = document.createElement('div');
 
                 str = '"' + str.replace(breakersRegex, function (exprWithBreakers, expr) {
                     return '"+(' + expr + '||"")+"';
@@ -1438,11 +1444,32 @@
                     try {
                         return evil();
                     } catch (e) {
-                        return ' ' + e.message + ' ';
+                        return ' <span style="color: red;">' + e.message + '</span> ';
                     }
                 })
                     .callAndSubscribe(function (value) {
-                        textNode.nodeValue = value;
+
+                        docFragment = document.createDocumentFragment();
+                        div.innerHTML = value;
+
+                        var newNodeList = _.toArray(div.childNodes);
+                        var firstNode = nodeList[0];
+
+                        while (div.childNodes[0]) {
+                            docFragment.appendChild(div.childNodes[0]);
+                        }
+
+                        //condition - fix for 2011 Samsung Smart Tv
+                        if (docFragment.childNodes.length) {
+                            parent.insertBefore(docFragment, firstNode);
+                        }
+
+
+                        _.each(nodeList, function (node) {
+                            parent.removeChild(node);
+                        });
+                        nodeList = newNodeList;
+
                     });
 
             }

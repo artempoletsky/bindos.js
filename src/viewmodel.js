@@ -206,13 +206,13 @@
 
         if (!breakContextIsSent) {
             $el.contents().each(function () {
-                var el = this;
+                var node = this;
                 if (this.nodeType == 3) {
                     _.forOwn(self.inlineModificators, function (mod) {
-                        mod.call(self, el, context, addArgs);
+                        mod.call(self, node, context, addArgs);
                     });
                 } else {
-                    self.findBinds(el, context, addArgs);
+                    self.findBinds(node, context, addArgs);
                 }
             });
 

@@ -268,9 +268,11 @@ describe('ViewModel', function () {
 
 
     it('support {{}}', function () {
+
+
         var $div = $('<div>Hello {{name}}! {{value}}<div>asd</div></div>');
         var ctx = {
-            name: Observable('Moe'),
+            name: Observable('<span style="color: green;">Moe</span>'),
             value: Observable('')
         };
         ViewModel.findBinds($div[0], ctx);
@@ -285,6 +287,15 @@ describe('ViewModel', function () {
         ViewModel.findBinds($div2[0], ctx);
         expect($div2.text()).toBe('Hello Moe! 12asd');
 
+
+        //empty support
+        var $div3 = $('<div>${name}</div>');
+        ViewModel.findBinds($div3[0], ctx);
+        expect($div3.text()).toBe('Moe');
+        ctx.name('');
+        expect($div3.text()).toBe('');
+        ctx.name('Moe');
+        expect($div3.text()).toBe('Moe');
     });
 
 
