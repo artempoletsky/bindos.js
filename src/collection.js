@@ -232,7 +232,7 @@
         }),
 
     // Underscore methods that we want to implement on the Collection.
-        methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'find',
+        methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'find','foldl','foldr',
             'detect', 'filter', 'select', 'reject', 'every', 'all', 'some', 'any',
             'include', 'contains', 'invoke', 'max', 'min', 'sortBy', 'sortByDesc', 'sortedIndex',
             'toArray', 'size', 'first', 'initial', 'rest', 'last', 'without', 'indexOf',

@@ -8,6 +8,9 @@
      * @type {{Object}}
      */
     ViewModel.tmpl = {
+        setRawTemplate: function (name, html) {
+            rawTemplates[name] = html;
+        },
         /**
          * Возвращает сырой текстовый темплейт по имени
          * @param name {String} имя темплейта
@@ -28,8 +31,8 @@
                 rawTemplate;
             if (!template) {
                 rawTemplate = rawTemplates[rawTemplateName];
-                if (!rawTemplate) {
-                    throw  new Error('Raw tempalte: "' + rawTemplateName + '" is not defined');
+                if (rawTemplate === undefined) {
+                    throw  new Error('Raw template: "' + rawTemplateName + '" is not defined');
                 }
                 compiledTemplates[rawTemplateName] = template = constructorFunction(rawTemplate);
             }
@@ -37,10 +40,15 @@
         }
     };
 
-    ViewModel.binds.template = function (elem, value) {
-        var $el = $(elem);
-        rawTemplates[value] = $el.html();
+    ViewModel.binds.template = function (elem, value, context, addArgs) {
+        var $el = $(elem), splt = value.split(/\s*,\s*/), name = splt[0], constuctor = splt[1];
+
+        rawTemplates[name] = $el.html();
         $el.remove();
+        if (constuctor) {
+            constuctor = this.evil(context, constuctor, addArgs);
+            compiledTemplates[name] = constuctor(rawTemplates[name]);
+        }
         return false;
     };
 
