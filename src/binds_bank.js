@@ -251,10 +251,14 @@
                         div.innerHTML = value;
 
                         var newNodeList = _.toArray(div.childNodes);
-                        /*if (!newNodeList.length) {
+
+                        if (!newNodeList.length
+                            //hack for samsung smart tv 2011
+                            && navigator.userAgent.toLowerCase().indexOf('maple') == -1) {
                             newNodeList = [document.createTextNode('')];
                             div.appendChild(newNodeList[0]);
-                        } */
+                        }
+
                         var firstNode = nodeList[0];
 
                         while (div.childNodes[0]) {

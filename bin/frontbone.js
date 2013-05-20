@@ -847,7 +847,7 @@
         }),
 
     // Underscore methods that we want to implement on the Collection.
-        methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'find',
+        methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'find','foldl','foldr',
             'detect', 'filter', 'select', 'reject', 'every', 'all', 'some', 'any',
             'include', 'contains', 'invoke', 'max', 'min', 'sortBy', 'sortByDesc', 'sortedIndex',
             'toArray', 'size', 'first', 'initial', 'rest', 'last', 'without', 'indexOf',
@@ -1453,10 +1453,14 @@
                         div.innerHTML = value;
 
                         var newNodeList = _.toArray(div.childNodes);
-                        /*if (!newNodeList.length) {
+
+                        if (!newNodeList.length
+                            //hack for samsung smart tv 2011
+                            && navigator.userAgent.toLowerCase().indexOf('maple') == -1) {
                             newNodeList = [document.createTextNode('')];
                             div.appendChild(newNodeList[0]);
-                        } */
+                        }
+
                         var firstNode = nodeList[0];
 
                         while (div.childNodes[0]) {
@@ -1497,6 +1501,9 @@
      * @type {{Object}}
      */
     ViewModel.tmpl = {
+        setRawTemplate: function (name, html) {
+            rawTemplates[name] = html;
+        },
         /**
          * Возвращает сырой текстовый темплейт по имени
          * @param name {String} имя темплейта
@@ -1517,8 +1524,8 @@
                 rawTemplate;
             if (!template) {
                 rawTemplate = rawTemplates[rawTemplateName];
-                if (!rawTemplate) {
-                    throw  new Error('Raw tempalte: "' + rawTemplateName + '" is not defined');
+                if (rawTemplate === undefined) {
+                    throw  new Error('Raw template: "' + rawTemplateName + '" is not defined');
                 }
                 compiledTemplates[rawTemplateName] = template = constructorFunction(rawTemplate);
             }
@@ -1526,10 +1533,15 @@
         }
     };
 
-    ViewModel.binds.template = function (elem, value) {
-        var $el = $(elem);
-        rawTemplates[value] = $el.html();
+    ViewModel.binds.template = function (elem, value, context, addArgs) {
+        var $el = $(elem), splt = value.split(/\s*,\s*/), name = splt[0], constuctor = splt[1];
+
+        rawTemplates[name] = $el.html();
         $el.remove();
+        if (constuctor) {
+            constuctor = this.evil(context, constuctor, addArgs);
+            compiledTemplates[name] = constuctor(rawTemplates[name]);
+        }
         return false;
     };
 
