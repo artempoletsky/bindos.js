@@ -151,8 +151,6 @@
                 if (throwError) {
                     throw exception;
                 } else {
-                    if(context===window && string=='click')
-                    debugger;
                     console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
                 }
 
