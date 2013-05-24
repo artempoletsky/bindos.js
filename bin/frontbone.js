@@ -1040,6 +1040,7 @@
         if (typeof string !== 'string') {
             throw  new TypeError('String expected in evil function');
         }
+        string = string.replace(/\n/g, '\\n');
         if (Observable.isObservable(context)) {
             context = context();
         }
@@ -1208,7 +1209,7 @@
             });
         },
         src: function ($el, value, context, addArgs) {
-            var elem=$el[0];
+            var elem = $el[0];
             this.findObservable(context, value, addArgs)
                 .callAndSubscribe(function (val) {
                     elem.src = val || '';
@@ -1220,8 +1221,8 @@
                 .callAndSubscribe(function (val) {
                     //undefined конвертируется в пустую строку
                     /*if (!val) {
-                        val = '';
-                    } */
+                     val = '';
+                     } */
                     $el.html(val);
                 });
         },
@@ -1389,47 +1390,47 @@
         firstColonRegex = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/,
         commaSplitter = /\s*,\s*/,
         dataBind = function (name, $el, value, context, addArgs) {
-        $el.removeAttr(name);
-        var newCtx, breakContextIsSent;
-        if (value) {
+            $el.removeAttr(name);
+            var newCtx, breakContextIsSent;
+            if (value) {
 
-            _.each(value.split(bindSplitter), function (cBind) {
-                var arr = cBind.match(firstColonRegex), bindName, bindVal, bindFn;
-                if (!arr) {
-                    bindName = cBind;
-                    bindVal = '';
-                } else {
-                    bindName = arr[1];
-                    bindVal = arr[2];
-                }
-
-                bindName = bindName.split(commaSplitter);
-
-                _.each(bindName, function (ccBind) {
-                    if (ccBind && ccBind.charAt(0) !== '!') {
-                        bindFn = ViewModel.binds[ccBind];
-
-                        if (bindFn) {
-                            newCtx = bindFn.call(ViewModel, $el, bindVal, context, addArgs);
-
-                            if (newCtx === false) {
-                                breakContextIsSent = true;
-                            } else if (newCtx) {
-                                context = newCtx;
-                            }
-                        } else {
-                            console.warn('Bind: "' + ccBind + '" not exists');
-                        }
+                _.each(value.split(bindSplitter), function (cBind) {
+                    var arr = cBind.match(firstColonRegex), bindName, bindVal, bindFn;
+                    if (!arr) {
+                        bindName = cBind;
+                        bindVal = '';
+                    } else {
+                        bindName = arr[1];
+                        bindVal = arr[2];
                     }
+
+                    bindName = bindName.split(commaSplitter);
+
+                    _.each(bindName, function (ccBind) {
+                        if (ccBind && ccBind.charAt(0) !== '!') {
+                            bindFn = ViewModel.binds[ccBind];
+
+                            if (bindFn) {
+                                newCtx = bindFn.call(ViewModel, $el, bindVal, context, addArgs);
+
+                                if (newCtx === false) {
+                                    breakContextIsSent = true;
+                                } else if (newCtx) {
+                                    context = newCtx;
+                                }
+                            } else {
+                                console.warn('Bind: "' + ccBind + '" not exists');
+                            }
+                        }
+                    });
                 });
-            });
-        }
-        if (breakContextIsSent) {
-            return false;
-        }
-        //console.log(newCtx);
-        return context;
-    };
+            }
+            if (breakContextIsSent) {
+                return false;
+            }
+            //console.log(newCtx);
+            return context;
+        };
 
 
     ViewModel.tag = function (tagName, behavior) {
@@ -1465,7 +1466,7 @@
 
                 parent = textNode.parentNode;
                 div = document.createElement('div');
-                str=str.replace(/\n/g, '\\n');
+
 
 
                 str = '"' + str.replace(breakersRegex, function (exprWithBreakers, expr) {
@@ -1475,6 +1476,8 @@
 
                 evil = vm.evil(context, str, addArgs, true);
 
+
+
                 Computed(function () {
                     try {
                         return evil();
@@ -1482,12 +1485,15 @@
                         return ' <span style="color: red;">' + e.message + '</span> ';
                     }
                 })
-                    .callAndSubscribe(function (value) {
+                    .callAndSubscribe(parent.childNodes.length == 1 ? function (value) {
+                        //if this is the only child
+                        parent.innerHTML = value;
+                    } : function (value) {
 
                         docFragment = document.createDocumentFragment();
                         div.innerHTML = value;
 
-                        var newNodeList = _.toArray(div.childNodes),firstNode;
+                        var newNodeList = _.toArray(div.childNodes), firstNode;
 
                         if (!newNodeList.length
                             //hack for samsung smart tv 2011

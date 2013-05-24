@@ -108,6 +108,7 @@
         if (typeof string !== 'string') {
             throw  new TypeError('String expected in evil function');
         }
+        string = string.replace(/\n/g, '\\n');
         if (Observable.isObservable(context)) {
             context = context();
         }
