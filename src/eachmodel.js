@@ -91,18 +91,18 @@
             }, ctx);
         };
 
-    ViewModel.binds.withModel = function (elem, value, context, addArgs) {
+    ViewModel.binds.withModel = function ($el, value, context, addArgs) {
         addArgs = addArgs || {};
         //$children, oModel, context, addArgs, ctx
-        createRow($(elem).children(), this.findObservable(context, value, addArgs), context, addArgs, {});
+        createRow($el.children(), this.findObservable(context, value, addArgs), context, addArgs, {});
         //останавливает внешний парсер
         return false;
     };
 
-    ViewModel.binds.eachModel = function (elem, value, context, addArgs) {
+    ViewModel.binds.eachModel = function ($el, value, context, addArgs) {
         var options,
             values,
-            $el = $(elem),
+            elem= $el[0],
         //заглушка чтобы быстро делать off
             ctx = {},
             oldCollection,

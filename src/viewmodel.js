@@ -170,11 +170,11 @@
 
     };
 
-    ViewModel.findBinds = function (element, context, addArgs) {
+    ViewModel.findBinds = function (selector, context, addArgs) {
         var newctx,
             breakContextIsSent = false,
             self = this,
-            $el = $(element);
+            $el = $(selector);
 
         _.forOwn(self.tags, function (behavior, tagName) {
 

@@ -1083,8 +1083,6 @@
                 if (throwError) {
                     throw exception;
                 } else {
-                    if(context===window && string=='click')
-                    debugger;
                     console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
                 }
 
@@ -1104,11 +1102,11 @@
 
     };
 
-    ViewModel.findBinds = function (element, context, addArgs) {
+    ViewModel.findBinds = function (selector, context, addArgs) {
         var newctx,
             breakContextIsSent = false,
             self = this,
-            $el = $(element);
+            $el = $(selector);
 
         _.forOwn(self.tags, function (behavior, tagName) {
 
@@ -1202,43 +1200,42 @@
 }(this));
 (function () {
     "use strict";
-    /*globals ViewModel, $, _*/
+    /*globals ViewModel, $, _, Computed*/
     ViewModel.binds = {
-        log: function (elem, value, context, addArgs) {
+        log: function ($el, value, context, addArgs) {
             this.findObservable(context, value, addArgs).callAndSubscribe(function () {
                 console.log(context, '.', value, '=', this());
             });
         },
-        src: function (elem, value, context, addArgs) {
+        src: function ($el, value, context, addArgs) {
+            var elem=$el[0];
             this.findObservable(context, value, addArgs)
                 .callAndSubscribe(function (val) {
                     elem.src = val || '';
                 });
         },
-        html: function (elem, value, context, addArgs) {
-            //var $el=$(elem);
+        html: function ($el, value, context, addArgs) {
+            //var elem=$el[0];
             this.findObservable(context, value, addArgs)
                 .callAndSubscribe(function (val) {
                     //undefined конвертируется в пустую строку
-                    if (!val) {
+                    /*if (!val) {
                         val = '';
-                    }
-                    elem.innerHTML = val;
+                    } */
+                    $el.html(val);
                 });
         },
-        text: function (elem, value, context, addArgs) {
-            var $el = $(elem);
+        text: function ($el, value, context, addArgs) {
             this.findObservable(context, value, addArgs)
                 .callAndSubscribe(function (val) {
                     $el.text(val);
                 });
         },
-        'with': function (elem, value, context, addArgs) {
-            return this.findObservable(context, value, addArgs)();
+        'with': function ($el, value, context, addArgs) {
+            return this.evil(context, value, addArgs)();
         },
-        each: function (elem, value, context, addArgs) {
+        each: function ($el, value, context, addArgs) {
             var fArray = this.findObservable(context, value, addArgs),
-                $el = $(elem),
                 html = $el.html();
             $el.empty();
 
@@ -1265,17 +1262,17 @@
 
             return false;
         },
-        value: function (elem, value, context, addArgs) {
-            var $el = $(elem),
-                obs = this.findObservable(context, value, addArgs)
-                    .callAndSubscribe(function (value) {
-                        $el.val(value);
-                    });
+        value: function ($el, value, context, addArgs) {
+            var obs = this.findObservable(context, value, addArgs)
+                .callAndSubscribe(function (value) {
+                    $el.val(value);
+                });
             $el.change(function () {
                 obs($el.val());
             });
         },
-        attr: function (elem, value, context, addArgs) {
+        attr: function ($el, value, context, addArgs) {
+            var elem = $el[0];
             _.each(this.parseOptionsObject(value), function (condition, attrName) {
                 ViewModel.findObservable(context, condition, addArgs)
                     .callAndSubscribe(function (val) {
@@ -1287,8 +1284,7 @@
                     });
             });
         },
-        style: function (elem, value, context, addArgs) {
-            var $el = $(elem);
+        style: function ($el, value, context, addArgs) {
             _.each(this.parseOptionsObject(value), function (condition, style) {
                 ViewModel.findObservable(context, condition, addArgs)
                     .callAndSubscribe(function (value) {
@@ -1296,8 +1292,7 @@
                     });
             });
         },
-        css: function (elem, value, context, addArgs) {
-            var $el = $(elem);
+        css: function ($el, value, context, addArgs) {
             _.each(this.parseOptionsObject(value), function (condition, className) {
                 ViewModel.findObservable(context, condition, addArgs)
                     .callAndSubscribe(function (value) {
@@ -1310,8 +1305,7 @@
                     });
             });
         },
-        display: function (elem, value, context, addArgs) {
-            var $el = $(elem);
+        display: function ($el, value, context, addArgs) {
             this.findObservable(context, value, addArgs).callAndSubscribe(function (value) {
                 if (value) {
                     $el.show();
@@ -1321,16 +1315,14 @@
                 }
             });
         },
-        click: function (elem, value, context, addArgs) {
-            var fn = this.findObservable(context, value, addArgs)(),
-                $el = $(elem);
+        click: function ($el, value, context, addArgs) {
+            var fn = this.evil(context, value, addArgs)();
             $el.click(function () {
                 fn.apply(context, arguments);
             });
         },
-        className: function (elem, value, context, addArgs) {
-            var oldClassName,
-                $el = $(elem);
+        className: function ($el, value, context, addArgs) {
+            var oldClassName;
             this.findObservable(context, value, addArgs).callAndSubscribe(function (className) {
                 if (oldClassName) {
                     $el.removeClass(oldClassName);
@@ -1341,22 +1333,62 @@
                 oldClassName = className;
             });
         },
-        events: function (elem, value, context, addArgs) {
-            var self = this,
-                $el = $(elem);
+        events: function ($el, value, context, addArgs) {
+            var self = this;
             _.each(this.parseOptionsObject(value), function (expr, eventName) {
-                var callback = self.findObservable(context, expr, addArgs)();
+                var callback = self.evil(context, expr, addArgs)();
                 $el.bind(eventName, function (e) {
                     callback.call(context, e);
                 });
             });
+        },
+        view: function ($el, value, context, addArgs) {
+            var options, ViewModelClass, args, vm, values;
+            try {
+                options = this.parseOptionsObject(value);
+            } catch (error) {
+                values = value.split(/\s*,\s*/);
+                options = {
+                    'class': values[0],
+                    'name': values[1]
+                };
+            }
+
+            if (options['class']) {
+                ViewModelClass = this.evil(context, options['class'], addArgs)();
+            } else {
+                ViewModelClass = ViewModel.extend({
+                    autoParseBinds: true
+                });
+            }
+            args = {
+                el: $el
+            };
+            if (options.options) {
+                _.forOwn(options.options, function (value, key) {
+                    args[key] = ViewModel.evil(context, value, addArgs)();
+                });
+            }
+
+            vm = new ViewModelClass(args);
+            if (options.name) {
+                context[options.name] = vm;
+            }
+
+            return false;
+        },
+        $click: function ($el, value, context, addArgs) {
+            var evil = this.evil(context, value, addArgs);
+            $el.click(function () {
+                evil();
+            });
+            return false;
         }
     };
     var bindSplitter = /\s*;\s*/,
         firstColonRegex = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/,
-        commaSplitter = /\s*,\s*/;
-
-    var dataBind = function (name, $el, value, context, addArgs) {
+        commaSplitter = /\s*,\s*/,
+        dataBind = function (name, $el, value, context, addArgs) {
         $el.removeAttr(name);
         var newCtx, breakContextIsSent;
         if (value) {
@@ -1378,7 +1410,7 @@
                         bindFn = ViewModel.binds[ccBind];
 
                         if (bindFn) {
-                            newCtx = bindFn.call(ViewModel, $el[0], bindVal, context, addArgs);
+                            newCtx = bindFn.call(ViewModel, $el, bindVal, context, addArgs);
 
                             if (newCtx === false) {
                                 breakContextIsSent = true;
@@ -1397,16 +1429,16 @@
         }
         //console.log(newCtx);
         return context;
-    }
+    };
 
 
     ViewModel.tag = function (tagName, behavior) {
         document.createElement(tagName);// for IE
         ViewModel.tags[tagName] = behavior;
-    }
+    };
     ViewModel.removeTag = function (tagName) {
         delete ViewModel.tags[tagName];
-    }
+    };
     ViewModel.tags = {};
 
     ViewModel.customAttributes = {
@@ -1416,7 +1448,7 @@
         'nk': function ($el, value, context, addArgs) {
             return dataBind('nk', $el, value, context, addArgs);
         }
-    }
+    };
 
     ViewModel.inlineModificators = {
         '{{}}': function (textNode, context, addArgs) {
@@ -1452,7 +1484,7 @@
                         docFragment = document.createDocumentFragment();
                         div.innerHTML = value;
 
-                        var newNodeList = _.toArray(div.childNodes);
+                        var newNodeList = _.toArray(div.childNodes),firstNode;
 
                         if (!newNodeList.length
                             //hack for samsung smart tv 2011
@@ -1461,7 +1493,7 @@
                             div.appendChild(newNodeList[0]);
                         }
 
-                        var firstNode = nodeList[0];
+                        firstNode = nodeList[0];
 
                         while (div.childNodes[0]) {
                             docFragment.appendChild(div.childNodes[0]);
@@ -1639,18 +1671,18 @@
             }, ctx);
         };
 
-    ViewModel.binds.withModel = function (elem, value, context, addArgs) {
+    ViewModel.binds.withModel = function ($el, value, context, addArgs) {
         addArgs = addArgs || {};
         //$children, oModel, context, addArgs, ctx
-        createRow($(elem).children(), this.findObservable(context, value, addArgs), context, addArgs, {});
+        createRow($el.children(), this.findObservable(context, value, addArgs), context, addArgs, {});
         //останавливает внешний парсер
         return false;
     };
 
-    ViewModel.binds.eachModel = function (elem, value, context, addArgs) {
+    ViewModel.binds.eachModel = function ($el, value, context, addArgs) {
         var options,
             values,
-            $el = $(elem),
+            elem= $el[0],
         //заглушка чтобы быстро делать off
             ctx = {},
             oldCollection,
