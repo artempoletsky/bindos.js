@@ -334,7 +334,7 @@ describe('ViewModel', function () {
 
             //$el.attr('value') == 'name'
             //bind ctx.name to value of input
-            this.findObservable(context, $el.attr('value'), addArgs)
+            this.findObservable($el.attr('value'), context, addArgs)
                 .callAndSubscribe(function (value) {
                     $input.val(value);
                 });

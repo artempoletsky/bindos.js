@@ -94,7 +94,7 @@
     ViewModel.binds.withModel = function ($el, value, context, addArgs) {
         addArgs = addArgs || {};
         //$children, oModel, context, addArgs, ctx
-        createRow($el.children(), this.findObservable(context, value, addArgs), context, addArgs, {});
+        createRow($el.children(), this.findObservable(value, context, addArgs), context, addArgs, {});
         //останавливает внешний парсер
         return false;
     };
@@ -124,7 +124,7 @@
         rawTemplate = options.templateName ? '' : $el.html();
 
         //когда меняется целая коллекция
-        this.findObservable(context, options.collection, addArgs).callAndSubscribe(function (collection) {
+        this.findObservable(options.collection, context, addArgs).callAndSubscribe(function (collection) {
 
             if (oldCollection) {
                 oldCollection.off(0, 0, ctx);

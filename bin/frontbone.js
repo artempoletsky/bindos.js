@@ -1090,7 +1090,7 @@
             }
         };
     };
-    ViewModel.findObservable = function (context, string, addArgs) {
+    ViewModel.findObservable = function (string, context, addArgs) {
 
         var evil = ViewModel.evil(string, context, addArgs),
             obs = evil();
@@ -1204,20 +1204,20 @@
     /*globals ViewModel, $, _, Computed*/
     ViewModel.binds = {
         log: function ($el, value, context, addArgs) {
-            this.findObservable(context, value, addArgs).callAndSubscribe(function () {
+            this.findObservable(value, context, addArgs).callAndSubscribe(function () {
                 console.log(context, '.', value, '=', this());
             });
         },
         src: function ($el, value, context, addArgs) {
             var elem = $el[0];
-            this.findObservable(context, value, addArgs)
+            this.findObservable(value, context, addArgs)
                 .callAndSubscribe(function (val) {
                     elem.src = val || '';
                 });
         },
         html: function ($el, value, context, addArgs) {
             //var elem=$el[0];
-            this.findObservable(context, value, addArgs)
+            this.findObservable(value, context, addArgs)
                 .callAndSubscribe(function (val) {
                     //undefined конвертируется в пустую строку
                     /*if (!val) {
@@ -1227,7 +1227,7 @@
                 });
         },
         text: function ($el, value, context, addArgs) {
-            this.findObservable(context, value, addArgs)
+            this.findObservable(value, context, addArgs)
                 .callAndSubscribe(function (val) {
                     $el.text(val);
                 });
@@ -1236,7 +1236,7 @@
             return this.evil(value, context, addArgs)();
         },
         each: function ($el, value, context, addArgs) {
-            var fArray = this.findObservable(context, value, addArgs),
+            var fArray = this.findObservable(value, context, addArgs),
                 html = $el.html();
             $el.empty();
 
@@ -1264,7 +1264,7 @@
             return false;
         },
         value: function ($el, value, context, addArgs) {
-            var obs = this.findObservable(context, value, addArgs)
+            var obs = this.findObservable(value, context, addArgs)
                 .callAndSubscribe(function (value) {
                     $el.val(value);
                 });
@@ -1275,7 +1275,7 @@
         attr: function ($el, value, context, addArgs) {
             var elem = $el[0];
             _.each(this.parseOptionsObject(value), function (condition, attrName) {
-                ViewModel.findObservable(context, condition, addArgs)
+                ViewModel.findObservable(condition, context, addArgs)
                     .callAndSubscribe(function (val) {
                         if (val !== false && val !== undefined && val != null) {
                             elem.setAttribute(attrName, val);
@@ -1287,7 +1287,7 @@
         },
         style: function ($el, value, context, addArgs) {
             _.each(this.parseOptionsObject(value), function (condition, style) {
-                ViewModel.findObservable(context, condition, addArgs)
+                ViewModel.findObservable(condition, context, addArgs)
                     .callAndSubscribe(function (value) {
                         $el.css(style, value);
                     });
@@ -1295,7 +1295,7 @@
         },
         css: function ($el, value, context, addArgs) {
             _.each(this.parseOptionsObject(value), function (condition, className) {
-                ViewModel.findObservable(context, condition, addArgs)
+                ViewModel.findObservable(condition, context, addArgs)
                     .callAndSubscribe(function (value) {
                         if (value) {
                             $el.addClass(className);
@@ -1307,7 +1307,7 @@
             });
         },
         display: function ($el, value, context, addArgs) {
-            this.findObservable(context, value, addArgs).callAndSubscribe(function (value) {
+            this.findObservable(value, context, addArgs).callAndSubscribe(function (value) {
                 if (value) {
                     $el.show();
                 }
@@ -1324,7 +1324,7 @@
         },
         className: function ($el, value, context, addArgs) {
             var oldClassName;
-            this.findObservable(context, value, addArgs).callAndSubscribe(function (className) {
+            this.findObservable(value, context, addArgs).callAndSubscribe(function (className) {
                 if (oldClassName) {
                     $el.removeClass(oldClassName);
                 }
@@ -1680,7 +1680,7 @@
     ViewModel.binds.withModel = function ($el, value, context, addArgs) {
         addArgs = addArgs || {};
         //$children, oModel, context, addArgs, ctx
-        createRow($el.children(), this.findObservable(context, value, addArgs), context, addArgs, {});
+        createRow($el.children(), this.findObservable(value, context, addArgs), context, addArgs, {});
         //останавливает внешний парсер
         return false;
     };
@@ -1710,7 +1710,7 @@
         rawTemplate = options.templateName ? '' : $el.html();
 
         //когда меняется целая коллекция
-        this.findObservable(context, options.collection, addArgs).callAndSubscribe(function (collection) {
+        this.findObservable(options.collection, context, addArgs).callAndSubscribe(function (collection) {
 
             if (oldCollection) {
                 oldCollection.off(0, 0, ctx);

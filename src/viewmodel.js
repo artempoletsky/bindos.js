@@ -158,7 +158,7 @@
             }
         };
     };
-    ViewModel.findObservable = function (context, string, addArgs) {
+    ViewModel.findObservable = function (string, context, addArgs) {
 
         var evil = ViewModel.evil(string, context, addArgs),
             obs = evil();
