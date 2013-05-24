@@ -1220,9 +1220,9 @@
             this.findObservable(value, context, addArgs)
                 .callAndSubscribe(function (val) {
                     //undefined конвертируется в пустую строку
-                    /*if (!val) {
-                     val = '';
-                     } */
+                    if (!val && typeof val != 'number') {
+                        val = '';
+                    }
                     $el.html(val);
                 });
         },
@@ -1465,14 +1465,12 @@
                 div = document.createElement('div');
 
 
-
                 str = '"' + str.replace(breakersRegex, function (exprWithBreakers, expr) {
                     return '"+(' + expr + '||"")+"';
                 }) + '"';
 
 
                 evil = vm.evil(str, context, addArgs, true);
-
 
 
                 Computed(function () {

@@ -51,7 +51,7 @@ module.exports = function (grunt) {
                     , 'src/eachmodel.js'
                 ],
                 options: {
-                    specs: ['spec/*test.js', '!spec/viewmodel.test.js'],
+                    specs: ['spec/*test.js', '!spec/viewmodel.test.js', '!spec/binds.test.js'],
                     helpers: 'spec/*Helper.js'
                 }
             }
