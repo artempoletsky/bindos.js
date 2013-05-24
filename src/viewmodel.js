@@ -176,7 +176,8 @@
             breakContextIsSent = false,
             self = this,
             $el = $(selector),
-            tagBehavior = self.tags[$el[0].tagName.toLowerCase()];
+            elem = $el[0],
+            tagBehavior = self.tags[elem.tagName.toLowerCase()], attrs;
 
 
         if (tagBehavior) {
@@ -185,28 +186,32 @@
         }
 
 
-        _.forOwn(self.customAttributes, function (attrFn, attrName) {
-            var value = $el.attr(attrName), result;
-            if (value !== undefined) {
-
+        _.forIn(_.foldl(elem.attributes, function (result, attr) {
+            result[attr.nodeName] = attr.nodeValue;
+            return result;
+        }, {}),
+            function (value, name) {
+                var attrFn = self.customAttributes[name];
+                if (!attrFn) {
+                    return;
+                }
                 newctx = attrFn.call(self, $el, value, context, addArgs);
                 if (newctx === false) {
                     breakContextIsSent = true;
                 } else if (newctx) {
                     context = newctx;
                 }
-            }
-        });
+            });
 
 
         if (!breakContextIsSent) {
             $el.contents().each(function () {
                 var node = this;
                 if (this.nodeType == 3) {
-                    _.forOwn(self.inlineModificators, function (mod) {
+                    _.forIn(self.inlineModificators, function (mod) {
                         mod.call(self, node, context, addArgs);
                     });
-                } else  if(this.nodeType == 1){
+                } else if (this.nodeType == 1) {
                     self.findBinds(node, context, addArgs);
                 }
             });
