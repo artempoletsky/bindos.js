@@ -1465,10 +1465,13 @@
 
                 parent = textNode.parentNode;
                 div = document.createElement('div');
+                str=str.replace(/\n/g, '\\n');
+
 
                 str = '"' + str.replace(breakersRegex, function (exprWithBreakers, expr) {
                     return '"+(' + expr + '||"")+"';
                 }) + '"';
+
 
                 evil = vm.evil(context, str, addArgs, true);
 

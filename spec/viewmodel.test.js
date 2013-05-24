@@ -285,19 +285,38 @@ describe('ViewModel', function () {
         ViewModel.findBinds($div2[0], ctx);
         expect($div2.text()).toBe('Hello Moe! 12asd');
 
+        ViewModel.inlineModificators['{{}}'].regex = /\{\{([\s\S]+?)\}\}/g;
+
     });
 
     it('{{}} empty support', function () {
         var ctx = {
             name: Observable('<span style="color: green;">Moe</span>')
         };
-        var $div3 = $('<div>${name}</div>');
+        var $div3 = $('<div>{{name}}</div>');
         ViewModel.findBinds($div3[0], ctx);
         expect($div3.text()).toBe('Moe');
         ctx.name('');
         expect($div3.text()).toBe('');
         ctx.name('Moe');
         expect($div3.text()).toBe('Moe');
+    });
+
+
+    it('{{}} support line breaks', function () {
+        var ctx = {
+            name: Observable('')
+        };
+
+        var $div3 = $('<div>\n\
+        {{name}} \n\
+            </div>');
+
+
+        ViewModel.findBinds($div3, ctx);
+
+
+        expect($.trim($div3.text())).toBe('');
     });
 
 
