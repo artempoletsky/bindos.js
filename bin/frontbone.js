@@ -1107,19 +1107,15 @@
         var newctx,
             breakContextIsSent = false,
             self = this,
-            $el = $(selector);
+            $el = $(selector),
+            tagBehavior = self.tags[$el[0].tagName.toLowerCase()];
 
-        _.forOwn(self.tags, function (behavior, tagName) {
 
-            if ($el[0].tagName.toLowerCase() == tagName) {
-                newctx = behavior.call(self, $el, context, addArgs);
-                if (newctx === false) {
-                    breakContextIsSent = true;
-                } else if (newctx) {
-                    context = newctx;
-                }
-            }
-        });
+        if (tagBehavior) {
+            tagBehavior.call(self, $el, context, addArgs);
+            return;
+        }
+
 
         _.forOwn(self.customAttributes, function (attrFn, attrName) {
             var value = $el.attr(attrName), result;
@@ -1142,7 +1138,7 @@
                     _.forOwn(self.inlineModificators, function (mod) {
                         mod.call(self, node, context, addArgs);
                     });
-                } else {
+                } else  if(this.nodeType == 1){
                     self.findBinds(node, context, addArgs);
                 }
             });
