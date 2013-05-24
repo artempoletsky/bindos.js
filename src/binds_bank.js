@@ -32,7 +32,7 @@
                 });
         },
         'with': function ($el, value, context, addArgs) {
-            return this.evil(context, value, addArgs)();
+            return this.evil(value, context, addArgs)();
         },
         each: function ($el, value, context, addArgs) {
             var fArray = this.findObservable(context, value, addArgs),
@@ -116,7 +116,7 @@
             });
         },
         click: function ($el, value, context, addArgs) {
-            var fn = this.evil(context, value, addArgs)();
+            var fn = this.evil(value, context, addArgs)();
             $el.click(function () {
                 fn.apply(context, arguments);
             });
@@ -136,7 +136,7 @@
         events: function ($el, value, context, addArgs) {
             var self = this;
             _.each(this.parseOptionsObject(value), function (expr, eventName) {
-                var callback = self.evil(context, expr, addArgs)();
+                var callback = self.evil(expr, context, addArgs)();
                 $el.bind(eventName, function (e) {
                     callback.call(context, e);
                 });
@@ -155,7 +155,7 @@
             }
 
             if (options['class']) {
-                ViewModelClass = this.evil(context, options['class'], addArgs)();
+                ViewModelClass = this.evil(options['class'], context, addArgs)();
             } else {
                 ViewModelClass = ViewModel.extend({
                     autoParseBinds: true
@@ -166,7 +166,7 @@
             };
             if (options.options) {
                 _.forOwn(options.options, function (value, key) {
-                    args[key] = ViewModel.evil(context, value, addArgs)();
+                    args[key] = ViewModel.evil(value, context, addArgs)();
                 });
             }
 
@@ -178,10 +178,7 @@
             return false;
         },
         $click: function ($el, value, context, addArgs) {
-            var evil = this.evil(context, value, addArgs);
-            $el.click(function () {
-                evil();
-            });
+            $el.click(this.evil(value, context, addArgs));
             return false;
         }
     };
@@ -273,7 +270,7 @@
                 }) + '"';
 
 
-                evil = vm.evil(context, str, addArgs, true);
+                evil = vm.evil(str, context, addArgs, true);
 
 
 

@@ -103,7 +103,7 @@
         };
     ViewModel = Events.extend(ViewModel);
 
-    ViewModel.evil = function (context, string, addArgs, throwError) {
+    ViewModel.evil = function (string, context, addArgs, throwError) {
         addArgs = addArgs || {};
         if (typeof string !== 'string') {
             throw  new TypeError('String expected in evil function');
@@ -160,7 +160,7 @@
     };
     ViewModel.findObservable = function (context, string, addArgs) {
 
-        var evil = ViewModel.evil(context, string, addArgs),
+        var evil = ViewModel.evil(string, context, addArgs),
             obs = evil();
 
         if (Observable.isObservable(obs)) {

@@ -46,7 +46,7 @@
         rawTemplates[name] = $el.html();
         $el.remove();
         if (constuctor) {
-            constuctor = this.evil(context, constuctor, addArgs);
+            constuctor = this.evil(constuctor, context, addArgs);
             compiledTemplates[name] = constuctor(rawTemplates[name]);
         }
         return false;
