@@ -265,9 +265,8 @@
 
 
                 str = '"' + str.replace(breakersRegex, function (exprWithBreakers, expr) {
-                    return '"+(' + expr + '||"")+"';
+                    return '"+(((' + expr + '===0)?"0":' + expr + ')?' + expr + ':"")+"';
                 }) + '"';
-
 
                 evil = vm.evil(str, context, addArgs, true);
 

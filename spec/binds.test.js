@@ -7,8 +7,8 @@ describe('ViewModel.binds', function () {
         it('replaces innerHTML of HTMLElement the value of the concerned observable', function () {
             var $div=$('<div nk="html: value"></div>'),
                 ctx= {
-                value: Observable('<span>Hello</span>')
-            };
+                    value: Observable('<span>Hello</span>')
+                };
             ViewModel.findBinds($div, ctx);
             expect($div.html()).toBe('<span>Hello</span>');
 
@@ -23,6 +23,24 @@ describe('ViewModel.binds', function () {
 
             ctx.value(0);
             expect($div.html()).toBe('0');
+        });
+
+    });
+
+
+
+    describe('inline modificators', function () {
+
+        it('0 is not empty string', function () {
+            var $div=$('<div>{{value()}}</div>'),
+                ctx= {
+                    value: Observable(0)
+                };
+            ViewModel.findBinds($div, ctx);
+            expect($div.html()).toBe('0');
+
+            ctx.value(null);
+            expect($div.html()).toBe('');
         });
 
     });
