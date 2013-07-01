@@ -1,19 +1,22 @@
+/*globals describe, jasmine, expect, $, _, it, ViewModel, Observable, spyOn*/
 describe('ViewModel', function () {
-    it('can parse options object', function () {
+    "use strict";
 
-        var simpleRawOptions = '   {\n\
+        it('can parse options object', function () {
+
+            var simpleRawOptions = '   {\n\
          model: Task,\n\
          add: todos | Math.floor(todos.length/2),\n\
          foo: bar\n\
          }\n\
          ';
-        var simpleOptions = ViewModel.parseOptionsObject(simpleRawOptions);
+            var simpleOptions = ViewModel.parseOptionsObject(simpleRawOptions);
 
-        expect(simpleOptions.model).toBe('Task');
-        expect(simpleOptions.add).toBe('todos | Math.floor(todos.length/2)');
-        expect(simpleOptions.foo).toBe('bar');
+            expect(simpleOptions.model).toBe('Task');
+            expect(simpleOptions.add).toBe('todos | Math.floor(todos.length/2)');
+            expect(simpleOptions.foo).toBe('bar');
 
-        var rawOptions = '   {\n\
+            var rawOptions = '   {\n\
             model: Task,\n\
             b: {c: d},\
             submit: {\n\
@@ -26,137 +29,123 @@ describe('ViewModel', function () {
         }\n\
            ';
 
-        var options = ViewModel.parseOptionsObject(rawOptions);
-        expect(options.model).toBe('Task');
-        expect(options.submit.add).toBe('todos | Math.floor(todos.length/2)');
-        expect(options.submit.foo.bar).toBe('a');
-        expect(options.submit.foo.baz).toBe('sdfsdf');
-        expect(options.b.c).toBe('d');
-    });
-    it('can create VM object', function () {
-        var click = jasmine.createSpy('click');
-        var obj = {
-            el: 'div',
-            initialize: function () {
-                expect(this).toBe(vm);
-            },
-            events: {
-                'click': 'onClick'
-            },
-            onClick: click
-        }
-        spyOn(obj, 'initialize')
-        var vm = ViewModel.create(obj);
-        expect(obj.initialize).toHaveBeenCalled();
-        expect(click).not.toHaveBeenCalled();
-
-    })
-
-
-    it('context of \'delegateEvents\' handlers must be this ViewModel', function () {
-        var called = false;
-        var vm = ViewModel.create({
-            el: 'body',
-            events: {
-                'click': 'onClick'
-            },
-            onClick: function () {
-                called = true;
-                expect(this).toBe(vm);
-            }
+            var options = ViewModel.parseOptionsObject(rawOptions);
+            expect(options.model).toBe('Task');
+            expect(options.submit.add).toBe('todos | Math.floor(todos.length/2)');
+            expect(options.submit.foo.bar).toBe('a');
+            expect(options.submit.foo.baz).toBe('sdfsdf');
+            expect(options.b.c).toBe('d');
         });
-        expect(vm.events.click).toEqual('onClick');
-        expect(called).toBe(false);
-        //$('body').append(vm.$el);
-        vm.$el.click();
-        expect(called).toBe(true);
-    })
-
-    it('can delegate events', function () {
-
-        var dom = $('<div id="grand"><div class="father"><div class="child"></div></div></div>');
-        var spy = jasmine.createSpy();
-        var vm = ViewModel.create({
-            el: dom,
-            events: {
-                'click .child': 'onClick'
-            },
-            onClick: spy
-        });
-        expect(spy.calls.length).toBe(0);
-        vm.$el.click();
-        expect(spy.calls.length).toBe(0);
-        vm.$el.find('.child').click();
-        expect(spy.calls.length).toBe(1);
-        expect(spy.calls[0].args[0].type).toBe('click');
-        expect(spy.calls[0].object).toBe(vm);
-    })
-    it('can undelegate events', function () {
-        var dom = $('<div id="grand"><div class="father"><div class="child"></div></div></div>');
-        var spy = jasmine.createSpy();
-        var vm = ViewModel.create({
-            el: dom,
-            events: {
-                'click .child': 'onClick'
-            },
-            onClick: spy
-        });
-        var $child = vm.$el.find('.child');
-        $child.click();
-        expect(spy.calls.length).toBe(1);
-        vm.undelegateEvents();
-        $child.click();
-        expect(spy.calls.length).toBe(1);
-        vm.delegateEvents();
-        $child.click();
-        expect(spy.calls.length).toBe(2);
-    })
-    it('can parse binds from html', function () {
-
-        var $div = $('<div data-bind="html: name"></div>');
-        ViewModel.findBinds($div, {
-            name: 'Moe'
-        });
-        expect($div.html()).toBe('Moe');
-    });
-
-    it('With support', function () {
-
-        var $div = $('<div class="nav_target header-item header-speed-test"' +
-            'data-bind="with: SpeedTest;' +
-            //'voice: speedtest,v_navigation;' +
-            "!css: {voicelink: rating()<2,nav_target: rating()<2};" +
-            'events: {click: click, voice: click}">' +
-            '<b class="l"></b><b class="r"></b>' +
-            '<span class="c"><i class="speedtest_icon" data-bind="className: \'speedtest_icon_\'+rating()"></i></span>' +
-            '</div>');
-        ViewModel.findBinds($div, {
-            SpeedTest :{
-                click: function(){},
-                rating: Observable('1')
-            }
+        it('can create VM object', function () {
+            var click = jasmine.createSpy('click');
+            var vm;
+            var obj = {
+                el: 'div',
+                initialize: function () {
+                },
+                events: {
+                    'click': 'onClick'
+                },
+                onClick: click
+            };
+            spyOn(obj, 'initialize');
+            vm = ViewModel.create(obj);
+            expect(obj.initialize.calls[0].object).toBe(vm);
+            expect(obj.initialize).toHaveBeenCalled();
+            expect(click).not.toHaveBeenCalled();
+            vm.$el.click();
+            expect(click).toHaveBeenCalled();
         });
 
-        expect($div.find('.speedtest_icon').hasClass('speedtest_icon_1')).toBe(true);
-    })
+
+        it('context of \'delegateEvents\' handlers must be this ViewModel', function () {
+            var called = false;
+            var vm = ViewModel.create({
+                el: 'body',
+                events: {
+                    'click': 'onClick'
+                },
+                onClick: function () {
+                    called = true;
+                    expect(this).toBe(vm);
+                }
+            });
+            expect(vm.events.click).toEqual('onClick');
+            expect(called).toBe(false);
+            //$('body').append(vm.$el);
+            vm.$el.click();
+            expect(called).toBe(true);
+        });
+
+        it('can delegate events', function () {
+
+            var dom = $('<div id="grand"><div class="father"><div class="child"></div></div></div>');
+            var spy = jasmine.createSpy();
+            var vm = ViewModel.create({
+                el: dom,
+                events: {
+                    'click .child': 'onClick'
+                },
+                onClick: spy
+            });
+            expect(spy.calls.length).toBe(0);
+            vm.$el.click();
+            expect(spy.calls.length).toBe(0);
+            vm.$el.find('.child').click();
+            expect(spy.calls.length).toBe(1);
+            expect(spy.calls[0].args[0].type).toBe('click');
+            expect(spy.calls[0].object).toBe(vm);
+        });
+        it('can undelegate events', function () {
+            var dom = $('<div id="grand"><div class="father"><div class="child"></div></div></div>');
+            var spy = jasmine.createSpy();
+            var vm = ViewModel.create({
+                el: dom,
+                events: {
+                    'click .child': 'onClick'
+                },
+                onClick: spy
+            });
+            var $child = vm.$el.find('.child');
+            $child.click();
+            expect(spy.calls.length).toBe(1);
+            vm.undelegateEvents();
+            $child.click();
+            expect(spy.calls.length).toBe(1);
+            vm.delegateEvents();
+            $child.click();
+            expect(spy.calls.length).toBe(2);
+        });
+        it('can parse binds from html', function () {
+
+            var $div = $('<div data-bind="html: name"></div>');
+            ViewModel.findBinds($div, {
+                name: 'Moe'
+            });
+            expect($div.html()).toBe('Moe');
+        });
+
+
+
+
 
     it('each method must return this', function () {
         var vm = new ViewModel();
         var exclude = 'on,initialize,hasListener,get,$,setElement,one,bindToModel,_constructor';
         var me;
-        for (var prop in vm) {
-            if (typeof vm[prop] == 'function' && !~exclude.indexOf(prop)) {
+        _.each(vm,function(prop){
+            if (typeof vm[prop] == 'function' && exclude.indexOf(prop)==-1) {
                 try {
-                    me = vm[prop].call(vm);
+                    me = vm[prop]();
                 } catch (exception) {
                     throw Error(prop + ' throw error ' + exception.message);
-                    break;
                 }
                 if (me !== vm) {
                     throw Error(prop + '() not return this');
                 }
             }
-        }
+        });
+
         me = vm.on('click', function () {
         });
         expect(me).toBe(vm);
@@ -165,7 +154,7 @@ describe('ViewModel', function () {
         expect(me).toBe(vm);
         me = vm.setElement(document.createElement('div'));
         expect(me).toBe(vm);
-    })
+    });
 
     it('observables has no _super', function () {
         var obs = Observable(' _super(); ');
@@ -186,15 +175,12 @@ describe('ViewModel', function () {
     it('has extended events behavior', function () {
         var spy = jasmine.createSpy('spy');
         var element = $('<div><div><div class="trigger"></div><div class="trigger1"></div></div></div>')[0];
-        window.foo = {
-            bar: function () {
-            }
-        }
-        spyOn(foo, 'bar');
+
+
+
         var vm = ViewModel.create({
             events: {
                 'simpleFunction .trigger': spy,
-                'globalFunction .trigger': foo.bar,
                 'click,anotherEvents': spy,
                 'click,anotherEvents .trigger,div .trigger1': spy,
                 'click,anotherEvents,onceMore': spy
@@ -203,8 +189,6 @@ describe('ViewModel', function () {
         });
         vm.$el.find('.trigger').trigger('simpleFunction');
         expect(spy.calls.length).toBe(1);
-        vm.$el.find('.trigger').trigger('globalFunction');
-        expect(foo.bar.calls.length).toBe(1);
         vm.$el.click();
         expect(spy.calls.length).toBe(3);
         vm.$el.find('.trigger1').trigger('anotherEvents');
@@ -219,10 +203,10 @@ describe('ViewModel', function () {
     it('not strong binds syntax', function () {
         ViewModel.binds.foo = function (elem, value, context, addArgs) {
 
-        }
+        };
         ViewModel.binds.bar = function (elem, value, context, addArgs) {
 
-        }
+        };
         spyOn(ViewModel.binds, 'foo');
         spyOn(ViewModel.binds, 'bar');
         var el = $('<div data-bind="foo"><div data-bind="bar: baz;"></div></div>')[0];
@@ -233,7 +217,6 @@ describe('ViewModel', function () {
         expect(ViewModel.binds.bar.calls.length).toBe(1);
         expect(ViewModel.binds.bar.calls[0].args[1]).toBe('baz');
         expect(ViewModel.binds.bar.calls[0].args[2]).toBe(window);
-
     });
 
     it('parseOptionsObject', function () {
@@ -242,19 +225,19 @@ describe('ViewModel', function () {
         //console.log(ViewModel.parseOptionsObject('{a:b'));
         //ViewModel.parseOptionsObject('{}')
         expect(function () {
-            ViewModel.parseOptionsObject('{ a : b }')
+            ViewModel.parseOptionsObject('{ a : b }');
         }).not.toThrow();
         expect(function () {
-            ViewModel.parseOptionsObject('{}')
+            ViewModel.parseOptionsObject('{}');
         }).not.toThrow();
         expect(function () {
-            ViewModel.parseOptionsObject('{a:b')
+            ViewModel.parseOptionsObject('{a:b');
         }).toThrow();
         expect(function () {
-            ViewModel.parseOptionsObject('a:b')
+            ViewModel.parseOptionsObject('a:b');
         }).toThrow();
         expect(function () {
-            ViewModel.parseOptionsObject('{a:}')
+            ViewModel.parseOptionsObject('{a:}');
         }).not.toThrow();
         expect(ViewModel.parseOptionsObject('{a:b}').a).toBe('b');
         expect(ViewModel.parseOptionsObject('{asdvccbt:erwer}').asdvccbt).toBe('erwer');
@@ -355,7 +338,7 @@ describe('ViewModel', function () {
             bye: 'Good bye friend!'
         });
         //creating new custom attribute
-        ViewModel.customAttributes['lang'] = function ($el, value) {
+        ViewModel.customAttributes.lang = function ($el, value) {
             //value now is "hello"
             //$el now is $div
 
@@ -379,5 +362,4 @@ describe('ViewModel', function () {
 
     });
 
-
-})
+});
