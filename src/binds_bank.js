@@ -257,7 +257,7 @@
                 div,
                 nodeList = [textNode],
                 breakersRegex = ViewModel.inlineModificators['{{}}'].regex;
-
+            breakersRegex.lastIndex = 0;
             if (breakersRegex.test(str)) {
 
                 parent = textNode.parentNode;
