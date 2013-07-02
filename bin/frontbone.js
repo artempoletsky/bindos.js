@@ -1200,9 +1200,46 @@
 
     window.ViewModel = ViewModel;
 }(this));
+/*globals ViewModel, $, _, Computed, Observable*/
 (function () {
     "use strict";
-    /*globals ViewModel, $, _, Computed*/
+    var filtersSplitter = /\s*\|\s*/;
+    var filtersSplitter2 = /(\w+)(:['"]([^'"]+)['"])?/;
+
+    ViewModel.filters = {};
+
+    ViewModel.applyFilters = function (value, context, addArgs) {
+        var filters = value.split(filtersSplitter);
+        if (filters.length <= 1) {
+            return this.findObservable(value, context, addArgs);
+        }
+        value = filters.shift();
+        var computed = this.findObservable(value, context, addArgs);
+        filters = _.foldl(filters, function (result, string) {
+            var matches = filtersSplitter2.exec(string);
+            var key = matches[1];
+            result.push({
+                unformat: ViewModel.filters[key].unformat,
+                format: ViewModel.filters[key].format,
+                key: key,
+                value: matches[3] || ''
+            });
+            return result;
+        }, []);
+        return Computed({
+            get: function () {
+                return _.foldl(filters, function (result, obj) {
+                    return obj.format.call(ViewModel, result, obj.value);
+                }, computed());
+            },
+            set: function (value) {
+                computed(_.foldr(filters, function (result, obj) {
+                    return obj.unformat.call(ViewModel, result, obj.value);
+                }, value));
+            }
+        });
+    };
+
     ViewModel.binds = {
         log: function ($el, value, context, addArgs) {
             this.findObservable(value, context, addArgs).callAndSubscribe(function () {
@@ -1218,7 +1255,9 @@
         },
         html: function ($el, value, context, addArgs) {
             //var elem=$el[0];
-            this.findObservable(value, context, addArgs)
+            //var filters = this.filtersOut(value);
+            //console.log(value);
+            this.applyFilters(value, context, addArgs)
                 .callAndSubscribe(function (val) {
                     //undefined конвертируется в пустую строку
                     if (!val && typeof val != 'number') {
@@ -1449,37 +1488,53 @@
         }
     };
 
+
+    ViewModel.filters._sysUnwrap = {
+        format: function (value) {
+            if (Observable.isObservable(value)) {
+                return value();
+            }
+            return value;
+        }
+    };
+
+    ViewModel.filters._sysEmpty = {
+        format: function (value) {
+            return value || (value === 0 ? '0' : '');
+        }
+    };
+
     ViewModel.inlineModificators = {
         '{{}}': function (textNode, context, addArgs) {
             var str = textNode.nodeValue,
                 vm = this,
-                evil,
                 parent,
                 docFragment,
                 div,
                 nodeList = [textNode],
                 breakersRegex = ViewModel.inlineModificators['{{}}'].regex;
-
+            breakersRegex.lastIndex = 0;
             if (breakersRegex.test(str)) {
 
                 parent = textNode.parentNode;
                 div = document.createElement('div');
 
 
+                var i = 0;
+
+                var ctx = {
+
+                };
+                breakersRegex.lastIndex = 0;
+
                 str = '"' + str.replace(breakersRegex, function (exprWithBreakers, expr) {
-                    return '"+(((' + expr + '===0)?"0":' + expr + ')?' + expr + ':"")+"';
+
+                    i++;
+                    ctx['___comp' + i] = vm.applyFilters(expr + ' | _sysUnwrap | _sysEmpty', context, addArgs);
+                    return '"+___comp' + i + '()+"';
                 }) + '"';
 
-                evil = vm.evil(str, context, addArgs, true);
-
-
-                Computed(function () {
-                    try {
-                        return evil();
-                    } catch (e) {
-                        return ' <span style="color: red;">' + e.message + '</span> ';
-                    }
-                })
+                Computed(vm.evil(str, ctx))
                     .callAndSubscribe(parent.childNodes.length == 1 ? function (value) {
                         //if this is the only child
                         parent.innerHTML = value;
@@ -1490,14 +1545,22 @@
 
                         var newNodeList = _.toArray(div.childNodes), firstNode;
 
-                        if (!newNodeList.length
-                            //hack for samsung smart tv 2011
-                            && navigator.userAgent.toLowerCase().indexOf('maple') == -1) {
-                            newNodeList = [document.createTextNode('')];
-                            div.appendChild(newNodeList[0]);
-                        }
 
                         firstNode = nodeList[0];
+
+                        while (nodeList[1]) {
+                            parent.removeChild(nodeList[1]);
+                            nodeList.splice(1, 1);
+                        }
+
+
+
+                        if (!newNodeList.length) {
+                            firstNode.textContent = '';
+                            nodeList = [firstNode];
+                            return;
+                        }
+
 
                         while (div.childNodes[0]) {
                             docFragment.appendChild(div.childNodes[0]);
@@ -1512,10 +1575,7 @@
                             }
                         }
 
-
-                        _.each(nodeList, function (node) {
-                            parent.removeChild(node);
-                        });
+                        parent.removeChild(firstNode);
                         nodeList = newNodeList;
 
                     });
@@ -1525,6 +1585,8 @@
         }
     };
     ViewModel.inlineModificators['{{}}'].regex = /\{\{([\s\S]+?)\}\}/g;
+
+
 }());
 
 (function () {

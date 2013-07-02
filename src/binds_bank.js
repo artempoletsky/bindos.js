@@ -1,9 +1,9 @@
-/*globals ViewModel, $, _, Computed*/
+/*globals ViewModel, $, _, Computed, Observable*/
 (function () {
     "use strict";
     var filtersSplitter = /\s*\|\s*/;
     var filtersSplitter2 = /(\w+)(:['"]([^'"]+)['"])?/;
-    //asd | adasd:'zxc' | cxczxc | erwerwe:"324"
+
     ViewModel.filters = {};
 
     ViewModel.applyFilters = function (value, context, addArgs) {
@@ -17,8 +17,8 @@
             var matches = filtersSplitter2.exec(string);
             var key = matches[1];
             result.push({
-                out: ViewModel.filters[key].out,
-                in: ViewModel.filters[key].in,
+                unformat: ViewModel.filters[key].unformat,
+                format: ViewModel.filters[key].format,
                 key: key,
                 value: matches[3] || ''
             });
@@ -27,12 +27,12 @@
         return Computed({
             get: function () {
                 return _.foldl(filters, function (result, obj) {
-                    return obj.out.call(ViewModel, result, obj.value);
+                    return obj.format.call(ViewModel, result, obj.value);
                 }, computed());
             },
             set: function (value) {
                 computed(_.foldr(filters, function (result, obj) {
-                    return obj.in.call(ViewModel, result, obj.value);
+                    return obj.unformat.call(ViewModel, result, obj.value);
                 }, value));
             }
         });
@@ -288,7 +288,7 @@
 
 
     ViewModel.filters._sysUnwrap = {
-        out: function (value) {
+        format: function (value) {
             if (Observable.isObservable(value)) {
                 return value();
             }
@@ -297,7 +297,7 @@
     };
 
     ViewModel.filters._sysEmpty = {
-        out: function (value) {
+        format: function (value) {
             return value || (value === 0 ? '0' : '');
         }
     };

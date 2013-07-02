@@ -2,37 +2,33 @@
 describe('ViewModel.binds', function () {
     "use strict";
 
+    var filter = ViewModel.filters.tf1 = {
+        format: function (value, option) {
+            return value * 1 + option * 1;
+        },
+        unformat: function (value, option) {
+            return value * 1 - option * 1;
+        }
+    };
+
+    var filter2 = ViewModel.filters.tf2 = {
+        format: function (value, option) {
+            return 1 * value * value;
+        },
+        unformat: function (value, option) {
+            return Math.sqrt(1 * value);
+        }
+    };
+
+
 
     describe('filters', function () {
 
-
-        var filter = ViewModel.filters.tf1 = {
-            out: function (value, option) {
-                return value * 1 + option * 1;
-            },
-            in: function (value, option) {
-                return value * 1 - option * 1;
-            }
-        };
-
-        var filter2 = ViewModel.filters.tf2 = {
-            out: function (value, option) {
-                return 1 * value * value;
-            },
-            in: function (value, option) {
-                return Math.sqrt(1 * value);
-            }
-        };
-
-
         it('can create reusable filter', function () {
-
-
-            expect(filter.out(123, '2')).toBe(125);
-            expect(filter.in('125', '2')).toBe(123);
-            expect(filter2.out(2)).toBe(4);
-            expect(filter2.in('4')).toBe(2);
-
+            expect(filter.format(123, '2')).toBe(125);
+            expect(filter.unformat('125', '2')).toBe(123);
+            expect(filter2.format(2)).toBe(4);
+            expect(filter2.unformat('4')).toBe(2);
         });
 
 
@@ -89,7 +85,7 @@ describe('ViewModel.binds', function () {
                         value: Observable('<span>Hello</span>')
                     };
                 ViewModel.findBinds($div, ctx);
-                expect($div.html()).toBe('<span>Hello</span>');
+                expect($div.html().toLowerCase()).toBe('<span>hello</span>');
 
                 ctx.value(undefined);
                 expect($div.html()).toBe('');
