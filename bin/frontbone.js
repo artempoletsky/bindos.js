@@ -1109,7 +1109,12 @@
             self = this,
             $el = $(selector),
             elem = $el[0],
-            tagBehavior = self.tags[elem.tagName.toLowerCase()], attrs;
+            tagBehavior, attrs;
+
+        if (!elem) {
+            throw new Error('Element not exists');
+        }
+        tagBehavior = self.tags[elem.tagName.toLowerCase()];
 
 
         if (tagBehavior) {
