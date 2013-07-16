@@ -103,6 +103,24 @@
         };
     ViewModel = Events.extend(ViewModel);
 
+    $.fn.clearBinds = function () {
+        var $self = $();
+        $self.length = 1;
+        this.each(function () {
+            $self[0] = this;
+            if($self.attr('nk-id')){
+
+            }
+            $self.children().clearBinds();
+        });
+        return this;
+    };
+
+    var registeredBinds={};
+    ViewModel.registerBind=function($el, observable, method){
+
+    };
+
     ViewModel.evil = function (string, context, addArgs, throwError) {
         addArgs = addArgs || {};
         if (typeof string !== 'string') {
@@ -164,10 +182,17 @@
             obs = evil();
 
         if (Observable.isObservable(obs)) {
-            return obs;
+            return Computed({
+                get: function(){
+                    return obs();
+                },
+                set: function(value){
+                    obs(value);
+                }
+            }).obj;
         }
 
-        return Computed(evil, context);
+        return Computed(evil, context).obj;
 
     };
 

@@ -28,14 +28,14 @@
             get: function () {
                 return _.foldl(filters, function (result, obj) {
                     return obj.format.call(ViewModel, result, obj.value);
-                }, computed());
+                }, computed.get());
             },
             set: function (value) {
-                computed(_.foldr(filters, function (result, obj) {
+                computed.set(_.foldr(filters, function (result, obj) {
                     return obj.unformat.call(ViewModel, result, obj.value);
                 }, value));
             }
-        });
+        }).obj;
     };
 
     ViewModel.binds = {
@@ -329,10 +329,10 @@
 
                     i++;
                     ctx['___comp' + i] = vm.applyFilters(expr + ' | _sysUnwrap | _sysEmpty', context, addArgs);
-                    return '"+___comp' + i + '()+"';
+                    return '"+___comp' + i + '.get()+"';
                 }) + '"';
 
-                Computed(vm.evil(str, ctx))
+                Computed(vm.evil(str, ctx)).obj
                     .callAndSubscribe(parent.childNodes.length == 1 ? function (value) {
                         //if this is the only child
                         parent.innerHTML = value;

@@ -8,7 +8,7 @@ describe('Observable', function () {
     it('construct', function () {
         var obs = Observable();
         expect(obs()).toBeUndefined();
-        var spy = jasmine.createSpy('spy');
+        var spy = jasmine.createSpy('subscribe callback');
         obs.subscribe(spy);
         expect(spy).not.toHaveBeenCalled();
         obs(1);
@@ -33,7 +33,7 @@ describe('Observable', function () {
             },
             async: false
         });
-        var spy = jasmine.createSpy('spy');
+        var spy = jasmine.createSpy('subscribe callback');
         priceCurrency.subscribe(spy);
         expect(priceCurrency()).toBe('0 UAH');
         expect(spy.calls.length).toBe(0);

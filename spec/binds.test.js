@@ -39,12 +39,12 @@ describe('ViewModel.binds', function () {
                 value: Observable(5)
             };
             var filtComp = ViewModel.applyFilters('value | tf1:\'13\' | tf2', ctx);
-            expect(filtComp()).toBe(18 * 18);
+            expect(filtComp.get()).toBe(18 * 18);
 
-            filtComp(4 * 4);
+            filtComp.set(4 * 4);
             expect(ctx.value()).toBe(4 - 13);
 
-            filtComp(18 * 18);
+            filtComp.set(18 * 18);
             expect(ctx.value()).toBe(5);
         });
 
@@ -250,7 +250,8 @@ describe('ViewModel.binds', function () {
             //$el now is $div
 
             //subscribe to change locale
-            lang.callAndSubscribe(function (lang) {
+            $el.html(lang()[value]);
+            lang.subscribe(function (lang) {
                 $el.html(lang[value]);
             });
         };

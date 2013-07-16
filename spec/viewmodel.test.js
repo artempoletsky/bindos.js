@@ -2,6 +2,24 @@
 describe('ViewModel', function () {
     "use strict";
 
+    it('adds jquery clear binds method', function () {
+        var $div = $('<div><div nk="html: value"></div></div>');
+        var ctx = {
+            value: Observable(0)
+        };
+        ViewModel.findBinds($div, ctx);
+        //убеждаемся что бинд работает
+        expect($div.text()).toBe('0');
+        ctx.value(1);
+        expect($div.text()).toBe('1');
+
+        $div.clearBinds();
+
+        //перестает работать
+        ctx.value(2);
+        expect($div.text()).toBe('1');
+    });
+
     it('can parse options object', function () {
 
         var simpleRawOptions = '   {\n\

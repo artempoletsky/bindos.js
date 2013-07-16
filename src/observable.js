@@ -44,88 +44,128 @@
         }, BaseObservable;
 
 
+    var ObjectObservable = function (params) {
+        params = params || {};
+        this.dependencies = [];
+        this.selfCallbacks = [];
+        this.listeners = [];
+
+        var initial = params.initial;
+        if (params.get) {
+            computedInit = this;
+            initial = params.get();
+            computedInit = false;
+            this.getter = params.get;
+        }
+        if (params.set) {
+            this.setter = params.set;
+        }
+        this.lastValue = this.value = initial;
+        //TODO: implement dirty behavior
+        this.dirty = params.dirty;
+    };
+
+    ObjectObservable.prototype = {
+        setter: function (value) {
+            return value;
+        },
+        getter: function () {
+            if (computedInit) {
+                computedInit.dependsOn(this);
+            }
+            return this.value;
+        },
+        set: function (value) {
+
+            this.value = this.setter(value);
+            return this.notify();
+        },
+        get: function () {
+            return this.getter();
+        },
+        destroy: function () {
+            var me = this;
+            _.each(me.dependencies, function (obs, index) {
+                obs.unsubscribe(me.selfCallbacks[index]);
+            });
+            me.dependencies = undefined;
+            me.selfCallbacks = undefined;
+            me.listeners = [];
+            me.value = undefined;
+        },
+        dependsOn: function (obs) {
+            var me = this;
+
+            if (me.dependencies.indexOf(obs) === -1) {
+                me.dependencies.push(obs);
+                var callback = function () {
+                    me.notify();
+                };
+                me.selfCallbacks.push(callback);
+                obs.subscribe(callback);
+            }
+            return me;
+        },
+        subscribe: function (callback) {
+            this.listeners.push(callback);
+            return this;
+        },
+        unsubscribe: function (callback) {
+            this.listeners = _.filter(this.listeners, function (listener) {
+                return listener === callback;
+            });
+            return this;
+        },
+        notify: function () {
+            var me = this,
+                value = me.get();
+            if (me.lastValue !== value || _.isObject(value)) {
+                _.each(me.listeners, function (callback) {
+                    callback(value);
+                });
+            }
+            me.lastValue = value;
+            return me;
+        },
+        fire: function () {
+            var me = this,
+                value = me.get();
+            if (me.lastValue !== value || _.isObject(value)) {
+                _.each(me.listeners, function (callback) {
+                    callback(value);
+                });
+            }
+            return me;
+        },
+        callAndSubscribe: function (callback) {
+            callback(this.get());
+            return this.subscribe(callback);
+        }
+    };
 
     BaseObservable = function (params) {
-        params = params || {};
-        var value = params.initial,
-            getter = params.get,
-            setter = params.set,
-            ctx = params.context,
-            async = params.async,
-            dependencies = [],
-            listeners = [],
-            fn = function (newValue) {
-                if (arguments.length === 0) {
-                    if (getter) {
-                        value = getter.call(ctx);
-                    } else if (computedInit) {
-                        computedInit.dependsOn(fn);
-                    }
-                } else {
-                    if (value !== newValue || _.isObject(newValue)) {
-                        if (setter) {
-                            setter.call(ctx, newValue);
-                        } else if (getter) {
-                            throw new Error('Setter for computed is not defined');
-                        } else {
-                            value = newValue;
-                        }
-                        if (!async) {
-                            fn.notify();
-                        } else {
-                            addToRefresh(fn);
-                        }
-                    }
-                }
-                return value;
-            };
+        var object = new ObjectObservable(params);
+
+        var fn = function (newValue) {
+            if (arguments.length !== 0) {
+                object.set(newValue);
+                return newValue;
+            }
+            return object.get();
+        };
+
         _.extend(fn, {
-            dependsOn: function (obs) {
-                var me = this;
-                if (dependencies.indexOf(obs) === -1) {
-                    dependencies.push(obs);
-                    obs.subscribe(function () {
-                        if (!async) {
-                            fn.notify();
-                        } else {
-                            addToRefresh(fn);
-                        }
-                    });
-                }
-                return me;
-            },
+            obj: object,
             subscribe: function (callback) {
-                listeners.push(callback);
+                object.subscribe(callback);
                 return this;
             },
             unsubscribe: function (callback) {
-                listeners = _.filter(listeners, function (listener) {
-                    return listener === callback;
-                });
+                object.unsubscribe(callback);
                 return this;
             },
-            notify: function () {
-                var me = this,
-                    value = me();
-                if (me.lastValue !== value || _.isObject(value)) {
-                    _.each(listeners, function (callback) {
-                        callback.call(me, value);
-                    });
-                }
-                me.lastValue = value;
-                return me;
-            },
             fire: function () {
-                var me = this,
-                    value = me();
-                _.each(listeners, function (callback) {
-                    callback.call(me, value);
-                });
-                return me;
-            },
-            callAndSubscribe: function (callback) {
-                callback.call(this, this());
-                this.subscribe(callback);
+                object.fire();
                 return this;
             },
             _notSimple: true,
@@ -133,16 +173,8 @@
         });
         //fn.fire = fn.notify;
         fn.valueOf = fn.toString = function () {
-            return this();
+            return fn();
         };
-        if (getter) {
-            computedInit = fn;
-            value = getter.call(ctx);
-            computedInit = false;
-        }
-        fn.lastValue = value;
-        delete fn.dependsOn;
-        dependencies = undefined;
         return fn;
     };
     Observable = function (initial) {
