@@ -140,6 +140,12 @@
         callAndSubscribe: function (callback) {
             callback(this.get());
             return this.subscribe(callback);
+        },
+        valueOf: function(){
+            return this.get();
+        },
+        toString: function(){
+            return this.get();
         }
     };
 

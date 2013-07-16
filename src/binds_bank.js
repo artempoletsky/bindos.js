@@ -6,13 +6,13 @@
 
     ViewModel.filters = {};
 
-    ViewModel.applyFilters = function (value, context, addArgs) {
+    ViewModel.applyFilters = function (value, context, addArgs, $el) {
         var filters = value.split(filtersSplitter);
         if (filters.length <= 1) {
-            return this.findObservable(value, context, addArgs);
+            return this.findObservable(value, context, addArgs, $el);
         }
         value = filters.shift();
-        var computed = this.findObservable(value, context, addArgs);
+        var computed = this.findObservable(value, context, addArgs, $el);
         filters = _.foldl(filters, function (result, string) {
             var matches = filtersSplitter2.exec(string);
             var key = matches[1];
@@ -55,7 +55,7 @@
             //var elem=$el[0];
             //var filters = this.filtersOut(value);
             //console.log(value);
-            this.applyFilters(value, context, addArgs)
+            this.applyFilters(value, context, addArgs, $el)
                 .callAndSubscribe(function (val) {
                     //undefined конвертируется в пустую строку
                     if (!val && typeof val != 'number') {
@@ -328,8 +328,8 @@
                 str = '"' + str.replace(breakersRegex, function (exprWithBreakers, expr) {
 
                     i++;
-                    ctx['___comp' + i] = vm.applyFilters(expr + ' | _sysUnwrap | _sysEmpty', context, addArgs);
-                    return '"+___comp' + i + '.get()+"';
+                    ctx['___comp' + i] = vm.applyFilters(expr + ' | _sysUnwrap | _sysEmpty', context, addArgs).getter;
+                    return '"+___comp' + i + '()+"';
                 }) + '"';
 
                 Computed(vm.evil(str, ctx)).obj

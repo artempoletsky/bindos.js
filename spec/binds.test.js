@@ -21,7 +21,6 @@ describe('ViewModel.binds', function () {
     };
 
 
-
     describe('filters', function () {
 
         it('can create reusable filter', function () {
@@ -108,6 +107,35 @@ describe('ViewModel.binds', function () {
                     };
                 ViewModel.findBinds($div, ctx);
                 expect($div.html()).toBe('444');
+            });
+        });
+
+        describe('.eachModel', function () {
+            it('draws collection', function () {
+
+                var Posan=Model.extend({
+                    mapping: 'posany',
+                    defaults: {
+                        name: 'Ti kto eba?'
+                    }
+                });
+
+                var collection = Collection.create({
+                    model: Posan
+                },[
+                    {name: 'Vasya'},
+                    {name: 'Petya'}
+                ]);
+
+
+                expect(collection.length).toBe(2);
+                var $cont=$('<div><ul nk="eachModel: collection"><li>{{name}}</li></ul></div>');
+                ViewModel.findBinds($cont, {
+                    collection: collection
+                });
+
+                expect($cont.find('li:eq(0)').html()).toBe('Vasya');
+                expect($cont.find('li:eq(1)').html()).toBe('Petya');
             });
         });
     });

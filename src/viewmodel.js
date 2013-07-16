@@ -108,18 +108,14 @@
         $self.length = 1;
         this.each(function () {
             $self[0] = this;
-            if($self.attr('nk-id')){
-
-            }
+            _.each($self.data('nk_observers'), function (obs) {
+                obs.destroy();
+            });
             $self.children().clearBinds();
         });
         return this;
     };
 
-    var registeredBinds={};
-    ViewModel.registerBind=function($el, observable, method){
-
-    };
 
     ViewModel.evil = function (string, context, addArgs, throwError) {
         addArgs = addArgs || {};
@@ -176,24 +172,34 @@
             }
         };
     };
-    ViewModel.findObservable = function (string, context, addArgs) {
+    ViewModel.findObservable = function (string, context, addArgs, $el) {
 
         var evil = ViewModel.evil(string, context, addArgs),
             obs = evil();
 
+        var result;
+
         if (Observable.isObservable(obs)) {
-            return Computed({
-                get: function(){
+            result = Computed({
+                get: function () {
                     return obs();
                 },
-                set: function(value){
+                set: function (value) {
                     obs(value);
                 }
             }).obj;
+        } else {
+            result = Computed(evil).obj;
         }
 
-        return Computed(evil, context).obj;
+        if ($el) {
+            var observers = $el.data('nk_observers');
+            observers = observers || [];
+            observers.push(result);
+            $el.data('nk_observers', observers);
+        }
 
+        return result;
     };
 
     ViewModel.findBinds = function (selector, context, addArgs) {
