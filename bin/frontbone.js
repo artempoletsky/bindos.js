@@ -1328,8 +1328,8 @@
 
     ViewModel.binds = {
         log: function ($el, value, context, addArgs) {
-            this.findObservable(value, context, addArgs, $el).callAndSubscribe(function () {
-                console.log(context, '.', value, '=', this());
+            this.findObservable(value, context, addArgs, $el).callAndSubscribe(function (val) {
+                console.log(context, '.', value, '=', val);
             });
         },
         src: function ($el, value, context, addArgs) {
