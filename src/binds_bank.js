@@ -40,13 +40,13 @@
 
     ViewModel.binds = {
         log: function ($el, value, context, addArgs) {
-            this.findObservable(value, context, addArgs).callAndSubscribe(function () {
+            this.findObservable(value, context, addArgs, $el).callAndSubscribe(function () {
                 console.log(context, '.', value, '=', this());
             });
         },
         src: function ($el, value, context, addArgs) {
             var elem = $el[0];
-            this.findObservable(value, context, addArgs)
+            this.findObservable(value, context, addArgs, $el)
                 .callAndSubscribe(function (val) {
                     elem.src = val || '';
                 });
@@ -65,7 +65,7 @@
                 });
         },
         text: function ($el, value, context, addArgs) {
-            this.findObservable(value, context, addArgs)
+            this.findObservable(value, context, addArgs, $el)
                 .callAndSubscribe(function (val) {
                     $el.text(val);
                 });
@@ -74,7 +74,7 @@
             return this.evil(value, context, addArgs)();
         },
         each: function ($el, value, context, addArgs) {
-            var fArray = this.findObservable(value, context, addArgs),
+            var fArray = this.findObservable(value, context, addArgs, $el),
                 html = $el.html();
             $el.empty();
 
@@ -102,7 +102,7 @@
             return false;
         },
         value: function ($el, value, context, addArgs) {
-            var obs = this.findObservable(value, context, addArgs)
+            var obs = this.findObservable(value, context, addArgs, $el)
                 .callAndSubscribe(function (value) {
                     $el.val(value);
                 });
@@ -113,7 +113,7 @@
         attr: function ($el, value, context, addArgs) {
             var elem = $el[0];
             _.each(this.parseOptionsObject(value), function (condition, attrName) {
-                ViewModel.findObservable(condition, context, addArgs)
+                ViewModel.findObservable(condition, context, addArgs, $el)
                     .callAndSubscribe(function (val) {
                         if (val !== false && val !== undefined && val != null) {
                             elem.setAttribute(attrName, val);
@@ -125,7 +125,7 @@
         },
         style: function ($el, value, context, addArgs) {
             _.each(this.parseOptionsObject(value), function (condition, style) {
-                ViewModel.findObservable(condition, context, addArgs)
+                ViewModel.findObservable(condition, context, addArgs, $el)
                     .callAndSubscribe(function (value) {
                         $el.css(style, value);
                     });
@@ -133,7 +133,7 @@
         },
         css: function ($el, value, context, addArgs) {
             _.each(this.parseOptionsObject(value), function (condition, className) {
-                ViewModel.findObservable(condition, context, addArgs)
+                ViewModel.findObservable(condition, context, addArgs, $el)
                     .callAndSubscribe(function (value) {
                         if (value) {
                             $el.addClass(className);
@@ -145,7 +145,7 @@
             });
         },
         display: function ($el, value, context, addArgs) {
-            this.findObservable(value, context, addArgs).callAndSubscribe(function (value) {
+            this.findObservable(value, context, addArgs, $el).callAndSubscribe(function (value) {
                 if (value) {
                     $el.show();
                 }
@@ -155,14 +155,14 @@
             });
         },
         click: function ($el, value, context, addArgs) {
-            var fn = this.evil(value, context, addArgs)();
+            var fn = this.evil(value, context, addArgs, $el)();
             $el.click(function () {
                 fn.apply(context, arguments);
             });
         },
         className: function ($el, value, context, addArgs) {
             var oldClassName;
-            this.findObservable(value, context, addArgs).callAndSubscribe(function (className) {
+            this.findObservable(value, context, addArgs, $el).callAndSubscribe(function (className) {
                 if (oldClassName) {
                     $el.removeClass(oldClassName);
                 }
@@ -332,8 +332,7 @@
                     return '"+___comp' + i + '()+"';
                 }) + '"';
 
-                Computed(vm.evil(str, ctx)).obj
-                    .callAndSubscribe(parent.childNodes.length == 1 ? function (value) {
+                vm.findObservable(str, ctx, addArgs, $(parent)).callAndSubscribe(parent.childNodes.length == 1 ? function (value) {
                         //if this is the only child
                         parent.innerHTML = value;
                     } : function (value) {
@@ -377,6 +376,8 @@
                         nodeList = newNodeList;
 
                     });
+
+
 
             }
 

@@ -116,6 +116,19 @@
         return this;
     };
 
+    $.fn.refreshBinds = function () {
+        var $self = $();
+        $self.length = 1;
+        this.each(function () {
+            $self[0] = this;
+            _.each($self.data('nk_observers'), function (obs) {
+                obs.notify();
+            });
+            $self.children().refreshBinds();
+        });
+        return this;
+    };
+
 
     ViewModel.evil = function (string, context, addArgs, throwError) {
         addArgs = addArgs || {};

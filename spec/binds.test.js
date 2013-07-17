@@ -113,16 +113,9 @@ describe('ViewModel.binds', function () {
         describe('.eachModel', function () {
             it('draws collection', function () {
 
-                var Posan=Model.extend({
-                    mapping: 'posany',
-                    defaults: {
-                        name: 'Ti kto eba?'
-                    }
-                });
 
-                var collection = Collection.create({
-                    model: Posan
-                },[
+
+                var collection = new Collection([
                     {name: 'Vasya'},
                     {name: 'Petya'}
                 ]);
@@ -136,6 +129,8 @@ describe('ViewModel.binds', function () {
 
                 expect($cont.find('li:eq(0)').html()).toBe('Vasya');
                 expect($cont.find('li:eq(1)').html()).toBe('Petya');
+                collection.at(0).prop('name', 'Sasha');
+                expect($cont.find('li:eq(0)').html()).toBe('Sasha');
             });
         });
     });

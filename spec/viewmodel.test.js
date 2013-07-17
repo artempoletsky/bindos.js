@@ -18,6 +18,21 @@ describe('ViewModel', function () {
         //перестает работать
         ctx.value(2);
         expect($div.text()).toBe('1');
+
+    });
+
+
+    it('adds jquery refresh binds method', function () {
+        var $div = $('<div><div nk="html: value"></div></div>');
+        var ctx = {
+            value: 0
+        };
+        ViewModel.findBinds($div, ctx);
+
+        expect($div.text()).toBe('0');
+        ctx.value=1;
+        $div.refreshBinds();
+        expect($div.text()).toBe('1');
     });
 
     it('can parse options object', function () {
