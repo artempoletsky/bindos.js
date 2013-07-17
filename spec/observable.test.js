@@ -24,6 +24,17 @@ describe('Observable', function () {
         expect(spy.calls.length).toBe(4);
     });
 
+    it('has fire method', function () {
+        var obs = Observable("foo");
+
+        var spy = jasmine.createSpy('subscribe callback');
+        obs.subscribe(spy);
+        expect(spy).not.toHaveBeenCalled();
+        obs.fire();
+        expect(spy.calls.length).toBe(1);
+        expect(spy.calls[0].args[0]).toBe("foo");
+    });
+
     it('Computed', function () {
         var price = Observable(0);
         var currency = Observable('UAH');
@@ -93,18 +104,18 @@ describe('Observable', function () {
         var currency = Observable('USD');
         var priceCurrency = Computed(function () {
             return price() + ' ' + currency();
-        }, this);
+        });
 
         var supportString = Observable('Service support');
         var supportPhone = Observable('13322444');
         var priceString = Observable('Price');
         var support = Computed(function () {
             return supportString() + ': ' + supportPhone();
-        }, this);
+        });
 
         var alltext = Computed(function () {
             return priceString() + ': ' + priceCurrency() + '. ' + support();
-        }, this);
+        });
         expect(alltext()).toBe('Price: 10 USD. Service support: 13322444');
 
         var spy = jasmine.createSpy('spy');
@@ -121,20 +132,6 @@ describe('Observable', function () {
 
     });
 
-    it('Computed may has setter', function () {
-        var leftIndex = Observable(0);
-        var topIndex = Observable(0);
-
-        var index = Computed(function () {
-            return topIndex() * 5 + leftIndex();
-        }, null, false, function (val) {
-            leftIndex(val - topIndex(Math.floor(val / 5)) * 5)
-        });//последний параметр - сеттер
-        index(8);//используем Computed так же как Observable
-        expect(leftIndex()).toBe(3);
-        expect(topIndex()).toBe(1);
-        expect(index()).toBe(8);
-    });
 
     it('Computed construct from options object', function () {
         var leftIndex = Observable(0);
@@ -159,10 +156,10 @@ describe('Observable', function () {
         var obs = Observable(0);
         var comp = Computed(function () {
             return obs() + obs();
-        }, null, false);
+        });
         var comp2 = Computed(function () {
             return comp() + comp() + obs() + obs() + obs();
-        }, null, false);
+        });
         var spy = jasmine.createSpy();
         var spy2 = jasmine.createSpy();
         comp.subscribe(spy);

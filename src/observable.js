@@ -130,21 +130,19 @@
         fire: function () {
             var me = this,
                 value = me.get();
-            if (me.lastValue !== value || _.isObject(value)) {
-                _.each(me.listeners, function (callback) {
-                    callback(value);
-                });
-            }
+            _.each(me.listeners, function (callback) {
+                callback(value);
+            });
             return me;
         },
         callAndSubscribe: function (callback) {
             callback(this.get());
             return this.subscribe(callback);
         },
-        valueOf: function(){
+        valueOf: function () {
             return this.get();
         },
-        toString: function(){
+        toString: function () {
             return this.get();
         }
     };
@@ -195,13 +193,14 @@
         return fn.__observable || false;
     };
 
-    Computed = function (getter, context, async, setter) {
-        return BaseObservable(typeof getter === 'function' ? {
-            get: getter,
-            context: context,
-            set: setter,
-            async: async
-        } : getter);
+    Computed = function (options, context) {
+        //TODO: удалить исключение после 17.08.2013
+        if (context) {
+            throw Error('Context for computed is obsolete');
+        }
+        return BaseObservable(typeof options === 'function' ? {
+            get: options
+        } : options);
     };
 
     window.BaseObservable = BaseObservable;
