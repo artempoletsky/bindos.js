@@ -44,19 +44,43 @@
         }, BaseObservable;
 
 
-    var ObjectObservable = function (params) {
+    var ObjectObservable = window.ObjectObservable = function (params) {
         params = params || {};
         this.dependencies = [];
         this.selfCallbacks = [];
         this.listeners = [];
 
         var initial = params.initial;
-        if (params.get) {
+        if (params.evil) {
+
+            var evil = ViewModel.evil(params.evil.string, params.evil.context, params.evil.addArgs);
+            computedInit = this;
+            var obs = evil();
+            if (Observable.isObservable(obs)) {
+                initial = obs();
+                this.getter = function () {
+                    return obs();
+                };
+                this.setter = function (value) {
+                    obs(value);
+                    return value;
+                };
+            } else {
+                initial = obs;
+                this.getter = function () {
+                    return evil();
+                };
+            }
+            computedInit = false;
+
+
+        } else if (params.get) {
             computedInit = this;
             initial = params.get();
             computedInit = false;
             this.getter = params.get;
         }
+
         if (params.set) {
             this.setter = params.set;
         }
@@ -92,6 +116,8 @@
             me.selfCallbacks = undefined;
             me.listeners = [];
             me.value = undefined;
+            me.lastValue = undefined;
+
         },
         dependsOn: function (obs) {
             var me = this;
@@ -119,7 +145,7 @@
         notify: function () {
             var me = this,
                 value = me.get();
-            if (me.lastValue !== value || _.isObject(value)) {
+            if (me.lastValue !== value) {
                 _.each(me.listeners, function (callback) {
                     callback(value);
                 });
@@ -1123,6 +1149,7 @@
         else {
             keys.push('return ' + string);
         }
+
         fn = Function.apply(context, keys);
         vals.unshift(context);
         return function () {
@@ -1154,25 +1181,26 @@
             }
         };
     };
+
+
+    ViewModel.findCallAndSubscribe=function(string, context, addArgs, callback, $el){
+        var obs=this.findObservable(string, context, addArgs, $el);
+        callback(obs.value);
+        obs.subscribe(callback);
+        return obs;
+    };
+
     ViewModel.findObservable = function (string, context, addArgs, $el) {
 
-        var evil = ViewModel.evil(string, context, addArgs),
-            obs = evil();
 
-        var result;
-
-        if (Observable.isObservable(obs)) {
-            result = Computed({
-                get: function () {
-                    return obs();
-                },
-                set: function (value) {
-                    obs(value);
+          var result = new ObjectObservable({
+                evil: {
+                    string: string,
+                    context: context,
+                    addArgs: addArgs
                 }
-            }).obj;
-        } else {
-            result = Computed(evil).obj;
-        }
+            });
+
 
         if ($el) {
             var observers = $el.data('nk_observers');
@@ -1294,10 +1322,10 @@
 
     ViewModel.filters = {};
 
-    ViewModel.applyFilters = function (value, context, addArgs, $el) {
+    ViewModel.applyFilters = function (value, context, addArgs, callback, $el) {
         var filters = value.split(filtersSplitter);
         if (filters.length <= 1) {
-            return this.findObservable(value, context, addArgs, $el);
+            return this.findCallAndSubscribe(value, context, addArgs, callback, $el);
         }
         value = filters.shift();
         var computed = this.findObservable(value, context, addArgs, $el);
@@ -1312,7 +1340,7 @@
             });
             return result;
         }, []);
-        return Computed({
+        var result = new ObjectObservable({
             get: function () {
                 return _.foldl(filters, function (result, obj) {
                     return obj.format.call(ViewModel, result, obj.value);
@@ -1323,40 +1351,40 @@
                     return obj.unformat.call(ViewModel, result, obj.value);
                 }, value));
             }
-        }).obj;
+        });
+        if (callback) {
+            callback(result.value);
+            result.subscribe(callback);
+        }
+
+        return result;
     };
 
     ViewModel.binds = {
         log: function ($el, value, context, addArgs) {
-            this.findObservable(value, context, addArgs, $el).callAndSubscribe(function (val) {
+            this.findCallAndSubscribe(value, context, addArgs, function (val) {
                 console.log(context, '.', value, '=', val);
-            });
+            }, $el);
         },
         src: function ($el, value, context, addArgs) {
             var elem = $el[0];
-            this.findObservable(value, context, addArgs, $el)
-                .callAndSubscribe(function (val) {
-                    elem.src = val || '';
-                });
+            this.findCallAndSubscribe(value, context, addArgs, function (val) {
+                elem.src = val || '';
+            }, $el);
         },
         html: function ($el, value, context, addArgs) {
-            //var elem=$el[0];
-            //var filters = this.filtersOut(value);
-            //console.log(value);
-            this.applyFilters(value, context, addArgs, $el)
-                .callAndSubscribe(function (val) {
-                    //undefined конвертируется в пустую строку
-                    if (!val && typeof val != 'number') {
-                        val = '';
-                    }
-                    $el.html(val);
-                });
+            this.applyFilters(value, context, addArgs, function (val) {
+                //undefined конвертируется в пустую строку
+                if (!val && typeof val != 'number') {
+                    val = '';
+                }
+                $el.html(val);
+            }, $el);
         },
         text: function ($el, value, context, addArgs) {
-            this.findObservable(value, context, addArgs, $el)
-                .callAndSubscribe(function (val) {
-                    $el.text(val);
-                });
+            this.findCallAndSubscribe(value, context, addArgs, function (val) {
+                $el.text(val);
+            }, $el);
         },
         'with': function ($el, value, context, addArgs) {
             return this.evil(value, context, addArgs)();
@@ -1380,7 +1408,11 @@
                         addArgs.$parent = array;
                         addArgs.$value = val;
                         var tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = html;
+                        try {
+                            tempDiv.innerHTML = html;
+                        } catch (e) {
+                            console.log(e);
+                        }
                         ViewModel.findBinds(tempDiv, val, addArgs);
                         $el.append($(tempDiv).children());
                     });
@@ -1401,14 +1433,13 @@
         attr: function ($el, value, context, addArgs) {
             var elem = $el[0];
             _.each(this.parseOptionsObject(value), function (condition, attrName) {
-                ViewModel.findObservable(condition, context, addArgs, $el)
-                    .callAndSubscribe(function (val) {
-                        if (val !== false && val !== undefined && val != null) {
-                            elem.setAttribute(attrName, val);
-                        } else {
-                            elem.removeAttribute(attrName);
-                        }
-                    });
+                ViewModel.findCallAndSubscribe(condition, context, addArgs, function (val) {
+                    if (val !== false && val !== undefined && val != null) {
+                        elem.setAttribute(attrName, val);
+                    } else {
+                        elem.removeAttribute(attrName);
+                    }
+                }, $el);
             });
         },
         style: function ($el, value, context, addArgs) {
@@ -1614,59 +1645,66 @@
                 breakersRegex.lastIndex = 0;
 
                 str = '"' + str.replace(breakersRegex, function (exprWithBreakers, expr) {
-
                     i++;
                     ctx['___comp' + i] = vm.applyFilters(expr + ' | _sysUnwrap | _sysEmpty', context, addArgs).getter;
                     return '"+___comp' + i + '()+"';
                 }) + '"';
 
-                vm.findObservable(str, ctx, addArgs, $(parent)).callAndSubscribe(parent.childNodes.length == 1 ? function (value) {
-                        //if this is the only child
+
+                vm.findCallAndSubscribe(str, ctx, addArgs, parent.childNodes.length == 1 ? function (value) {
+                    //if this is the only child
+                    try {
                         parent.innerHTML = value;
-                    } : function (value) {
+                    } catch (e) {
+                        console.log(e);
+                    }
 
-                        docFragment = document.createDocumentFragment();
+                } : function (value) {
+
+                    docFragment = document.createDocumentFragment();
+
+                    try {
                         div.innerHTML = value;
+                    } catch (e) {
+                        console.log(e);
+                    }
 
-                        var newNodeList = _.toArray(div.childNodes), firstNode;
+
+                    var newNodeList = _.toArray(div.childNodes), firstNode;
 
 
-                        firstNode = nodeList[0];
+                    firstNode = nodeList[0];
 
-                        while (nodeList[1]) {
-                            parent.removeChild(nodeList[1]);
-                            nodeList.splice(1, 1);
+                    while (nodeList[1]) {
+                        parent.removeChild(nodeList[1]);
+                        nodeList.splice(1, 1);
+                    }
+
+
+                    if (!newNodeList.length) {
+                        firstNode.textContent = '';
+                        nodeList = [firstNode];
+                        return;
+                    }
+
+
+                    while (div.childNodes[0]) {
+                        docFragment.appendChild(div.childNodes[0]);
+                    }
+
+
+                    if (docFragment.childNodes.length) {
+                        try {
+                            parent.insertBefore(docFragment, firstNode);
+                        } catch (e) {
+                            throw  e;
                         }
+                    }
 
+                    parent.removeChild(firstNode);
+                    nodeList = newNodeList;
 
-
-                        if (!newNodeList.length) {
-                            firstNode.textContent = '';
-                            nodeList = [firstNode];
-                            return;
-                        }
-
-
-                        while (div.childNodes[0]) {
-                            docFragment.appendChild(div.childNodes[0]);
-                        }
-
-
-                        if (docFragment.childNodes.length) {
-                            try {
-                                parent.insertBefore(docFragment, firstNode);
-                            } catch (e) {
-                                throw  e;
-                            }
-                        }
-
-                        parent.removeChild(firstNode);
-                        nodeList = newNodeList;
-
-                    });
-
-
-
+                }, $(parent));
             }
 
         }
@@ -1738,53 +1776,59 @@
     var createRow = function ($children, oModel, context, addArgs, ctx) {
 
 
-            var model, newContext = {};
+            var model, newContext = {}, prop;
 
 
             _.extend(addArgs, {
-                $self: oModel.get(),
                 $parent: context
             });
 
 
             oModel.callAndSubscribe(function (value) {
+                addArgs.$self = value;
                 if (model) {
                     //перестает слушать старую модель
                     model.off(0, 0, ctx);
                 }
 
                 if (value) {
-
-                    newContext = value.attributes;
+                    _.extend(newContext, value.attributes);
                     //слушает новую
-                    value.on('change', function () {
+                    value.on('change', function (changed) {
+                        _.extend(newContext, changed);
                         $children.refreshBinds();
                     }, ctx);
 
-                } /*else {
 
-                     //обнуляет все observables
-                     _.forIn(newContext, function (obs) {
-                     obs('');
-                     });
-                }*/
+                } else {
+                    for (prop in newContext) {
+                        delete newContext[prop];
+                    }
+                }
+                $children.refreshBinds();
                 model = value;
-            });
 
+            });
 
             //парсит внутренний html как темплейт
             $children.each(function () {
                 ViewModel.findBinds(this, newContext, addArgs);
             });
 
-            $children.refreshBinds();
+
+            //$children.refreshBinds();
 
 
             return addArgs;
         },
         cloneRow = function (ctx, rawTemplate, elName, model, collection, index) {
             var args, $children, tempDiv = document.createElement(elName);
-            tempDiv.innerHTML = rawTemplate;
+            try {
+                tempDiv.innerHTML = rawTemplate;
+            } catch (e) {
+                console.log(e);
+            }
+
             $children = $(tempDiv).children();
 
             args = createRow($children, Observable(model).obj, collection, {

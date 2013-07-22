@@ -8,9 +8,13 @@ describe('ViewModel', function () {
             value: Observable(0)
         };
         ViewModel.findBinds($div, ctx);
+
+        expect(ctx.value.obj.listeners.length).toBe(1);
         //убеждаемся что бинд работает
         expect($div.text()).toBe('0');
+
         ctx.value(1);
+
         expect($div.text()).toBe('1');
 
         $div.clearBinds();

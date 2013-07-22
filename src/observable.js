@@ -44,19 +44,43 @@
         }, BaseObservable;
 
 
-    var ObjectObservable = function (params) {
+    var ObjectObservable = window.ObjectObservable = function (params) {
         params = params || {};
         this.dependencies = [];
         this.selfCallbacks = [];
         this.listeners = [];
 
         var initial = params.initial;
-        if (params.get) {
+        if (params.evil) {
+
+            var evil = ViewModel.evil(params.evil.string, params.evil.context, params.evil.addArgs);
+            computedInit = this;
+            var obs = evil();
+            if (Observable.isObservable(obs)) {
+                initial = obs();
+                this.getter = function () {
+                    return obs();
+                };
+                this.setter = function (value) {
+                    obs(value);
+                    return value;
+                };
+            } else {
+                initial = obs;
+                this.getter = function () {
+                    return evil();
+                };
+            }
+            computedInit = false;
+
+
+        } else if (params.get) {
             computedInit = this;
             initial = params.get();
             computedInit = false;
             this.getter = params.get;
         }
+
         if (params.set) {
             this.setter = params.set;
         }
@@ -92,6 +116,8 @@
             me.selfCallbacks = undefined;
             me.listeners = [];
             me.value = undefined;
+            me.lastValue = undefined;
+
         },
         dependsOn: function (obs) {
             var me = this;
@@ -119,7 +145,7 @@
         notify: function () {
             var me = this,
                 value = me.get();
-            if (me.lastValue !== value || _.isObject(value)) {
+            if (me.lastValue !== value) {
                 _.each(me.listeners, function (callback) {
                     callback(value);
                 });

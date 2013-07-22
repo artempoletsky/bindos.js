@@ -110,9 +110,39 @@ describe('ViewModel.binds', function () {
             });
         });
 
+
+        describe('.withModel', function () {
+            it('draws model', function () {
+
+                var superman = new Model({
+                    name: 'Superman'
+                });
+
+                var $cont = $('<div><ul nk="withModel: hero"><li>{{name}}</li></ul></div>');
+                var ctx = {
+                    hero: Observable()
+                };
+
+                ViewModel.findBinds($cont, ctx);
+
+                ctx.hero(superman);
+
+                expect($cont.find('li').html()).toBe('Superman');
+
+                var batman = new Model({
+                    name: 'Batman'
+                });
+
+                ctx.hero(batman);
+
+                expect($cont.find('li').html()).toBe('Batman');
+
+
+            });
+        });
+
         describe('.eachModel', function () {
             it('draws collection', function () {
-
 
 
                 var collection = new Collection([
@@ -122,7 +152,7 @@ describe('ViewModel.binds', function () {
 
 
                 expect(collection.length).toBe(2);
-                var $cont=$('<div><ul nk="eachModel: collection"><li>{{name}}</li></ul></div>');
+                var $cont = $('<div><ul nk="eachModel: collection"><li>{{name}}</li></ul></div>');
                 ViewModel.findBinds($cont, {
                     collection: collection
                 });
@@ -131,6 +161,91 @@ describe('ViewModel.binds', function () {
                 expect($cont.find('li:eq(1)').html()).toBe('Petya');
                 collection.at(0).prop('name', 'Sasha');
                 expect($cont.find('li:eq(0)').html()).toBe('Sasha');
+            });
+
+            it("'s multiple refresh fix", function () {
+                var AbilitiesCollection = Collection.extend({
+                    parse: function (json) {
+                        return _.map(json, function (name) {
+                            return {
+                                name: name
+                            };
+                        });
+                    }
+                });
+                var Hero = Model.extend({
+                    initialize: function () {
+                        this.abilities = new AbilitiesCollection(this.prop('abilities'));
+                    }
+                });
+
+                var heroes = Collection.create({
+                    model: Hero
+                }, [
+                    {name: 'Batman', abilities: ['kung fu', 'money']},
+                    {name: 'Superman', abilities: ['laser eyes', 'flying', 'bulletproof']}
+                ]);
+
+
+                var ctx = {
+                    heroes: Observable(heroes)
+                };
+                var calls0=0;
+                window.spy0 = function () {
+                    calls0++;
+                    return '';
+                };
+
+                var calls1=0;
+                window.spy1 = function () {
+                    calls1++;
+                    return '';
+                };
+
+                var calls2=0;
+                window.spy2 = function () {
+                    calls2++;
+                    return '';
+                };
+
+
+                var $cont = $('<div><ul nk="eachModel: heroes; attr: {nothing: spy0()}"><li nk="attr: {nothing: spy1()}">{{name}}: <ul nk="eachModel: $self.abilities"><li nk="attr: {nothing: spy2()}">{{name}},</li></ul></li></ul></div>');
+
+                ViewModel.findBinds($cont, ctx);
+
+                expect($cont.text()).toBe('Batman: kung fu,money,Superman: laser eyes,flying,bulletproof,');
+
+
+                //console.log($cont);
+
+
+                expect(calls0).toBe(1);
+
+                expect(calls1).toBe(2);//two heroes
+
+                expect(calls2).toBe(5);//5 abilities
+
+
+                $cont.refreshBinds();
+
+
+                expect(calls0).toBe(2);
+
+                expect(calls1).toBe(4);
+
+                expect(calls2).toBe(10);
+
+
+                heroes.at(0).prop('name', 'Iron man');
+
+                expect($cont.text()).toBe('Iron man: kung fu,money,Superman: laser eyes,flying,bulletproof,');
+
+                expect(calls0).toBe(2);
+
+                expect(calls1).toBe(5);
+
+                expect(calls2).toBe(12);
+
             });
         });
     });

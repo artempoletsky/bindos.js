@@ -154,6 +154,7 @@
         else {
             keys.push('return ' + string);
         }
+
         fn = Function.apply(context, keys);
         vals.unshift(context);
         return function () {
@@ -185,25 +186,26 @@
             }
         };
     };
+
+
+    ViewModel.findCallAndSubscribe=function(string, context, addArgs, callback, $el){
+        var obs=this.findObservable(string, context, addArgs, $el);
+        callback(obs.value);
+        obs.subscribe(callback);
+        return obs;
+    };
+
     ViewModel.findObservable = function (string, context, addArgs, $el) {
 
-        var evil = ViewModel.evil(string, context, addArgs),
-            obs = evil();
 
-        var result;
-
-        if (Observable.isObservable(obs)) {
-            result = Computed({
-                get: function () {
-                    return obs();
-                },
-                set: function (value) {
-                    obs(value);
+          var result = new ObjectObservable({
+                evil: {
+                    string: string,
+                    context: context,
+                    addArgs: addArgs
                 }
-            }).obj;
-        } else {
-            result = Computed(evil).obj;
-        }
+            });
+
 
         if ($el) {
             var observers = $el.data('nk_observers');

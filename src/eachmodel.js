@@ -5,53 +5,59 @@
     var createRow = function ($children, oModel, context, addArgs, ctx) {
 
 
-            var model, newContext = {};
+            var model, newContext = {}, prop;
 
 
             _.extend(addArgs, {
-                $self: oModel.get(),
                 $parent: context
             });
 
 
             oModel.callAndSubscribe(function (value) {
+                addArgs.$self = value;
                 if (model) {
                     //перестает слушать старую модель
                     model.off(0, 0, ctx);
                 }
 
                 if (value) {
-
-                    newContext = value.attributes;
+                    _.extend(newContext, value.attributes);
                     //слушает новую
-                    value.on('change', function () {
+                    value.on('change', function (changed) {
+                        _.extend(newContext, changed);
                         $children.refreshBinds();
                     }, ctx);
 
-                } /*else {
 
-                     //обнуляет все observables
-                     _.forIn(newContext, function (obs) {
-                     obs('');
-                     });
-                }*/
+                } else {
+                    for (prop in newContext) {
+                        delete newContext[prop];
+                    }
+                }
+                $children.refreshBinds();
                 model = value;
-            });
 
+            });
 
             //парсит внутренний html как темплейт
             $children.each(function () {
                 ViewModel.findBinds(this, newContext, addArgs);
             });
 
-            $children.refreshBinds();
+
+            //$children.refreshBinds();
 
 
             return addArgs;
         },
         cloneRow = function (ctx, rawTemplate, elName, model, collection, index) {
             var args, $children, tempDiv = document.createElement(elName);
-            tempDiv.innerHTML = rawTemplate;
+            try {
+                tempDiv.innerHTML = rawTemplate;
+            } catch (e) {
+                console.log(e);
+            }
+
             $children = $(tempDiv).children();
 
             args = createRow($children, Observable(model).obj, collection, {
