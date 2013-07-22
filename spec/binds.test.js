@@ -114,31 +114,38 @@ describe('ViewModel.binds', function () {
         describe('.withModel', function () {
             it('draws model', function () {
 
-                var superman = new Model({
+                var Hero=Model.extend({
+                    greet: function () {
+                        return 'My name is ' + this.prop('name');
+                    }
+                });
+
+                var superman = new Hero({
                     name: 'Superman'
                 });
 
-                var $cont = $('<div><ul nk="withModel: hero"><li>{{name}}</li></ul></div>');
+                var $cont = $('<div><ul nk="withModel: hero"><li>{{name}} {{$self().greet()}}</li></ul></div>');
                 var ctx = {
-                    hero: Observable()
+                    hero: Observable(superman)
                 };
 
                 ViewModel.findBinds($cont, ctx);
 
                 ctx.hero(superman);
 
-                expect($cont.find('li').html()).toBe('Superman');
+                expect($cont.find('li').html()).toBe('Superman My name is Superman');
 
-                var batman = new Model({
+                var batman = new Hero({
                     name: 'Batman'
                 });
 
                 ctx.hero(batman);
 
-                expect($cont.find('li').html()).toBe('Batman');
-
+                expect($cont.find('li').html()).toBe('Batman My name is Batman');
 
             });
+
+
         });
 
         describe('.eachModel', function () {
@@ -190,26 +197,26 @@ describe('ViewModel.binds', function () {
                 var ctx = {
                     heroes: Observable(heroes)
                 };
-                var calls0=0;
+                var calls0 = 0;
                 window.spy0 = function () {
                     calls0++;
                     return '';
                 };
 
-                var calls1=0;
+                var calls1 = 0;
                 window.spy1 = function () {
                     calls1++;
                     return '';
                 };
 
-                var calls2=0;
+                var calls2 = 0;
                 window.spy2 = function () {
                     calls2++;
                     return '';
                 };
 
 
-                var $cont = $('<div><ul nk="eachModel: heroes; attr: {nothing: spy0()}"><li nk="attr: {nothing: spy1()}">{{name}}: <ul nk="eachModel: $self.abilities"><li nk="attr: {nothing: spy2()}">{{name}},</li></ul></li></ul></div>');
+                var $cont = $('<div><ul nk="eachModel: heroes; attr: {nothing: spy0()}"><li nk="attr: {nothing: spy1()}">{{name}}: <ul nk="eachModel: $self().abilities"><li nk="attr: {nothing: spy2()}">{{name}},</li></ul></li></ul></div>');
 
                 ViewModel.findBinds($cont, ctx);
 

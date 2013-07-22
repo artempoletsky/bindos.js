@@ -180,7 +180,7 @@
                 if (throwError) {
                     throw exception;
                 } else {
-                    console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
+                    console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context, 'addArgs: ', addArgs);
                 }
 
             }

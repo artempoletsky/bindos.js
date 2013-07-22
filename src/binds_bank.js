@@ -74,18 +74,19 @@
             return this.evil(value, context, addArgs)();
         },
         each: function ($el, value, context, addArgs) {
-            var fArray = this.findObservable(value, context, addArgs, $el),
-                html = $el.html();
-            $el.empty();
 
+            var html = $el.html();
             if (addArgs) {
                 addArgs = _.clone(addArgs);
             }
             else {
                 addArgs = {};
             }
-            fArray.callAndSubscribe(function (array) {
+
+            this.findCallAndSubscribe(value, context, addArgs, function (array) {
+                $el.children().clearBinds();
                 $el.empty();
+
                 if (array) {
                     _.each(array, function (val, ind) {
                         addArgs.$index = ind;
@@ -101,7 +102,8 @@
                         $el.append($(tempDiv).children());
                     });
                 }
-            });
+            }, $el);
+
 
             return false;
         },

@@ -1175,7 +1175,7 @@
                 if (throwError) {
                     throw exception;
                 } else {
-                    console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context);
+                    console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context, 'addArgs: ', addArgs);
                 }
 
             }
@@ -1390,18 +1390,19 @@
             return this.evil(value, context, addArgs)();
         },
         each: function ($el, value, context, addArgs) {
-            var fArray = this.findObservable(value, context, addArgs, $el),
-                html = $el.html();
-            $el.empty();
 
+            var html = $el.html();
             if (addArgs) {
                 addArgs = _.clone(addArgs);
             }
             else {
                 addArgs = {};
             }
-            fArray.callAndSubscribe(function (array) {
+
+            this.findCallAndSubscribe(value, context, addArgs, function (array) {
+                $el.children().clearBinds();
                 $el.empty();
+
                 if (array) {
                     _.each(array, function (val, ind) {
                         addArgs.$index = ind;
@@ -1417,7 +1418,8 @@
                         $el.append($(tempDiv).children());
                     });
                 }
-            });
+            }, $el);
+
 
             return false;
         },
@@ -1778,14 +1780,11 @@
 
             var model, newContext = {}, prop;
 
+            addArgs.$parent=context;
+            addArgs.$self= Observable(oModel.value);
 
-            _.extend(addArgs, {
-                $parent: context
-            });
-
-
-            oModel.callAndSubscribe(function (value) {
-                addArgs.$self = value;
+            var cb=function (value) {
+                addArgs.$self(value);
                 if (model) {
                     //перестает слушать старую модель
                     model.off(0, 0, ctx);
@@ -1808,7 +1807,12 @@
                 $children.refreshBinds();
                 model = value;
 
-            });
+            };
+
+            cb(oModel.value);
+            oModel.subscribe(cb);
+
+                //oModel.callAndSubscribe();
 
             //парсит внутренний html как темплейт
             $children.each(function () {
@@ -1844,6 +1848,7 @@
 
     ViewModel.binds.withModel = function ($el, value, context, addArgs) {
         addArgs = addArgs || {};
+
         //$children, oModel, context, addArgs, ctx
         createRow($el.children(), this.findObservable(value, context, addArgs, $el), context, addArgs, {});
         //останавливает внешний парсер

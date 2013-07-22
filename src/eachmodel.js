@@ -7,14 +7,11 @@
 
             var model, newContext = {}, prop;
 
+            addArgs.$parent=context;
+            addArgs.$self= Observable(oModel.value);
 
-            _.extend(addArgs, {
-                $parent: context
-            });
-
-
-            oModel.callAndSubscribe(function (value) {
-                addArgs.$self = value;
+            var cb=function (value) {
+                addArgs.$self(value);
                 if (model) {
                     //перестает слушать старую модель
                     model.off(0, 0, ctx);
@@ -37,7 +34,12 @@
                 $children.refreshBinds();
                 model = value;
 
-            });
+            };
+
+            cb(oModel.value);
+            oModel.subscribe(cb);
+
+                //oModel.callAndSubscribe();
 
             //парсит внутренний html как темплейт
             $children.each(function () {
@@ -73,6 +75,7 @@
 
     ViewModel.binds.withModel = function ($el, value, context, addArgs) {
         addArgs = addArgs || {};
+
         //$children, oModel, context, addArgs, ctx
         createRow($el.children(), this.findObservable(value, context, addArgs, $el), context, addArgs, {});
         //останавливает внешний парсер
