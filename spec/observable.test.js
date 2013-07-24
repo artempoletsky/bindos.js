@@ -1,10 +1,17 @@
 describe('Observable', function () {
-    it('base observable class extents from Function', function () {
-        var obs = BaseObservable();
-
-        expect(obs.subscribe).toBeDefined();
-        expect(typeof obs).toBe('function');
+    it('fires when object is changed', function () {
+        var obs=Observable({});
+        var spy=jasmine.createSpy();
+        obs.subscribe(spy);
+        expect(spy).not.toHaveBeenCalled();
+        obs({
+            a: 'a'
+        });
+        expect(spy).toHaveBeenCalled();
     });
+
+
+
     it('construct', function () {
         var obs = Observable();
         expect(obs()).toBeUndefined();

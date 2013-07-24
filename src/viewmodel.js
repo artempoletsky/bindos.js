@@ -111,6 +111,7 @@
             _.each($self.data('nk_observers'), function (obs) {
                 obs.destroy();
             });
+            $self.data('nk_observers', []);
             $self.children().clearBinds();
         });
         return this;

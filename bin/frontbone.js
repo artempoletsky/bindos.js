@@ -138,7 +138,7 @@
         },
         unsubscribe: function (callback) {
             this.listeners = _.filter(this.listeners, function (listener) {
-                return listener === callback;
+                return listener !== callback;
             });
             return this;
         },
@@ -1106,6 +1106,7 @@
             _.each($self.data('nk_observers'), function (obs) {
                 obs.destroy();
             });
+            $self.data('nk_observers', []);
             $self.children().clearBinds();
         });
         return this;

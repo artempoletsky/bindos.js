@@ -138,7 +138,7 @@
         },
         unsubscribe: function (callback) {
             this.listeners = _.filter(this.listeners, function (listener) {
-                return listener === callback;
+                return listener !== callback;
             });
             return this;
         },

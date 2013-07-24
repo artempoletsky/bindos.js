@@ -7,14 +7,19 @@ describe('ViewModel', function () {
         var ctx = {
             value: Observable(0)
         };
+        var spy=jasmine.createSpy();
+        ctx.value.subscribe(spy);
+        expect(spy).not.toHaveBeenCalled();
         ViewModel.findBinds($div, ctx);
 
-        expect(ctx.value.obj.listeners.length).toBe(1);
+
+        expect(ctx.value.obj.listeners.length).toBe(2);
         //убеждаемся что бинд работает
         expect($div.text()).toBe('0');
 
         ctx.value(1);
 
+        expect(spy.calls.length).toBe(1);
         expect($div.text()).toBe('1');
 
         $div.clearBinds();
@@ -23,7 +28,12 @@ describe('ViewModel', function () {
         ctx.value(2);
         expect($div.text()).toBe('1');
 
+        console.log($div);
+        //не должен ломать существующий Observable
+        expect(spy.calls.length).toBe(2);
     });
+
+
 
 
     it('adds jquery refresh binds method', function () {
