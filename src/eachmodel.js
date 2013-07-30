@@ -5,78 +5,59 @@
     var createRow = function ($children, oModel, context, addArgs, ctx) {
 
 
-            var model, newContext = {}, prop;
+        var model, newContext = {}, prop;
 
-            addArgs.$parent=context;
-            addArgs.$self= Observable(oModel.value);
+        addArgs.$parent = context;
+        addArgs.$self = Computed({
+            initial: oModel.value,
+            $el: $children
+        });
 
-            var cb=function (value) {
-                addArgs.$self(value);
-                if (model) {
-                    //перестает слушать старую модель
-                    model.off(0, 0, ctx);
-                }
-
-                if (value) {
-                    _.extend(newContext, value.attributes);
-                    //слушает новую
-                    value.on('change', function (changed) {
-                        _.extend(newContext, changed);
-                        $children.refreshBinds();
-                    }, ctx);
-
-
-                } else {
-                    for (prop in newContext) {
-                        delete newContext[prop];
-                    }
-                }
-                $children.refreshBinds();
-                model = value;
-
-            };
-
-            cb(oModel.value);
-            oModel.subscribe(cb);
-
-                //oModel.callAndSubscribe();
-
-            //парсит внутренний html как темплейт
-            $children.each(function () {
-                ViewModel.findBinds(this, newContext, addArgs);
-            });
-
-
-            //$children.refreshBinds();
-
-
-            return addArgs;
-        },
-        cloneRow = function (ctx, rawTemplate, elName, model, collection, index) {
-            var args, $children, tempDiv = document.createElement(elName);
-            try {
-                tempDiv.innerHTML = rawTemplate;
-            } catch (e) {
-                console.log(e);
+        var cb = function (value) {
+            addArgs.$self(value);
+            if (model) {
+                //перестает слушать старую модель
+                model.off(0, 0, ctx);
             }
 
-            $children = $(tempDiv).children();
+            if (value) {
+                _.extend(newContext, value.attributes);
+                //слушает новую
+                value.on('change', function (changed) {
+                    _.extend(newContext, changed);
+                    $children.refreshBinds();
+                }, ctx);
 
-            args = createRow($children, Observable(model).obj, collection, {
-                $index: index
-            }, ctx);
 
-            return {
-                $children: $children,
-                tempDiv: tempDiv,
-                args: args
-            };
+            } else {
+                for (prop in newContext) {
+                    delete newContext[prop];
+                }
+            }
+            $children.refreshBinds();
+            model = value;
+
         };
+
+        cb(oModel.value);
+        oModel.subscribe(cb);
+
+        //oModel.callAndSubscribe();
+
+        //парсит внутренний html как темплейт
+        $children.each(function () {
+            ViewModel.findBinds(this, newContext, addArgs);
+        });
+
+
+        return addArgs;
+    };
+
 
     ViewModel.binds.withModel = function ($el, value, context, addArgs) {
         addArgs = addArgs || {};
 
-        //$children, oModel, context, addArgs, ctx
+
         createRow($el.children(), this.findObservable(value, context, addArgs, $el), context, addArgs, {});
         //останавливает внешний парсер
         return false;
@@ -130,7 +111,24 @@
 
             templateConstructor = function (rawTemplate) {
                 return function (model, $index, $parent) {
-                    var $children = cloneRow(ctx, rawTemplate, elName, model, $parent, $index).$children;
+
+                    var args, $children, tempDiv = document.createElement(elName);
+
+                    try {
+                        tempDiv.innerHTML = rawTemplate;
+                    } catch (e) {
+                        console.log(e);
+                    }
+
+                    $children = $(tempDiv).children();
+
+                    args = createRow($children, Computed({
+                        initial: model,
+                        $el: $children
+                    }).obj, collection, {
+                        $index: $index
+                    }, ctx);
+
                     tempChildrenLen = $children.length;
                     return $children;
                 };

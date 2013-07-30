@@ -189,8 +189,8 @@
     };
 
 
-    ViewModel.findCallAndSubscribe=function(string, context, addArgs, callback, $el){
-        var obs=this.findObservable(string, context, addArgs, $el);
+    ViewModel.findCallAndSubscribe = function (string, context, addArgs, callback, $el) {
+        var obs = this.findObservable(string, context, addArgs, $el);
         callback(obs.value);
         obs.subscribe(callback);
         return obs;
@@ -199,22 +199,14 @@
     ViewModel.findObservable = function (string, context, addArgs, $el) {
 
 
-          var result = new ObjectObservable({
-                evil: {
-                    string: string,
-                    context: context,
-                    addArgs: addArgs
-                }
-            });
-
-
-        if ($el) {
-            var observers = $el.data('nk_observers');
-            observers = observers || [];
-            observers.push(result);
-            $el.data('nk_observers', observers);
-        }
-
+        var result = new ObjectObservable({
+            evil: {
+                string: string,
+                context: context,
+                addArgs: addArgs
+            },
+            $el: $el
+        });
         return result;
     };
 

@@ -50,10 +50,11 @@
         this.selfCallbacks = [];
         this.listeners = [];
 
-        var initial = params.initial;
+        var initial = params.initial, $el = params.$el;
         if (params.evil) {
 
             var evil = ViewModel.evil(params.evil.string, params.evil.context, params.evil.addArgs);
+
             computedInit = this;
             var obs = evil();
             if (Observable.isObservable(obs)) {
@@ -79,6 +80,13 @@
             initial = params.get();
             computedInit = false;
             this.getter = params.get;
+        }
+
+        if ($el) {
+            var observers = $el.data('nk_observers');
+            observers = observers || [];
+            observers.push(this);
+            $el.data('nk_observers', observers);
         }
 
         if (params.set) {
@@ -229,7 +237,7 @@
         } : options);
     };
 
-    window.BaseObservable = BaseObservable;
+    //window.BaseObservable = BaseObservable;
     window.Observable = Observable;
     window.Computed = Computed;
     //window.Subscribeable = Subscribeable;
@@ -1184,8 +1192,8 @@
     };
 
 
-    ViewModel.findCallAndSubscribe=function(string, context, addArgs, callback, $el){
-        var obs=this.findObservable(string, context, addArgs, $el);
+    ViewModel.findCallAndSubscribe = function (string, context, addArgs, callback, $el) {
+        var obs = this.findObservable(string, context, addArgs, $el);
         callback(obs.value);
         obs.subscribe(callback);
         return obs;
@@ -1194,22 +1202,14 @@
     ViewModel.findObservable = function (string, context, addArgs, $el) {
 
 
-          var result = new ObjectObservable({
-                evil: {
-                    string: string,
-                    context: context,
-                    addArgs: addArgs
-                }
-            });
-
-
-        if ($el) {
-            var observers = $el.data('nk_observers');
-            observers = observers || [];
-            observers.push(result);
-            $el.data('nk_observers', observers);
-        }
-
+        var result = new ObjectObservable({
+            evil: {
+                string: string,
+                context: context,
+                addArgs: addArgs
+            },
+            $el: $el
+        });
         return result;
     };
 
@@ -1315,7 +1315,7 @@
 
     window.ViewModel = ViewModel;
 }(this));
-/*globals ViewModel, $, _, Computed, Observable*/
+/*globals ViewModel, $, _, Computed, Observable, ObjectObservable*/
 (function () {
     "use strict";
     var filtersSplitter = /\s*\|\s*/;
@@ -1351,8 +1351,10 @@
                 computed.set(_.foldr(filters, function (result, obj) {
                     return obj.unformat.call(ViewModel, result, obj.value);
                 }, value));
-            }
+            },
+            $el: $el
         });
+
         if (callback) {
             callback(result.value);
             result.subscribe(callback);
@@ -1632,11 +1634,13 @@
                 docFragment,
                 div,
                 nodeList = [textNode],
-                breakersRegex = ViewModel.inlineModificators['{{}}'].regex;
+                breakersRegex = ViewModel.inlineModificators['{{}}'].regex,
+                $el;
             breakersRegex.lastIndex = 0;
             if (breakersRegex.test(str)) {
 
                 parent = textNode.parentNode;
+                $el=$(parent);
                 div = document.createElement('div');
 
 
@@ -1649,7 +1653,7 @@
 
                 str = '"' + str.replace(breakersRegex, function (exprWithBreakers, expr) {
                     i++;
-                    ctx['___comp' + i] = vm.applyFilters(expr + ' | _sysUnwrap | _sysEmpty', context, addArgs).getter;
+                    ctx['___comp' + i] = vm.applyFilters(expr + ' | _sysUnwrap | _sysEmpty', context, addArgs, undefined, $el).getter;
                     return '"+___comp' + i + '()+"';
                 }) + '"';
 
@@ -1699,15 +1703,15 @@
                     if (docFragment.childNodes.length) {
                         try {
                             parent.insertBefore(docFragment, firstNode);
-                        } catch (e) {
-                            throw  e;
+                        } catch (er) {
+                            throw  er;
                         }
                     }
 
                     parent.removeChild(firstNode);
                     nodeList = newNodeList;
 
-                }, $(parent));
+                }, $el);
             }
 
         }
@@ -1779,78 +1783,59 @@
     var createRow = function ($children, oModel, context, addArgs, ctx) {
 
 
-            var model, newContext = {}, prop;
+        var model, newContext = {}, prop;
 
-            addArgs.$parent=context;
-            addArgs.$self= Observable(oModel.value);
+        addArgs.$parent = context;
+        addArgs.$self = Computed({
+            initial: oModel.value,
+            $el: $children
+        });
 
-            var cb=function (value) {
-                addArgs.$self(value);
-                if (model) {
-                    //перестает слушать старую модель
-                    model.off(0, 0, ctx);
-                }
-
-                if (value) {
-                    _.extend(newContext, value.attributes);
-                    //слушает новую
-                    value.on('change', function (changed) {
-                        _.extend(newContext, changed);
-                        $children.refreshBinds();
-                    }, ctx);
-
-
-                } else {
-                    for (prop in newContext) {
-                        delete newContext[prop];
-                    }
-                }
-                $children.refreshBinds();
-                model = value;
-
-            };
-
-            cb(oModel.value);
-            oModel.subscribe(cb);
-
-                //oModel.callAndSubscribe();
-
-            //парсит внутренний html как темплейт
-            $children.each(function () {
-                ViewModel.findBinds(this, newContext, addArgs);
-            });
-
-
-            //$children.refreshBinds();
-
-
-            return addArgs;
-        },
-        cloneRow = function (ctx, rawTemplate, elName, model, collection, index) {
-            var args, $children, tempDiv = document.createElement(elName);
-            try {
-                tempDiv.innerHTML = rawTemplate;
-            } catch (e) {
-                console.log(e);
+        var cb = function (value) {
+            addArgs.$self(value);
+            if (model) {
+                //перестает слушать старую модель
+                model.off(0, 0, ctx);
             }
 
-            $children = $(tempDiv).children();
+            if (value) {
+                _.extend(newContext, value.attributes);
+                //слушает новую
+                value.on('change', function (changed) {
+                    _.extend(newContext, changed);
+                    $children.refreshBinds();
+                }, ctx);
 
-            args = createRow($children, Observable(model).obj, collection, {
-                $index: index
-            }, ctx);
 
-            return {
-                $children: $children,
-                tempDiv: tempDiv,
-                args: args
-            };
+            } else {
+                for (prop in newContext) {
+                    delete newContext[prop];
+                }
+            }
+            $children.refreshBinds();
+            model = value;
+
         };
+
+        cb(oModel.value);
+        oModel.subscribe(cb);
+
+        //oModel.callAndSubscribe();
+
+        //парсит внутренний html как темплейт
+        $children.each(function () {
+            ViewModel.findBinds(this, newContext, addArgs);
+        });
+
+
+        return addArgs;
+    };
+
 
     ViewModel.binds.withModel = function ($el, value, context, addArgs) {
         addArgs = addArgs || {};
 
-        //$children, oModel, context, addArgs, ctx
+
         createRow($el.children(), this.findObservable(value, context, addArgs, $el), context, addArgs, {});
         //останавливает внешний парсер
         return false;
@@ -1904,7 +1889,24 @@
 
             templateConstructor = function (rawTemplate) {
                 return function (model, $index, $parent) {
-                    var $children = cloneRow(ctx, rawTemplate, elName, model, $parent, $index).$children;
+
+                    var args, $children, tempDiv = document.createElement(elName);
+
+                    try {
+                        tempDiv.innerHTML = rawTemplate;
+                    } catch (e) {
+                        console.log(e);
+                    }
+
+                    $children = $(tempDiv).children();
+
+                    args = createRow($children, Computed({
+                        initial: model,
+                        $el: $children
+                    }).obj, collection, {
+                        $index: $index
+                    }, ctx);
+
                     tempChildrenLen = $children.length;
                     return $children;
                 };

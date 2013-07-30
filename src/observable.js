@@ -50,10 +50,11 @@
         this.selfCallbacks = [];
         this.listeners = [];
 
-        var initial = params.initial;
+        var initial = params.initial, $el = params.$el;
         if (params.evil) {
 
             var evil = ViewModel.evil(params.evil.string, params.evil.context, params.evil.addArgs);
+
             computedInit = this;
             var obs = evil();
             if (Observable.isObservable(obs)) {
@@ -79,6 +80,13 @@
             initial = params.get();
             computedInit = false;
             this.getter = params.get;
+        }
+
+        if ($el) {
+            var observers = $el.data('nk_observers');
+            observers = observers || [];
+            observers.push(this);
+            $el.data('nk_observers', observers);
         }
 
         if (params.set) {
@@ -229,7 +237,7 @@
         } : options);
     };
 
-    window.BaseObservable = BaseObservable;
+    //window.BaseObservable = BaseObservable;
     window.Observable = Observable;
     window.Computed = Computed;
     //window.Subscribeable = Subscribeable;

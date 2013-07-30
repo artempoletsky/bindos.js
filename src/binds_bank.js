@@ -1,4 +1,4 @@
-/*globals ViewModel, $, _, Computed, Observable*/
+/*globals ViewModel, $, _, Computed, Observable, ObjectObservable*/
 (function () {
     "use strict";
     var filtersSplitter = /\s*\|\s*/;
@@ -34,8 +34,10 @@
                 computed.set(_.foldr(filters, function (result, obj) {
                     return obj.unformat.call(ViewModel, result, obj.value);
                 }, value));
-            }
+            },
+            $el: $el
         });
+
         if (callback) {
             callback(result.value);
             result.subscribe(callback);
@@ -315,11 +317,13 @@
                 docFragment,
                 div,
                 nodeList = [textNode],
-                breakersRegex = ViewModel.inlineModificators['{{}}'].regex;
+                breakersRegex = ViewModel.inlineModificators['{{}}'].regex,
+                $el;
             breakersRegex.lastIndex = 0;
             if (breakersRegex.test(str)) {
 
                 parent = textNode.parentNode;
+                $el=$(parent);
                 div = document.createElement('div');
 
 
@@ -332,7 +336,7 @@
 
                 str = '"' + str.replace(breakersRegex, function (exprWithBreakers, expr) {
                     i++;
-                    ctx['___comp' + i] = vm.applyFilters(expr + ' | _sysUnwrap | _sysEmpty', context, addArgs).getter;
+                    ctx['___comp' + i] = vm.applyFilters(expr + ' | _sysUnwrap | _sysEmpty', context, addArgs, undefined, $el).getter;
                     return '"+___comp' + i + '()+"';
                 }) + '"';
 
@@ -382,15 +386,15 @@
                     if (docFragment.childNodes.length) {
                         try {
                             parent.insertBefore(docFragment, firstNode);
-                        } catch (e) {
-                            throw  e;
+                        } catch (er) {
+                            throw  er;
                         }
                     }
 
                     parent.removeChild(firstNode);
                     nodeList = newNodeList;
 
-                }, $(parent));
+                }, $el);
             }
 
         }
