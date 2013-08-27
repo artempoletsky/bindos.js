@@ -96,32 +96,6 @@
                 Model.sync('read', this.url(), _.extend({}, options, opt));
                 return this;
             },
-            save: function () {
-                var me = this;
-                if (!this.validate()) {
-                    throw new Error('Model is invalid');
-                }
-                if (this.id) {
-
-                    if (_.keys(me._changed).length === 0) {//нечего сохранять
-                        return this;
-                    }
-                    Model.sync('update', this.url(), {
-                        data: me._changed,
-                        success: function (data) {
-                            me.update(data);
-                        }
-                    });
-                } else {
-                    Model.sync('create', this.url(), {
-                        data: _.clone(this.attributes),
-                        success: function (data) {
-                            me.update(data);
-                        }
-                    });
-                }
-                return this;
-            },
 			save: function (data) {
 
                 var me = this,
