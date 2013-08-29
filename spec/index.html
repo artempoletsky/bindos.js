@@ -59,6 +59,36 @@
 		
     </head>
     <body>
-
+        <script>
+            $(function(){
+                ViewModel.filters.tel={
+                    format: function(text){ 
+                        text=text||'';
+                        text=text.replace(/\D+/g, '');
+                        return _.foldl(text.split(''), function(result,char, index){
+                            result+=char;                            
+                            switch(index){
+                                case 0: result+=' ('; break;
+                                case 3: result+=') '; break;
+                            }                            
+                            return result;
+                        }, '+');
+                    },
+                    unformat: function(value){
+                        return value.replace(/\D+/g, '');
+                    }
+                }
+                ViewModel.create({
+                    autoParseBinds: true,
+                    el: '#el',
+                    value: Observable()
+                });
+                
+            });
+        </script>
+        <div id="el">
+            <input type="text" nk="value: value | tel"/>
+            {{value}}
+        </div>
     </body>
 </html>
