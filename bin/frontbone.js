@@ -609,24 +609,40 @@
                 Model.sync('read', this.url(), _.extend({}, options, opt));
                 return this;
             },
-            save: function () {
-                var me = this;
-                if (!this.validate()) {
-                    throw new Error('Model is invalid');
+			save: function (data) {
+
+                var me = this,
+                    errors = this.validate(data),
+                    url;
+
+                if (errors) {
+                    this.trigger('invalid', this, errors);
+                    return;
+                }
+
+
+                if ( _.isFunction(this.url)) {
+                    url = this.url();
+                } else {
+                    url = this.url;
+                }
+
+                if (data) {
+                    this.prop(data);
                 }
                 if (this.id) {
 
                     if (_.keys(me._changed).length === 0) {//нечего сохранять
                         return this;
                     }
-                    Model.sync('update', this.url(), {
+                    this.sync('update', url, {
                         data: me._changed,
                         success: function (data) {
                             me.update(data);
                         }
                     });
                 } else {
-                    Model.sync('create', this.url(), {
+                    this.sync('create', url, {
                         data: _.clone(this.attributes),
                         success: function (data) {
                             me.update(data);
