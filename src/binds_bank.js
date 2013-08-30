@@ -77,32 +77,31 @@
         },
         each: function($el, value, context, addArgs) {
 
-            var html = $el.html();
+            var template = $el.html();
             if (addArgs) {
                 addArgs = _.clone(addArgs);
             }
             else {
                 addArgs = {};
-            }
+            }                      
+
 
             this.findCallAndSubscribe(value, context, addArgs, function(array) {
                 $el.children().clearBinds();
                 $el.empty();
-
+                var fragment=document.createDocumentFragment();
                 if (array) {
                     _.each(array, function(val, ind) {
                         addArgs.$index = ind;
                         addArgs.$parent = array;
                         addArgs.$value = val;
-                        var tempDiv = document.createElement('div');
-                        try {
-                            tempDiv.innerHTML = html;
-                        } catch (e) {
-                            console.log(e);
-                        }
-                        ViewModel.findBinds(tempDiv, val, addArgs);
-                        $el.append($(tempDiv).children());
+                        
+                        $(template).each(function(){
+                            ViewModel.findBinds(this, val, addArgs);
+                            fragment.appendChild(this);
+                        });                                                                                               
                     });
+                    $el[0].appendChild(fragment);
                 }
             }, $el);
 

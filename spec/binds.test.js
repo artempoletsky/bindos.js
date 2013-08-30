@@ -109,13 +109,13 @@ describe('ViewModel.binds', function() {
                 expect($div.html()).toBe('444');
             });
         });
-        
-        
+
+
         describe('.value', function() {
 
             it('binds observable to input value', function() {
                 var $input = $('<input nk="value: value"/>'),
-                ctx = {
+                        ctx = {
                     value: Observable('Hello')
                 };
                 ViewModel.findBinds($input, ctx);
@@ -132,21 +132,22 @@ describe('ViewModel.binds', function() {
 
                 ctx.value(0);
                 expect($input.val()).toBe('0');
-                
-                
+
+
                 $input.val('abc');
                 $input.trigger('keyup');
-                expect(ctx.value()).toBe('abc');                
+                expect(ctx.value()).toBe('abc');
             });
+        });
 
-
-            it('supports filters', function() {
-                var $div = $('<div nk="html: value | tf1:\'321\'"></div>'),
-                        ctx = {
-                    value: Observable(123)
+        describe('.each', function() {
+            it('draws tr', function() {
+                var $table = $('<table><tr nk="each: array"><td>{{$value}}</td></tr></table>');
+                var ctx = {
+                    array: [1, 2, 3]
                 };
-                ViewModel.findBinds($div, ctx);
-                expect($div.html()).toBe('444');
+                ViewModel.findBinds($table, ctx);
+                expect($table.html().toLowerCase().replace(/\s+/g,'')).toBe('<tbody><tr><td>1</td><td>2</td><td>3</td></tr></tbody>')
             });
         });
 
