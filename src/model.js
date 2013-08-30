@@ -74,7 +74,7 @@
                 return this.prop.apply(this, arguments);
             },
             validate: function () {
-                return true;
+                return false;
             },
             fetch: function (options) {
                 options = options || {};
@@ -122,14 +122,14 @@
                     if (_.keys(me._changed).length === 0) {//нечего сохранять
                         return this;
                     }
-                    this.sync('update', url, {
+                    Model.sync('update', url, {
                         data: me._changed,
                         success: function (data) {
                             me.update(data);
                         }
                     });
                 } else {
-                    this.sync('create', url, {
+                    Model.sync('create', url, {
                         data: _.clone(this.attributes),
                         success: function (data) {
                             me.update(data);
