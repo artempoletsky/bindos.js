@@ -112,16 +112,9 @@
             templateConstructor = function (rawTemplate) {
                 return function (model, $index, $parent) {
 
-                    var args, $children, tempDiv = document.createElement(elName);
+                    var args, $children=$(rawTemplate);
 
-                    try {
-                        tempDiv.innerHTML = rawTemplate;
-                    } catch (e) {
-                        console.log(e);
-                    }
-
-                    $children = $(tempDiv).children();
-
+                   
                     args = createRow($children, Computed({
                         initial: model,
                         $el: $children

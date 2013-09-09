@@ -147,7 +147,7 @@ describe('ViewModel.binds', function() {
                     array: [1, 2, 3]
                 };
                 ViewModel.findBinds($table, ctx);
-                expect($table.html().toLowerCase().replace(/\s+/g,'')).toBe('<tbody><tr><td>1</td><td>2</td><td>3</td></tr></tbody>')
+                expect($table.html().toLowerCase().replace(/\s+/g, '')).toBe('<tbody><tr><td>1</td><td>2</td><td>3</td></tr></tbody>')
             });
         });
 
@@ -294,6 +294,15 @@ describe('ViewModel.binds', function() {
 
                 expect(calls2).toBe(12);
 
+            });
+
+            it('supports table', function() {
+                var table = $('<table nk="eachModel: collection"><tr><td>{{value}}</td></tr></table>');
+                var ctx = {
+                    collection: new Collection([{value: "foo"}])
+                };
+                ViewModel.findBinds(table, ctx);
+                expect(table.html().toLowerCase().replace(/\s+/g,'')).toBe('<tbody><tr><td>foo</td></tr></tbody>')
             });
         });
     });
