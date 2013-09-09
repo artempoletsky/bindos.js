@@ -371,7 +371,7 @@
 
 
                     if (!newNodeList.length) {
-                        firstNode.textContent = '';
+                        firstNode.nodeValue = '';
                         nodeList = [firstNode];
                         return;
                     }
