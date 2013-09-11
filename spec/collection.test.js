@@ -1,5 +1,5 @@
 describe('Collection', function(){
-	
+    
 	it('can construct from json', function(){
 		//console.log(Collection.prototype);
 		var c=new Collection([
@@ -100,6 +100,35 @@ describe('Collection', function(){
 			return model.prop('x')>=50;
 		});
 		expect(col.length).toBe(50);
-	})
-	
-})
+	});
+    
+	it('support lodash syntax', function(){		
+		var c=new Collection([
+		{
+			uid: 1,
+            valid: false
+		},
+		{
+			uid: 2,
+            valid: true
+		},
+		{
+			uid: 3,
+            valid: false
+		}]);
+		expect(c.find('uid', 3)).toBe(c.at(2));
+        expect(c.find({'uid': 2})).toBe(c.at(1));
+        
+        expect(c.find(function(model){
+            return model.prop('valid');
+        })).toBe(c.at(1));
+        
+        expect(c.find('valid')).toBe(c.at(1));
+        
+        var third=c.find('uid',3);
+                       
+        c.itself.sortByDesc('uid');
+                
+        expect(c.at(0)).toBe(third);
+	});
+});
