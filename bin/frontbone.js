@@ -587,7 +587,7 @@
                 return this.prop.apply(this, arguments);
             },
             validate: function () {
-                return true;
+                return false;
             },
             fetch: function (options) {
                 options = options || {};
@@ -635,14 +635,14 @@
                     if (_.keys(me._changed).length === 0) {//нечего сохранять
                         return this;
                     }
-                    this.sync('update', url, {
+                    Model.sync('update', url, {
                         data: me._changed,
                         success: function (data) {
                             me.update(data);
                         }
                     });
                 } else {
-                    this.sync('create', url, {
+                    Model.sync('create', url, {
                         data: _.clone(this.attributes),
                         success: function (data) {
                             me.update(data);
@@ -1332,21 +1332,25 @@
     window.ViewModel = ViewModel;
 }(this));
 /*globals ViewModel, $, _, Computed, Observable, ObjectObservable*/
-(function () {
+(function() {
     "use strict";
     var filtersSplitter = /\s*\|\s*/;
     var filtersSplitter2 = /(\w+)(:['"]([^'"]+)['"])?/;
 
+    var zeroEmpty = function(value) {
+        return value || (value === 0 ? '0' : '');
+    };
+
     ViewModel.filters = {};
 
-    ViewModel.applyFilters = function (value, context, addArgs, callback, $el) {
+    ViewModel.applyFilters = function(value, context, addArgs, callback, $el) {
         var filters = value.split(filtersSplitter);
         if (filters.length <= 1) {
             return this.findCallAndSubscribe(value, context, addArgs, callback, $el);
         }
         value = filters.shift();
         var computed = this.findObservable(value, context, addArgs, $el);
-        filters = _.foldl(filters, function (result, string) {
+        filters = _.foldl(filters, function(result, string) {
             var matches = filtersSplitter2.exec(string);
             var key = matches[1];
             result.push({
@@ -1358,13 +1362,13 @@
             return result;
         }, []);
         var result = new ObjectObservable({
-            get: function () {
-                return _.foldl(filters, function (result, obj) {
+            get: function() {
+                return _.foldl(filters, function(result, obj) {
                     return obj.format.call(ViewModel, result, obj.value);
                 }, computed.get());
             },
-            set: function (value) {
-                computed.set(_.foldr(filters, function (result, obj) {
+            set: function(value) {
+                computed.set(_.foldr(filters, function(result, obj) {
                     return obj.unformat.call(ViewModel, result, obj.value);
                 }, value));
             },
@@ -1380,82 +1384,80 @@
     };
 
     ViewModel.binds = {
-        log: function ($el, value, context, addArgs) {
-            this.findCallAndSubscribe(value, context, addArgs, function (val) {
+        log: function($el, value, context, addArgs) {
+            this.findCallAndSubscribe(value, context, addArgs, function(val) {
                 console.log(context, '.', value, '=', val);
             }, $el);
         },
-        src: function ($el, value, context, addArgs) {
+        src: function($el, value, context, addArgs) {
             var elem = $el[0];
-            this.findCallAndSubscribe(value, context, addArgs, function (val) {
+            this.findCallAndSubscribe(value, context, addArgs, function(val) {
                 elem.src = val || '';
             }, $el);
         },
-        html: function ($el, value, context, addArgs) {
-            this.applyFilters(value, context, addArgs, function (val) {
-                //undefined конвертируется в пустую строку
-                if (!val && typeof val != 'number') {
-                    val = '';
-                }
-                $el.html(val);
+        html: function($el, value, context, addArgs) {
+            this.applyFilters(value, context, addArgs, function(val) {
+                $el.html(zeroEmpty(val));
             }, $el);
         },
-        text: function ($el, value, context, addArgs) {
-            this.findCallAndSubscribe(value, context, addArgs, function (val) {
+        text: function($el, value, context, addArgs) {
+            this.findCallAndSubscribe(value, context, addArgs, function(val) {
                 $el.text(val);
             }, $el);
         },
-        'with': function ($el, value, context, addArgs) {
+        'with': function($el, value, context, addArgs) {
             return this.evil(value, context, addArgs)();
         },
-        each: function ($el, value, context, addArgs) {
+        each: function($el, value, context, addArgs) {
 
-            var html = $el.html();
+            var template = $el.html();
             if (addArgs) {
                 addArgs = _.clone(addArgs);
             }
             else {
                 addArgs = {};
-            }
+            }                      
 
-            this.findCallAndSubscribe(value, context, addArgs, function (array) {
+
+            this.findCallAndSubscribe(value, context, addArgs, function(array) {
                 $el.children().clearBinds();
                 $el.empty();
-
+                var fragment=document.createDocumentFragment();
                 if (array) {
-                    _.each(array, function (val, ind) {
+                    _.each(array, function(val, ind) {
                         addArgs.$index = ind;
                         addArgs.$parent = array;
                         addArgs.$value = val;
-                        var tempDiv = document.createElement('div');
-                        try {
-                            tempDiv.innerHTML = html;
-                        } catch (e) {
-                            console.log(e);
-                        }
-                        ViewModel.findBinds(tempDiv, val, addArgs);
-                        $el.append($(tempDiv).children());
+                        
+                        $(template).each(function(){
+                            ViewModel.findBinds(this, val, addArgs);
+                            fragment.appendChild(this);
+                        });                                                                                               
                     });
+                    $el[0].appendChild(fragment);
                 }
             }, $el);
 
 
             return false;
         },
-        value: function ($el, value, context, addArgs) {
-            var obs = this.findObservable(value, context, addArgs, $el)
-                .callAndSubscribe(function (value) {
-                    $el.val(value);
-                });
-            $el.change(function () {
-                obs($el.val());
+        value: function($el, value, context, addArgs) {
+            var obs = this.applyFilters(value, context, addArgs, function(val) {
+                $el.val(zeroEmpty(val));
+            }, $el);
+
+            $el.on('change keyup keydown', function() {
+                var val = $el.val();
+                //if ($el.get() !== val) {
+                    obs.set(val);
+                //}
             });
         },
-        attr: function ($el, value, context, addArgs) {
+        attr: function($el, value, context, addArgs) {
             var elem = $el[0];
-            _.each(this.parseOptionsObject(value), function (condition, attrName) {
-                ViewModel.findCallAndSubscribe(condition, context, addArgs, function (val) {
-                    if (val !== false && val !== undefined && val != null) {
+            _.each(this.parseOptionsObject(value), function(condition, attrName) {
+                ViewModel.findCallAndSubscribe(condition, context, addArgs, function(val) {
+                    if (val !== false && val !== undefined && val !== null) {
                         elem.setAttribute(attrName, val);
                     } else {
                         elem.removeAttribute(attrName);
@@ -1463,29 +1465,29 @@
                 }, $el);
             });
         },
-        style: function ($el, value, context, addArgs) {
-            _.each(this.parseOptionsObject(value), function (condition, style) {
+        style: function($el, value, context, addArgs) {
+            _.each(this.parseOptionsObject(value), function(condition, style) {
                 ViewModel.findObservable(condition, context, addArgs, $el)
-                    .callAndSubscribe(function (value) {
-                        $el.css(style, value);
-                    });
+                        .callAndSubscribe(function(value) {
+                    $el.css(style, value);
+                });
             });
         },
-        css: function ($el, value, context, addArgs) {
-            _.each(this.parseOptionsObject(value), function (condition, className) {
+        css: function($el, value, context, addArgs) {
+            _.each(this.parseOptionsObject(value), function(condition, className) {
                 ViewModel.findObservable(condition, context, addArgs, $el)
-                    .callAndSubscribe(function (value) {
-                        if (value) {
-                            $el.addClass(className);
-                        }
-                        else {
-                            $el.removeClass(className);
-                        }
-                    });
+                        .callAndSubscribe(function(value) {
+                    if (value) {
+                        $el.addClass(className);
+                    }
+                    else {
+                        $el.removeClass(className);
+                    }
+                });
             });
         },
-        display: function ($el, value, context, addArgs) {
-            this.findObservable(value, context, addArgs, $el).callAndSubscribe(function (value) {
+        display: function($el, value, context, addArgs) {
+            this.findObservable(value, context, addArgs, $el).callAndSubscribe(function(value) {
                 if (value) {
                     $el.show();
                 }
@@ -1494,15 +1496,15 @@
                 }
             });
         },
-        click: function ($el, value, context, addArgs) {
+        click: function($el, value, context, addArgs) {
             var fn = this.evil(value, context, addArgs, $el)();
-            $el.click(function () {
+            $el.click(function() {
                 fn.apply(context, arguments);
             });
         },
-        className: function ($el, value, context, addArgs) {
+        className: function($el, value, context, addArgs) {
             var oldClassName;
-            this.findObservable(value, context, addArgs, $el).callAndSubscribe(function (className) {
+            this.findObservable(value, context, addArgs, $el).callAndSubscribe(function(className) {
                 if (oldClassName) {
                     $el.removeClass(oldClassName);
                 }
@@ -1512,16 +1514,16 @@
                 oldClassName = className;
             });
         },
-        events: function ($el, value, context, addArgs) {
+        events: function($el, value, context, addArgs) {
             var self = this;
-            _.each(this.parseOptionsObject(value), function (expr, eventName) {
+            _.each(this.parseOptionsObject(value), function(expr, eventName) {
                 var callback = self.evil(expr, context, addArgs)();
-                $el.bind(eventName, function (e) {
+                $el.bind(eventName, function(e) {
                     callback.call(context, e);
                 });
             });
         },
-        view: function ($el, value, context, addArgs) {
+        view: function($el, value, context, addArgs) {
             var options, ViewModelClass, args, vm, values;
             try {
                 options = this.parseOptionsObject(value);
@@ -1544,7 +1546,7 @@
                 el: $el
             };
             if (options.options) {
-                _.forOwn(options.options, function (value, key) {
+                _.forOwn(options.options, function(value, key) {
                     args[key] = ViewModel.evil(value, context, addArgs)();
                 });
             }
@@ -1556,79 +1558,79 @@
 
             return false;
         },
-        $click: function ($el, value, context, addArgs) {
+        $click: function($el, value, context, addArgs) {
             $el.click(this.evil(value, context, addArgs));
             return false;
         }
     };
     var bindSplitter = /\s*;\s*/,
-        firstColonRegex = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/,
-        commaSplitter = /\s*,\s*/,
-        dataBind = function (name, $el, value, context, addArgs) {
-            $el.removeAttr(name);
-            var newCtx, breakContextIsSent;
-            if (value) {
+            firstColonRegex = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/,
+            commaSplitter = /\s*,\s*/,
+            dataBind = function(name, $el, value, context, addArgs) {
+        $el.removeAttr(name);
+        var newCtx, breakContextIsSent;
+        if (value) {
 
-                _.each(value.split(bindSplitter), function (cBind) {
-                    var arr = cBind.match(firstColonRegex), bindName, bindVal, bindFn;
-                    if (!arr) {
-                        bindName = cBind;
-                        bindVal = '';
-                    } else {
-                        bindName = arr[1];
-                        bindVal = arr[2];
-                    }
+            _.each(value.split(bindSplitter), function(cBind) {
+                var arr = cBind.match(firstColonRegex), bindName, bindVal, bindFn;
+                if (!arr) {
+                    bindName = cBind;
+                    bindVal = '';
+                } else {
+                    bindName = arr[1];
+                    bindVal = arr[2];
+                }
 
-                    bindName = bindName.split(commaSplitter);
+                bindName = bindName.split(commaSplitter);
 
-                    _.each(bindName, function (ccBind) {
-                        if (ccBind && ccBind.charAt(0) !== '!') {
-                            bindFn = ViewModel.binds[ccBind];
+                _.each(bindName, function(ccBind) {
+                    if (ccBind && ccBind.charAt(0) !== '!') {
+                        bindFn = ViewModel.binds[ccBind];
 
-                            if (bindFn) {
-                                newCtx = bindFn.call(ViewModel, $el, bindVal, context, addArgs);
+                        if (bindFn) {
+                            newCtx = bindFn.call(ViewModel, $el, bindVal, context, addArgs);
 
-                                if (newCtx === false) {
-                                    breakContextIsSent = true;
-                                } else if (newCtx) {
-                                    context = newCtx;
-                                }
-                            } else {
-                                console.warn('Bind: "' + ccBind + '" not exists');
+                            if (newCtx === false) {
+                                breakContextIsSent = true;
+                            } else if (newCtx) {
+                                context = newCtx;
                             }
+                        } else {
+                            console.warn('Bind: "' + ccBind + '" not exists');
                         }
-                    });
+                    }
                 });
-            }
-            if (breakContextIsSent) {
-                return false;
-            }
-            //console.log(newCtx);
-            return context;
-        };
+            });
+        }
+        if (breakContextIsSent) {
+            return false;
+        }
+        //console.log(newCtx);
+        return context;
+    };
 
 
-    ViewModel.tag = function (tagName, behavior) {
+    ViewModel.tag = function(tagName, behavior) {
         document.createElement(tagName);// for IE
         ViewModel.tags[tagName] = behavior;
     };
-    ViewModel.removeTag = function (tagName) {
+    ViewModel.removeTag = function(tagName) {
         delete ViewModel.tags[tagName];
     };
     ViewModel.tags = {};
 
     ViewModel.customAttributes = {
-        'data-bind': function ($el, value, context, addArgs) {
+        'data-bind': function($el, value, context, addArgs) {
             return dataBind('data-bind', $el, value, context, addArgs);
         },
-        'nk': function ($el, value, context, addArgs) {
+        'nk': function($el, value, context, addArgs) {
             return dataBind('nk', $el, value, context, addArgs);
         }
     };
 
 
     ViewModel.filters._sysUnwrap = {
-        format: function (value) {
+        format: function(value) {
             if (Observable.isObservable(value)) {
                 return value();
             }
@@ -1637,44 +1639,41 @@
     };
 
     ViewModel.filters._sysEmpty = {
-        format: function (value) {
-            return value || (value === 0 ? '0' : '');
-        }
+        format: zeroEmpty
     };
 
     ViewModel.inlineModificators = {
-        '{{}}': function (textNode, context, addArgs) {
+        '{{}}': function(textNode, context, addArgs) {
             var str = textNode.nodeValue,
-                vm = this,
-                parent,
-                docFragment,
-                div,
-                nodeList = [textNode],
-                breakersRegex = ViewModel.inlineModificators['{{}}'].regex,
-                $el;
+                    vm = this,
+                    parent,
+                    docFragment,
+                    div,
+                    nodeList = [textNode],
+                    breakersRegex = ViewModel.inlineModificators['{{}}'].regex,
+                    $el;
             breakersRegex.lastIndex = 0;
             if (breakersRegex.test(str)) {
 
                 parent = textNode.parentNode;
-                $el=$(parent);
+                $el = $(parent);
                 div = document.createElement('div');
 
 
                 var i = 0;
 
                 var ctx = {
-
                 };
                 breakersRegex.lastIndex = 0;
 
-                str = '"' + str.replace(breakersRegex, function (exprWithBreakers, expr) {
+                str = '"' + str.replace(breakersRegex, function(exprWithBreakers, expr) {
                     i++;
                     ctx['___comp' + i] = vm.applyFilters(expr + ' | _sysUnwrap | _sysEmpty', context, addArgs, undefined, $el).getter;
                     return '"+___comp' + i + '()+"';
                 }) + '"';
 
 
-                vm.findCallAndSubscribe(str, ctx, addArgs, parent.childNodes.length == 1 ? function (value) {
+                vm.findCallAndSubscribe(str, ctx, addArgs, parent.childNodes.length === 1 ? function(value) {
                     //if this is the only child
                     try {
                         parent.innerHTML = value;
@@ -1682,7 +1681,7 @@
                         console.log(e);
                     }
 
-                } : function (value) {
+                } : function(value) {
 
                     docFragment = document.createDocumentFragment();
 
@@ -1705,7 +1704,7 @@
 
 
                     if (!newNodeList.length) {
-                        firstNode.textContent = '';
+                        firstNode.nodeValue = '';
                         nodeList = [firstNode];
                         return;
                     }
@@ -1906,16 +1905,9 @@
             templateConstructor = function (rawTemplate) {
                 return function (model, $index, $parent) {
 
-                    var args, $children, tempDiv = document.createElement(elName);
+                    var args, $children=$(rawTemplate);
 
-                    try {
-                        tempDiv.innerHTML = rawTemplate;
-                    } catch (e) {
-                        console.log(e);
-                    }
-
-                    $children = $(tempDiv).children();
-
+                   
                     args = createRow($children, Computed({
                         initial: model,
                         $el: $children
@@ -2007,3 +1999,326 @@
 }());
 
 
+
+/**
+ * Router from backbone
+ */
+(function (window) {
+    "use strict";
+    /*globals _*/
+
+    // Cached regular expressions for matching named param parts and splatted
+    // parts of route strings.
+    var optionalParam = /\((.*?)\)/g;
+    var namedParam    = /(\(\?)?:\w+/g;
+    var splatParam    = /\*\w+/g;
+    var escapeRegExp  = /[\-{}\[\]+?.,\\\^$|#\s]/g;
+
+    // Routers map faux-URLs to actions, and fire events when routes are
+    // matched. Creating a new one sets its `routes` hash, if not set statically.
+    window.Router = Events.extend({
+
+        constructor: function ( options ) {
+            options || (options = {});
+            if (options.routes) this.routes = options.routes;
+            this._bindRoutes();
+            this.initialize.apply(this, arguments);
+        },
+
+        // Initialize is an empty function by default. Override it with your own
+        // initialization logic.
+        initialize: function(){},
+
+        // Manually bind a single named route to a callback. For example:
+        //
+        //     this.route('search/:query/p:num', 'search', function(query, num) {
+        //       ...
+        //     });
+        //
+        route: function(route, name, callback) {
+            if (!_.isRegExp(route)) route = this._routeToRegExp(route);
+            if (_.isFunction(name)) {
+                callback = name;
+                name = '';
+            }
+            if (!callback) callback = this[name];
+            var router = this;
+            window.History.route(route, function(fragment) {
+                var args = router._extractParameters(route, fragment);
+                callback && callback.apply(router, args);
+                router.trigger.apply(router, ['route:' + name].concat(args));
+                router.trigger('route', name, args);
+                window.History.trigger('route', router, name, args);
+            });
+            return this;
+        },
+
+        // Simple proxy to `Backbone.history` to save a fragment into the history.
+        navigate: function(fragment, options) {
+            window.History.navigate(fragment, options);
+            return this;
+        },
+
+        // Bind all defined routes to `Backbone.history`. We have to reverse the
+        // order of the routes here to support behavior where the most general
+        // routes can be defined at the bottom of the route map.
+        _bindRoutes: function() {
+            if (!this.routes) return;
+            this.routes = _.result(this, 'routes');
+            var route, routes = _.keys(this.routes);
+            while ((route = routes.pop()) != null) {
+                this.route(route, this.routes[route]);
+            }
+        },
+
+        // Convert a route string into a regular expression, suitable for matching
+        // against the current location hash.
+        _routeToRegExp: function(route) {
+            route = route.replace(escapeRegExp, '\\$&')
+                .replace(optionalParam, '(?:$1)?')
+                .replace(namedParam, function(match, optional) {
+                    return optional ? match : '([^\/]+)';
+                })
+                .replace(splatParam, '(.*?)');
+            return new RegExp('^' + route + '$');
+        },
+
+        // Given a route, and a URL fragment that it matches, return the array of
+        // extracted decoded parameters. Empty or unmatched parameters will be
+        // treated as `null` to normalize cross-browser behavior.
+        _extractParameters: function(route, fragment) {
+            var params = route.exec(fragment).slice(1);
+            return _.map(params, function(param) {
+                return param ? decodeURIComponent(param) : null;
+            });
+        }
+    });
+}(this));
+// History from backbone
+(function ( window ) {
+    "use strict";
+
+    // Cached regex for stripping a leading hash/slash and trailing space.
+    var routeStripper = /^[#\/]|\s+$/g;
+
+    // Cached regex for stripping leading and trailing slashes.
+    var rootStripper = /^\/+|\/+$/g;
+
+    // Cached regex for detecting MSIE.
+    var isExplorer = /msie [\w.]+/;
+
+    // Cached regex for removing a trailing slash.
+    var trailingSlash = /\/$/;
+
+    // Handles cross-browser history management, based on either
+    // [pushState](http://diveintohtml5.info/history.html) and real URLs, or
+    // [onhashchange](https://developer.mozilla.org/en-US/docs/DOM/window.onhashchange)
+    // and URL fragments. If the browser supports neither (old IE, natch),
+    // falls back to polling.
+    var History = Events.extend({
+
+        // The default interval to poll for hash changes, if necessary, is
+        // twenty times a second.
+        interval: 50,
+
+        // Has the history handling already been started?
+        started: false,
+
+        constructor: function () {
+            this.handlers = [];
+            _.bindAll(this, 'checkUrl');
+
+            // Ensure that `History` can be used outside of the browser.
+            if (typeof window !== 'undefined') {
+                this.location = window.location;
+                this.history = window.history;
+            }
+        },
+
+        // Gets the true hash value. Cannot use location.hash directly due to bug
+        // in Firefox where location.hash will always be decoded.
+        getHash: function(window) {
+            var match = (window || this).location.href.match(/#(.*)$/);
+            return match ? match[1] : '';
+        },
+
+        // Get the cross-browser normalized URL fragment, either from the URL,
+        // the hash, or the override.
+        getFragment: function(fragment, forcePushState) {
+            if (fragment == null) {
+                if (this._hasPushState || !this._wantsHashChange || forcePushState) {
+                    fragment = this.location.pathname;
+                    var root = this.root.replace(trailingSlash, '');
+                    if (!fragment.indexOf(root)) fragment = fragment.slice(root.length);
+                } else {
+                    fragment = this.getHash();
+                }
+            }
+            return fragment.replace(routeStripper, '');
+        },
+
+        // Start the hash change handling, returning `true` if the current URL matches
+        // an existing route, and `false` otherwise.
+        start: function(options) {
+            if (this.started) throw new Error("Backbone.history has already been started");
+            this.started = true;
+
+            // Figure out the initial configuration. Do we need an iframe?
+            // Is pushState desired ... is it available?
+            this.options          = _.extend({}, {root: '/'}, this.options, options);
+            this.root             = this.options.root;
+            this._wantsHashChange = this.options.hashChange !== false;
+            this._wantsPushState  = !!this.options.pushState;
+            this._hasPushState    = !!(this.options.pushState && this.history && this.history.pushState);
+            var fragment          = this.getFragment();
+            var docMode           = document.documentMode;
+            var oldIE             = (isExplorer.exec(navigator.userAgent.toLowerCase()) && (!docMode || docMode <= 7));
+
+            // Normalize root to always include a leading and trailing slash.
+            this.root = ('/' + this.root + '/').replace(rootStripper, '/');
+
+            if (oldIE && this._wantsHashChange) {
+                this.iframe = $('<iframe src="javascript:0" tabindex="-1" />').hide().appendTo('body')[0].contentWindow;
+                this.navigate(fragment);
+            }
+
+            // Depending on whether we're using pushState or hashes, and whether
+            // 'onhashchange' is supported, determine how we check the URL state.
+            if (this._hasPushState) {
+                $(window).on('popstate', this.checkUrl);
+            } else if (this._wantsHashChange && ('onhashchange' in window) && !oldIE) {
+                $(window).on('hashchange', this.checkUrl);
+            } else if (this._wantsHashChange) {
+                this._checkUrlInterval = setInterval(this.checkUrl, this.interval);
+            }
+
+            // Determine if we need to change the base url, for a pushState link
+            // opened by a non-pushState browser.
+            this.fragment = fragment;
+            var loc = this.location;
+            var atRoot = loc.pathname.replace(/[^\/]$/, '$&/') === this.root;
+
+            // Transition from hashChange to pushState or vice versa if both are
+            // requested.
+            if (this._wantsHashChange && this._wantsPushState) {
+
+                // If we've started off with a route from a `pushState`-enabled
+                // browser, but we're currently in a browser that doesn't support it...
+                if (!this._hasPushState && !atRoot) {
+                    this.fragment = this.getFragment(null, true);
+                    this.location.replace(this.root + this.location.search + '#' + this.fragment);
+                    // Return immediately as browser will do redirect to new url
+                    return true;
+
+                    // Or if we've started out with a hash-based route, but we're currently
+                    // in a browser where it could be `pushState`-based instead...
+                } else if (this._hasPushState && atRoot && loc.hash) {
+                    this.fragment = this.getHash().replace(routeStripper, '');
+                    this.history.replaceState({}, document.title, this.root + this.fragment + loc.search);
+                }
+
+            }
+
+            if (!this.options.silent) return this.loadUrl();
+        },
+
+        // Disable Backbone.history, perhaps temporarily. Not useful in a real app,
+        // but possibly useful for unit testing Routers.
+        stop: function() {
+            $(window).off('popstate', this.checkUrl).off('hashchange', this.checkUrl);
+            clearInterval(this._checkUrlInterval);
+            this.started = false;
+        },
+
+        // Add a route to be tested when the fragment changes. Routes added later
+        // may override previous routes.
+        route: function(route, callback) {
+            this.handlers.unshift({route: route, callback: callback});
+        },
+
+        // Checks the current URL to see if it has changed, and if it has,
+        // calls `loadUrl`, normalizing across the hidden iframe.
+        checkUrl: function(e) {
+            var current = this.getFragment();
+            if (current === this.fragment && this.iframe) {
+                current = this.getFragment(this.getHash(this.iframe));
+            }
+            if (current === this.fragment) return false;
+            if (this.iframe) this.navigate(current);
+            this.loadUrl();
+        },
+
+        // Attempt to load the current URL fragment. If a route succeeds with a
+        // match, returns `true`. If no defined routes matches the fragment,
+        // returns `false`.
+        loadUrl: function(fragmentOverride) {
+            var fragment = this.fragment = this.getFragment(fragmentOverride);
+            return _.any(this.handlers, function(handler) {
+                if (handler.route.test(fragment)) {
+                    handler.callback(fragment);
+                    return true;
+                }
+            });
+        },
+
+        // Save a fragment into the hash history, or replace the URL state if the
+        // 'replace' option is passed. You are responsible for properly URL-encoding
+        // the fragment in advance.
+        //
+        // The options object can contain `trigger: true` if you wish to have the
+        // route callback be fired (not usually desirable), or `replace: true`, if
+        // you wish to modify the current URL without adding an entry to the history.
+        navigate: function(fragment, options) {
+            if (!History.started) return false;
+            if (!options || options === true) options = {trigger: !!options};
+
+            fragment = this.getFragment(fragment || '');
+            if (this.fragment === fragment) return;
+            this.fragment = fragment;
+
+            var url = this.root + fragment;
+
+            // Don't include a trailing slash on the root.
+            if (fragment === '' && url !== '/') url = url.slice(0, -1);
+
+            // If pushState is available, we use it to set the fragment as a real URL.
+            if (this._hasPushState) {
+                this.history[options.replace ? 'replaceState' : 'pushState']({}, document.title, url);
+
+                // If hash changes haven't been explicitly disabled, update the hash
+                // fragment to store history.
+            } else if (this._wantsHashChange) {
+                this._updateHash(this.location, fragment, options.replace);
+                if (this.iframe && (fragment !== this.getFragment(this.getHash(this.iframe)))) {
+                    // Opening and closing the iframe tricks IE7 and earlier to push a
+                    // history entry on hash-tag change.  When replace is true, we don't
+                    // want this.
+                    if(!options.replace) this.iframe.document.open().close();
+                    this._updateHash(this.iframe.location, fragment, options.replace);
+                }
+
+                // If you've told us that you explicitly don't want fallback hashchange-
+                // based history, then `navigate` becomes a page refresh.
+            } else {
+                return this.location.assign(url);
+            }
+            if (options.trigger) return this.loadUrl(fragment);
+        },
+
+        // Update the hash location, either replacing the current entry, or adding
+        // a new one to the browser history.
+        _updateHash: function(location, fragment, replace) {
+            if (replace) {
+                var href = location.href.replace(/(javascript:|#).*$/, '');
+                location.replace(href + '#' + fragment);
+            } else {
+                // Some browsers require that `hash` contains a leading #.
+                location.hash = '#' + fragment;
+            }
+        }
+
+    });
+
+    // Create the default Backbone.history.
+    window.History = new History;
+})(this);
