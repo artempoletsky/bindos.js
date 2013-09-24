@@ -606,7 +606,7 @@
                         }
                     };
 
-                Model.sync('read', this.url(), _.extend({}, options, opt));
+                Model.sync('get', this.url(), _.extend({}, options, opt));
                 return this;
             },
 			save: function (data) {
