@@ -143,11 +143,13 @@
         var contextName = 'context' + Math.floor(Math.random() * 10000000),
             keys = [contextName],
             vals = [],
-            fn;
-        _.each(addArgs, function (val, key) {
-            keys.push(key);
-            vals.push(val);
-        });
+            fn,
+            addArgKey;
+
+        for (addArgKey in addArgs) {
+            keys.push(addArgKey);
+            vals.push(addArgs[addArgKey]);
+        }
 
         if (context) {
             keys.push('with(' + contextName + ') return ' + string);
@@ -160,7 +162,7 @@
         vals.unshift(context);
         return function () {
             try {
-                 return fn.apply(context, vals);
+                return fn.apply(context, vals);
             } catch (exception) {
                 if (throwError) {
                     throw exception;
