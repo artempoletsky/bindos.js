@@ -138,7 +138,7 @@ describe('Model', function(){
 		m.on('change:a',spyOnA);
 		m.fetch();
 		
-		expect(method).toBe('read');
+		expect(method).toBe('get');
 		expect(url).toBe('/foo/20/');
 		expect(m.prop('a')).toBe(1);
 		expect(m.prop('b')).toBe(2);

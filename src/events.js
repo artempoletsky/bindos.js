@@ -42,16 +42,23 @@
 
         findBinds = function (binds, event, fn, context, mode) {
             var result = mode === 'any' ? false : [],
-                bind = makeBind(event, fn, context);
+                bind = makeBind(event, fn, context),
+                bindsArrayIndex,
+                bindsArray,
+                l,
+                i, bindObject, compared, ns2;
             if (!mode) {
                 mode = 'filter';
             }
 
-            _.each(binds, function (bindsArray) {
-                _.each(bindsArray, function (bindObject) {
-                    var compared = (!bind.fn || bind.fn === bindObject.fn)
+            for (bindsArrayIndex in binds) {
+                bindsArray = binds[bindsArrayIndex];
+
+                for (i = 0, l = bindsArray.length; i < l; i++) {
+                    bindObject = bindsArray[i];
+                    compared = (!bind.fn || bind.fn === bindObject.fn)
                         && (!bind.n || bind.n === bindObject.n)
-                        && (!bind.c || bind.c === bindObject.c), ns2;
+                        && (!bind.c || bind.c === bindObject.c);
                     //сравнивает пространсва имен
                     if (compared && bind.ns.length) {
                         ns2 = bindObject.ns;
@@ -65,18 +72,17 @@
                             result.push(bindObject);
                         } else if (mode === 'any') {
                             result = true;
-                            return false;
+                            break;
                         }
                     } else if (mode === 'invert') {
                         result.push(bindObject);
                     }
-
-
-                });
-                if (result === true) {
-                    return false;
                 }
-            });
+                if (result === true) {
+                    break;
+                }
+            }
+
 
             return result;
         },
@@ -108,12 +114,15 @@
         Events = Class.extend({
             on: function (events, fn, context, callOnce) {
                 var self = this,
-                    ctx;
+                    ctx,
+                    eventNames,
+                    i,
+                    l, event_name;
                 if (_.isObject(events)) {
                     ctx = fn || self;
-                    _.each(events, function (callback, event_name) {
-                        self.on(event_name, callback, ctx, callOnce);
-                    });
+                    for (event_name in events) {
+                        self.on(event_name, events[event_name], ctx, callOnce);
+                    }
                     return this;
                 }
 
@@ -124,21 +133,27 @@
                 if (!context) {
                     context = this;
                 }
-                _.each(events.split(eventSplitter), function (event) {
-                    add(self, makeBind(event, fn, context, callOnce));
-                });
+
+                eventNames = events.split(eventSplitter);
+                for (i = 0, l = eventNames.length; i < l; i++) {
+                    add(self, makeBind(eventNames[i], fn, context, callOnce));
+                }
+
 
                 return self;
             },
             off: function (events, fn, context) {
-                var me = this;
+                var me = this, i, l, eventNames;
                 if (!events) {
                     remove(me, '', fn, context);
                     return me;
                 }
-                _.each(events.split(eventSplitter), function (name) {
-                    remove(me, name, fn, context);
-                });
+
+
+                eventNames = events.split(eventSplitter);
+                for (i = 0, l = eventNames.length; i < l; i++) {
+                    remove(me, eventNames[i], fn, context);
+                }
                 return me;
             },
             fire: function (events) {
@@ -147,17 +162,21 @@
                 }
                 //все кроме events передается аргументами в каждый колбек
                 var args = _.rest(arguments, 1),
-                    me = this;
-                _.each(events.split(eventSplitter), function (type) {
+                    me = this, i, l, eventNames, foundBinds, j, k, bind;
 
-                    _.each(findBinds(me._listeners, type, false, false), function (bind) {
+                eventNames = events.split(eventSplitter);
+                for (i = 0, l = eventNames.length; i < l; i++) {
+                    foundBinds = findBinds(me._listeners, eventNames[i], false, false);
+
+                    for (j = 0, k = foundBinds.length; j < k; j++) {
+                        bind = foundBinds[j];
                         //если забинден через one  удаляем
                         if (bind.s) {
                             me.off(0, bind.fn);
                         }
                         bind.fn.apply(bind.c, args);
-                    });
-                });
+                    }
+                }
                 return me;
             },
             one: function (events, fn, context) {
