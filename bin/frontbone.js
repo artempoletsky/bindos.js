@@ -587,7 +587,7 @@
                 return this.prop.apply(this, arguments);
             },
             validate: function () {
-                return true;
+                return false;
             },
             fetch: function (options) {
                 options = options || {};
@@ -635,14 +635,14 @@
                     if (_.keys(me._changed).length === 0) {//нечего сохранять
                         return this;
                     }
-                    this.sync('update', url, {
+                    Model.sync('update', url, {
                         data: me._changed,
                         success: function (data) {
                             me.update(data);
                         }
                     });
                 } else {
-                    this.sync('create', url, {
+                    Model.sync('create', url, {
                         data: _.clone(this.attributes),
                         success: function (data) {
                             me.update(data);
@@ -700,297 +700,311 @@
     window.Model = Model;
 }(this));
 
-(function (window) {
+(function(window) {
     "use strict";
     /*globals _,$, Model*/
-    var itself = function (self) {
-            this.self = self;
-        },
-        Collection = Model.extend({
+    var itself = function(self) {
+        this.self = self;
+    },
+            Collection = Model.extend({
+        constructor: function(models, attributes) {
+            this.attributes = {};
+            this._changed = {};
+            this.itself = new itself(this);
+            this.models = [];
+            this.length = 0;
 
-            constructor: function (models, attributes) {
-                this.attributes={};
-                this._changed={};
-                this.itself = new itself(this);
+            // хэш вида  id : глобальный индекс
+            this._hashId = [];
+            if (models) {
+                this.reset(models);
+            }
+            this.initialize(attributes);
+
+        },
+        models: [],
+        model: Model,
+        url: function() {
+            return this.baseURL + this.model.prototype.mapping + '/';
+        },
+        fetch: function(options) {
+            options = options || {};
+            var me = this,
+                    opt = {
+                success: function(data) {
+                    me.reset(data, options);
+                    if (typeof options.success === 'function') {
+                        options.success.apply(me, arguments);
+                    }
+                },
+                error: function() {
+                    if (typeof options.error === 'function') {
+                        options.error.apply(me, arguments);
+                    }
+                }
+            },
+            resOpt = _.extend({}, options, opt);
+            Model.sync('GET', this.url(), resOpt);
+        },
+        reset: function(json, options) {
+            options = options || {};
+            if (!options.add) {
+                this.fire('beforeReset', this.models);
                 this.models = [];
                 this.length = 0;
-
-                // хэш вида  id : глобальный индекс
                 this._hashId = [];
-                if (models) {
-                    this.reset(models);
-                }
-                this.initialize(attributes);
-
-            },
-            models: [],
-            model: Model,
-            url: function () {
-                return this.baseURL + this.model.prototype.mapping + '/';
-            },
-            fetch: function (options) {
-                options = options || {};
-                var me = this,
-                    opt = {
-                        success: function (data) {
-                            me.reset(data, options);
-                            if (typeof options.success === 'function') {
-                                options.success.apply(me, arguments);
-                            }
-                        },
-                        error: function () {
-                            if (typeof options.error === 'function') {
-                                options.error.apply(me, arguments);
-                            }
-                        }
-                    },
-                    resOpt = _.extend({}, options, opt);
-                Model.sync('GET', this.url(), resOpt);
-            },
-            reset: function (json, options) {
-                options = options || {};
-                if (!options.add) {
-                    this.fire('beforeReset', this.models);
-                    this.models = [];
-                    this.length = 0;
-                    this._hashId = [];
-                }
-                if (!json) {
-                    this.fire('reset');
-                    return this;
-                }
-
-                var modelsArr = this.parse(json);
-                this.add(modelsArr, 'end', !options.add);
-                if (!options.add) {
-                    this.fire('reset');
-                }
+            }
+            if (!json) {
+                this.fire('reset');
                 return this;
-            },
-            push: function (model) {
-                return this.add(model);
-            },
-            unshift: function (model) {
-                return this.add(model, 0);
-            },
-            add: function (models, index, silent) {
+            }
 
-                var me = this,
+            var modelsArr = this.parse(json);
+            this.add(modelsArr, 'end', !options.add);
+            if (!options.add) {
+                this.fire('reset');
+            }
+            return this;
+        },
+        push: function(model) {
+            return this.add(model);
+        },
+        unshift: function(model) {
+            return this.add(model, 0);
+        },
+        add: function(models, index, silent) {
+
+            var me = this,
                     hashIndex,
                     addedModels = [],
                     _models,
                     _index = 0;
 
-                if (!(models instanceof Array)) {
-                    models = [models];
+            if (!(models instanceof Array)) {
+                models = [models];
+            }
+
+            if (typeof index !== 'number') {
+                index = this.length;
+                _index = this.getIndex(this.models[this.length - 1]);
+            } else if (index === 0) {
+                _models = _.clone(models).reverse();
+                _index = this.getIndex(this.models[0]) - _models.length - 1;
+            }
+
+
+            function addHashIndex(model, index) {
+                if (index === 0 && me.length) {
+                    // берем наименьший порядковый индекс из первого элемента хэша
+                    hashIndex = me._hashId[0].index - 1;
+                    // добавляем элемент в начало хэша
+                    me._hashId.unshift({
+                        id: model.id,
+                        index: hashIndex
+                    });
                 }
-
-                if (typeof index !== 'number') {
-                    index = this.length;
-                    _index = this.getIndex(this.models[this.length - 1]);
-                } else if (index === 0) {
-                    _models = _.clone(models).reverse();
-                    _index = this.getIndex(this.models[0]) - _models.length - 1;
-                }
-
-
-                function addHashIndex(model, index) {
-                    if (index === 0 && me.length) {
-                        // берем наименьший порядковый индекс из первого элемента хэша
-                        hashIndex = me._hashId[0].index - 1;
-                        // добавляем элемент в начало хэша
-                        me._hashId.unshift({
-                            id: model.id,
-                            index: hashIndex
-                        });
+                else {
+                    var length = me._hashId.length;
+                    // проверка для пустого хэша
+                    if (length === 0) {
+                        hashIndex = 1;
                     }
                     else {
-                        var length = me._hashId.length;
-                        // проверка для пустого хэша
-                        if (length === 0) {
-                            hashIndex = 1;
-                        }
-                        else {
-                            // берем порядковый индекс из последнего элемента в хэше
-                            hashIndex = me._hashId[length - 1].index + 1;
-                        }
-                        // добавляем элемент в конец хэша
-                        me._hashId.push({
-                            id: model.id,
-                            index: hashIndex
-                        });
+                        // берем порядковый индекс из последнего элемента в хэше
+                        hashIndex = me._hashId[length - 1].index + 1;
                     }
-                }
-
-                _.each(models, function (model, ind) {
-                    if (!(model instanceof Model)) {
-                        model = Model.createOrUpdate(me.model, model);
-                    }
-                    addedModels.push(model);
-
-                    if (_models) {
-                        addHashIndex(_models[ind], 0);
-                    } else {
-                        addHashIndex(model, (index + ind));
-                    }
-
-                    model.one('remove', function () {
-                        me.cutByCid(this.cid);
+                    // добавляем элемент в конец хэша
+                    me._hashId.push({
+                        id: model.id,
+                        index: hashIndex
                     });
-
-                    me.models.splice(index + ind, 0, model);
-
-                });
-
-                this.length = this.models.length;
-                if (!silent) {
-                    this.fire('add', addedModels, index, _index);
                 }
-                return this;
-            },
-            cut: function (id) {
-                var found, me = this;
-                this.each(function (model, index) {
-                    if (model.id === id) {
-                        found = me.cutAt(index);
-                        return false;
-                    }
-                });
-                return found;
-            },
-            cutByCid: function (cid) {
-                var found,
-                    self = this;
-                this.each(function (model, index) {
-                    if (model.cid === cid) {
-                        found = self.cutAt(index);
-                        return false;
-                    }
-                });
-                return found;
-            },
-            shift: function () {
-                return this.cutAt(0);
-            },
-            pop: function () {
-                return this.cutAt();
-            },
-            cutAt: function (index) {
-                if (index === undefined) {
-                    index = this.models.length - 1;
-                }
-
-                var model = this.models.splice(index, 1)[0], cutted;
-                // удаление элемента из хеша
-                this._hashId.splice(index, 1);
-                this.length = this.models.length;
-                cutted = {};
-                cutted[index] = model;
-                this.fire('cut', cutted);
-                return model;
-            },
-            at: function (index) {
-                return this.models[index];
-            },
-            /**
-             * DEPRECATED since 26.01.2013
-             */
-            get: function () {
-                return this.getByID.apply(this, arguments);
-            },
-            getByID: function (id) {
-                var found;
-                this.each(function (model) {
-                    if (model.id == id) {
-                        found = model;
-                        return false;
-                    }
-                });
-                return found;
-            },
-            getByCid: function (cid) {
-                var found;
-                this.each(function (model) {
-                    if (model.cid == cid) {
-                        found = model;
-                        return false;
-                    }
-                });
-                return found;
-            },
-            /**
-             * Возвращение порядкового индекса модели
-             * во всей коллекции
-             * @param model
-             * @return {Number}
-             */
-            getIndex: function (model) {
-                if (!model) {
-                    return 0;
-                }
-                var i = this.indexOf(model);
-                return this._hashId[i].index;
             }
-        }),
 
-    // Underscore methods that we want to implement on the Collection.
-        methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'find','foldl','foldr',
-            'detect', 'filter', 'select', 'reject', 'every', 'all', 'some', 'any',
-            'include', 'contains', 'invoke', 'max', 'min', 'sortBy', 'sortByDesc', 'sortedIndex',
-            'toArray', 'size', 'first', 'initial', 'rest', 'last', 'without', 'indexOf',
-            'shuffle', 'lastIndexOf', 'isEmpty', 'groupBy'],
+            _.each(models, function(model, ind) {
+                if (!(model instanceof Model)) {
+                    model = Model.createOrUpdate(me.model, model);
+                }
+                addedModels.push(model);
 
-    // An internal function to generate lookup iterators.
-        lookupIterator = function (value) {
-            return _.isFunction(value) ? value : function (obj) {
-                return obj[value];
-            };
+                if (_models) {
+                    addHashIndex(_models[ind], 0);
+                } else {
+                    addHashIndex(model, (index + ind));
+                }
+
+                model.one('remove', function() {
+                    me.cutByCid(this.cid);
+                });
+
+                me.models.splice(index + ind, 0, model);
+
+            });
+
+            this.length = this.models.length;
+            if (!silent) {
+                this.fire('add', addedModels, index, _index);
+            }
+            return this;
         },
-        filterMethods = ['filter', 'reject'],
-        sortMethods = ['sortBy', 'sortByDesc', 'shuffle'];
+        cut: function(id) {
+            var found, me = this;
+            this.each(function(model, index) {
+                if (model.id === id) {
+                    found = me.cutAt(index);
+                    return false;
+                }
+            });
+            return found;
+        },
+        cutByCid: function(cid) {
+            var found,
+                    self = this;
+            this.each(function(model, index) {
+                if (model.cid === cid) {
+                    found = self.cutAt(index);
+                    return false;
+                }
+            });
+            return found;
+        },
+        shift: function() {
+            return this.cutAt(0);
+        },
+        pop: function() {
+            return this.cutAt();
+        },
+        cutAt: function(index) {
+            if (index === undefined) {
+                index = this.models.length - 1;
+            }
+
+            var model = this.models.splice(index, 1)[0], cutted;
+            // удаление элемента из хеша
+            this._hashId.splice(index, 1);
+            this.length = this.models.length;
+            cutted = {};
+            cutted[index] = model;
+            this.fire('cut', cutted);
+            return model;
+        },
+        at: function(index) {
+            return this.models[index];
+        },
+        /**
+         * DEPRECATED since 26.01.2013
+         */
+        get: function() {
+            return this.getByID.apply(this, arguments);
+        },
+        getByID: function(id) {
+            var found;
+            this.each(function(model) {
+                if (model.id == id) {
+                    found = model;
+                    return false;
+                }
+            });
+            return found;
+        },
+        getByCid: function(cid) {
+            var found;
+            this.each(function(model) {
+                if (model.cid == cid) {
+                    found = model;
+                    return false;
+                }
+            });
+            return found;
+        },
+        /**
+         * Возвращение порядкового индекса модели
+         * во всей коллекции
+         * @param model
+         * @return {Number}
+         */
+        getIndex: function(model) {
+            if (!model) {
+                return 0;
+            }
+            var i = this.indexOf(model);
+            return this._hashId[i].index;
+        }
+    }),
+    whereMethods=['detect', 'filter', 'select', 'reject', 'find','every', 'all', 'some', 'any','max', 'min','sortBy', 'sortByDesc', 'first', 'initial', 'rest', 'last', 'groupBy'],
+    methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'foldl', 'foldr',         
+        'include', 'contains', 'invoke', 'sortedIndex',
+        'toArray', 'size', 'without', 'indexOf',
+        'shuffle', 'lastIndexOf', 'isEmpty'],
+            filterMethods = ['filter', 'reject'],
+            sortMethods = ['sortBy', 'sortByDesc', 'shuffle'];
 
     // Sort the object's values by a criterion produced by an iterator.
-    _.sortByDesc = function (obj, value, context) {
-        var iterator = lookupIterator(value);
-        return _.pluck(_.map(obj,function (value, index, list) {
-            return {
-                value: value,
-                index: index,
-                criteria: iterator.call(context, value, index, list)
-            };
-        }).sort(function (left, right) {
-                var a = left.criteria,
-                    b = right.criteria;
-                if (a !== b) {
-                    if (a > b || a === undefined) {
-                        return -1;
-                    }
-                    if (a < b || b === undefined) {
-                        return 1;
-                    }
+    _.mixin({
+        sortByDesc: function(obj, value, context) {
+            return this.sortBy(obj, value, context).reverse();
+        }
+    });
+
+
+    var where = function(query) {        
+        return function(model) {
+            var valid=true;
+            _.forIn(query, function(value, key) {
+                if (value !== model.attributes[key]) {                    
+                    valid=false;
+                    return false;
                 }
-                return left.index < right.index ? -1 : 1;
-            }), 'value');
+            });
+            return valid;
+        };
+    };
+    
+    var pluck=function(prop){
+        return function(model) {            
+            return model.attributes[prop];
+        };
     };
 
 
-    // Mix in each Underscore method as a proxy to `Collection#models`.
-    _.each(methods, function (method) {
-        Collection.prototype[method] = function () {
-            return _[method].apply(_, [this.models].concat(_.toArray(arguments)));
+
+    _.each(methods, function(method) {
+        Collection.prototype[method] = function(fn, thisArg) {            
+            return _[method].apply(_, [this.models].concat(_.toArray(arguments)));           
+        };
+    });
+    
+    _.each(whereMethods, function(method) {
+        Collection.prototype[method] = function(fn, thisArg) {
+            if(typeof fn=='function'){
+                return _[method].apply(_, [this.models].concat(_.toArray(arguments)));
+            }            
+            var query;            
+            if(typeof fn=='string'){
+                if(arguments.length==2){
+                    query={};
+                    query[fn]=thisArg;
+                }else {
+                    return _[method](this.models, pluck(fn));
+                }                
+            }            
+            if(!query){
+                query=fn;
+            }                        
+            return _[method](this.models, where(query));            
         };
     });
 
 
-    _.each(filterMethods, function (method) {
-        itself.prototype[method] = function () {
+    _.each(filterMethods, function(method) {
+        itself.prototype[method] = function() {
             var antonym = method === 'filter' ? 'reject' : 'filter',
-                self = this.self,
-                args = _.toArray(arguments),
-                newModels = _[method].apply(_, [self.models].concat(args)),
-                rejectedModels = _[antonym].apply(_, [self.models].concat(args)),
-                indexes = {};
-            _.each(rejectedModels, function (model) {
+                    self = this.self,
+                    args = _.toArray(arguments),
+                    newModels = self[method].apply(self, arguments),
+                    rejectedModels = self[antonym].apply(self, arguments),
+                    indexes = {};
+            _.each(rejectedModels, function(model) {
                 indexes[self.indexOf(model)] = model;
             });
             self.models = newModels;
@@ -1000,12 +1014,12 @@
         };
     });
 
-    _.each(sortMethods, function (method) {
-        itself.prototype[method] = function () {
+    _.each(sortMethods, function(method) {
+        itself.prototype[method] = function() {
             var self = this.self,
-                newModels = _[method].apply(_, [self.models].concat(_.toArray(arguments))),
-                indexes = {};
-            _.each(newModels, function (model, index) {
+                    newModels = self[method].apply(self, arguments),
+                    indexes = {};
+            _.each(newModels, function(model, index) {
                 indexes[self.indexOf(model)] = index;
             });
             self.models = newModels;
@@ -1179,23 +1193,7 @@
         vals.unshift(context);
         return function () {
             try {
-                switch (vals.length) {
-                    case 1:
-                        return fn.call(context, context);
-                    case 2:
-                        return fn.call(context, context, vals[1]);
-                    case 3:
-                        return fn.call(context, context, vals[1], vals[2]);
-                    case 4:
-                        return fn.call(context, context, vals[1], vals[2], vals[3]);
-                    case 5:
-                        return fn.call(context, context, vals[1], vals[2], vals[3], vals[4]);
-                    case 6:
-                        return fn.call(context, context, vals[1], vals[2], vals[3], vals[4], vals[5]);
-                    default:
-                        return fn.apply(context, vals);
-                }
-
+                 return fn.apply(context, vals);
             } catch (exception) {
                 if (throwError) {
                     throw exception;
@@ -1332,21 +1330,25 @@
     window.ViewModel = ViewModel;
 }(this));
 /*globals ViewModel, $, _, Computed, Observable, ObjectObservable*/
-(function () {
+(function() {
     "use strict";
     var filtersSplitter = /\s*\|\s*/;
     var filtersSplitter2 = /(\w+)(:['"]([^'"]+)['"])?/;
 
+    var zeroEmpty = function(value) {
+        return value || (value === 0 ? '0' : '');
+    };
+
     ViewModel.filters = {};
 
-    ViewModel.applyFilters = function (value, context, addArgs, callback, $el) {
+    ViewModel.applyFilters = function(value, context, addArgs, callback, $el) {
         var filters = value.split(filtersSplitter);
         if (filters.length <= 1) {
             return this.findCallAndSubscribe(value, context, addArgs, callback, $el);
         }
         value = filters.shift();
         var computed = this.findObservable(value, context, addArgs, $el);
-        filters = _.foldl(filters, function (result, string) {
+        filters = _.foldl(filters, function(result, string) {
             var matches = filtersSplitter2.exec(string);
             var key = matches[1];
             result.push({
@@ -1358,13 +1360,13 @@
             return result;
         }, []);
         var result = new ObjectObservable({
-            get: function () {
-                return _.foldl(filters, function (result, obj) {
+            get: function() {
+                return _.foldl(filters, function(result, obj) {
                     return obj.format.call(ViewModel, result, obj.value);
                 }, computed.get());
             },
-            set: function (value) {
-                computed.set(_.foldr(filters, function (result, obj) {
+            set: function(value) {
+                computed.set(_.foldr(filters, function(result, obj) {
                     return obj.unformat.call(ViewModel, result, obj.value);
                 }, value));
             },
@@ -1380,82 +1382,80 @@
     };
 
     ViewModel.binds = {
-        log: function ($el, value, context, addArgs) {
-            this.findCallAndSubscribe(value, context, addArgs, function (val) {
+        log: function($el, value, context, addArgs) {
+            this.findCallAndSubscribe(value, context, addArgs, function(val) {
                 console.log(context, '.', value, '=', val);
             }, $el);
         },
-        src: function ($el, value, context, addArgs) {
+        src: function($el, value, context, addArgs) {
             var elem = $el[0];
-            this.findCallAndSubscribe(value, context, addArgs, function (val) {
+            this.findCallAndSubscribe(value, context, addArgs, function(val) {
                 elem.src = val || '';
             }, $el);
         },
-        html: function ($el, value, context, addArgs) {
-            this.applyFilters(value, context, addArgs, function (val) {
-                //undefined конвертируется в пустую строку
-                if (!val && typeof val != 'number') {
-                    val = '';
-                }
-                $el.html(val);
+        html: function($el, value, context, addArgs) {
+            this.applyFilters(value, context, addArgs, function(val) {
+                $el.html(zeroEmpty(val));
             }, $el);
         },
-        text: function ($el, value, context, addArgs) {
-            this.findCallAndSubscribe(value, context, addArgs, function (val) {
+        text: function($el, value, context, addArgs) {
+            this.findCallAndSubscribe(value, context, addArgs, function(val) {
                 $el.text(val);
             }, $el);
         },
-        'with': function ($el, value, context, addArgs) {
+        'with': function($el, value, context, addArgs) {
             return this.evil(value, context, addArgs)();
         },
-        each: function ($el, value, context, addArgs) {
+        each: function($el, value, context, addArgs) {
 
-            var html = $el.html();
+            var template = $el.html();
             if (addArgs) {
                 addArgs = _.clone(addArgs);
             }
             else {
                 addArgs = {};
-            }
+            }                      
 
-            this.findCallAndSubscribe(value, context, addArgs, function (array) {
+
+            this.findCallAndSubscribe(value, context, addArgs, function(array) {
                 $el.children().clearBinds();
                 $el.empty();
-
+                var fragment=document.createDocumentFragment();
                 if (array) {
-                    _.each(array, function (val, ind) {
+                    _.each(array, function(val, ind) {
                         addArgs.$index = ind;
                         addArgs.$parent = array;
                         addArgs.$value = val;
-                        var tempDiv = document.createElement('div');
-                        try {
-                            tempDiv.innerHTML = html;
-                        } catch (e) {
-                            console.log(e);
-                        }
-                        ViewModel.findBinds(tempDiv, val, addArgs);
-                        $el.append($(tempDiv).children());
+                        
+                        $(template).each(function(){
+                            ViewModel.findBinds(this, val, addArgs);
+                            fragment.appendChild(this);
+                        });                                                                                               
                     });
+                    $el[0].appendChild(fragment);
                 }
             }, $el);
 
 
             return false;
         },
-        value: function ($el, value, context, addArgs) {
-            var obs = this.findObservable(value, context, addArgs, $el)
-                .callAndSubscribe(function (value) {
-                    $el.val(value);
-                });
-            $el.change(function () {
-                obs($el.val());
+        value: function($el, value, context, addArgs) {
+            var obs = this.applyFilters(value, context, addArgs, function(val) {
+                $el.val(zeroEmpty(val));
+            }, $el);
+
+            $el.on('change keyup keydown', function() {
+                var val = $el.val();
+                //if ($el.get() !== val) {
+                    obs.set(val);
+                //}
             });
         },
-        attr: function ($el, value, context, addArgs) {
+        attr: function($el, value, context, addArgs) {
             var elem = $el[0];
-            _.each(this.parseOptionsObject(value), function (condition, attrName) {
-                ViewModel.findCallAndSubscribe(condition, context, addArgs, function (val) {
-                    if (val !== false && val !== undefined && val != null) {
+            _.each(this.parseOptionsObject(value), function(condition, attrName) {
+                ViewModel.findCallAndSubscribe(condition, context, addArgs, function(val) {
+                    if (val !== false && val !== undefined && val !== null) {
                         elem.setAttribute(attrName, val);
                     } else {
                         elem.removeAttribute(attrName);
@@ -1463,29 +1463,29 @@
                 }, $el);
             });
         },
-        style: function ($el, value, context, addArgs) {
-            _.each(this.parseOptionsObject(value), function (condition, style) {
+        style: function($el, value, context, addArgs) {
+            _.each(this.parseOptionsObject(value), function(condition, style) {
                 ViewModel.findObservable(condition, context, addArgs, $el)
-                    .callAndSubscribe(function (value) {
-                        $el.css(style, value);
-                    });
+                        .callAndSubscribe(function(value) {
+                    $el.css(style, value);
+                });
             });
         },
-        css: function ($el, value, context, addArgs) {
-            _.each(this.parseOptionsObject(value), function (condition, className) {
+        css: function($el, value, context, addArgs) {
+            _.each(this.parseOptionsObject(value), function(condition, className) {
                 ViewModel.findObservable(condition, context, addArgs, $el)
-                    .callAndSubscribe(function (value) {
-                        if (value) {
-                            $el.addClass(className);
-                        }
-                        else {
-                            $el.removeClass(className);
-                        }
-                    });
+                        .callAndSubscribe(function(value) {
+                    if (value) {
+                        $el.addClass(className);
+                    }
+                    else {
+                        $el.removeClass(className);
+                    }
+                });
             });
         },
-        display: function ($el, value, context, addArgs) {
-            this.findObservable(value, context, addArgs, $el).callAndSubscribe(function (value) {
+        display: function($el, value, context, addArgs) {
+            this.findObservable(value, context, addArgs, $el).callAndSubscribe(function(value) {
                 if (value) {
                     $el.show();
                 }
@@ -1494,15 +1494,15 @@
                 }
             });
         },
-        click: function ($el, value, context, addArgs) {
+        click: function($el, value, context, addArgs) {
             var fn = this.evil(value, context, addArgs, $el)();
-            $el.click(function () {
+            $el.click(function() {
                 fn.apply(context, arguments);
             });
         },
-        className: function ($el, value, context, addArgs) {
+        className: function($el, value, context, addArgs) {
             var oldClassName;
-            this.findObservable(value, context, addArgs, $el).callAndSubscribe(function (className) {
+            this.findObservable(value, context, addArgs, $el).callAndSubscribe(function(className) {
                 if (oldClassName) {
                     $el.removeClass(oldClassName);
                 }
@@ -1512,16 +1512,16 @@
                 oldClassName = className;
             });
         },
-        events: function ($el, value, context, addArgs) {
+        events: function($el, value, context, addArgs) {
             var self = this;
-            _.each(this.parseOptionsObject(value), function (expr, eventName) {
+            _.each(this.parseOptionsObject(value), function(expr, eventName) {
                 var callback = self.evil(expr, context, addArgs)();
-                $el.bind(eventName, function (e) {
+                $el.bind(eventName, function(e) {
                     callback.call(context, e);
                 });
             });
         },
-        view: function ($el, value, context, addArgs) {
+        view: function($el, value, context, addArgs) {
             var options, ViewModelClass, args, vm, values;
             try {
                 options = this.parseOptionsObject(value);
@@ -1544,7 +1544,7 @@
                 el: $el
             };
             if (options.options) {
-                _.forOwn(options.options, function (value, key) {
+                _.forOwn(options.options, function(value, key) {
                     args[key] = ViewModel.evil(value, context, addArgs)();
                 });
             }
@@ -1556,79 +1556,79 @@
 
             return false;
         },
-        $click: function ($el, value, context, addArgs) {
+        $click: function($el, value, context, addArgs) {
             $el.click(this.evil(value, context, addArgs));
             return false;
         }
     };
     var bindSplitter = /\s*;\s*/,
-        firstColonRegex = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/,
-        commaSplitter = /\s*,\s*/,
-        dataBind = function (name, $el, value, context, addArgs) {
-            $el.removeAttr(name);
-            var newCtx, breakContextIsSent;
-            if (value) {
+            firstColonRegex = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/,
+            commaSplitter = /\s*,\s*/,
+            dataBind = function(name, $el, value, context, addArgs) {
+        $el.removeAttr(name);
+        var newCtx, breakContextIsSent;
+        if (value) {
 
-                _.each(value.split(bindSplitter), function (cBind) {
-                    var arr = cBind.match(firstColonRegex), bindName, bindVal, bindFn;
-                    if (!arr) {
-                        bindName = cBind;
-                        bindVal = '';
-                    } else {
-                        bindName = arr[1];
-                        bindVal = arr[2];
-                    }
+            _.each(value.split(bindSplitter), function(cBind) {
+                var arr = cBind.match(firstColonRegex), bindName, bindVal, bindFn;
+                if (!arr) {
+                    bindName = cBind;
+                    bindVal = '';
+                } else {
+                    bindName = arr[1];
+                    bindVal = arr[2];
+                }
 
-                    bindName = bindName.split(commaSplitter);
+                bindName = bindName.split(commaSplitter);
 
-                    _.each(bindName, function (ccBind) {
-                        if (ccBind && ccBind.charAt(0) !== '!') {
-                            bindFn = ViewModel.binds[ccBind];
+                _.each(bindName, function(ccBind) {
+                    if (ccBind && ccBind.charAt(0) !== '!') {
+                        bindFn = ViewModel.binds[ccBind];
 
-                            if (bindFn) {
-                                newCtx = bindFn.call(ViewModel, $el, bindVal, context, addArgs);
+                        if (bindFn) {
+                            newCtx = bindFn.call(ViewModel, $el, bindVal, context, addArgs);
 
-                                if (newCtx === false) {
-                                    breakContextIsSent = true;
-                                } else if (newCtx) {
-                                    context = newCtx;
-                                }
-                            } else {
-                                console.warn('Bind: "' + ccBind + '" not exists');
+                            if (newCtx === false) {
+                                breakContextIsSent = true;
+                            } else if (newCtx) {
+                                context = newCtx;
                             }
+                        } else {
+                            console.warn('Bind: "' + ccBind + '" not exists');
                         }
-                    });
+                    }
                 });
-            }
-            if (breakContextIsSent) {
-                return false;
-            }
-            //console.log(newCtx);
-            return context;
-        };
+            });
+        }
+        if (breakContextIsSent) {
+            return false;
+        }
+        //console.log(newCtx);
+        return context;
+    };
 
 
-    ViewModel.tag = function (tagName, behavior) {
+    ViewModel.tag = function(tagName, behavior) {
         document.createElement(tagName);// for IE
         ViewModel.tags[tagName] = behavior;
     };
-    ViewModel.removeTag = function (tagName) {
+    ViewModel.removeTag = function(tagName) {
         delete ViewModel.tags[tagName];
     };
     ViewModel.tags = {};
 
     ViewModel.customAttributes = {
-        'data-bind': function ($el, value, context, addArgs) {
+        'data-bind': function($el, value, context, addArgs) {
             return dataBind('data-bind', $el, value, context, addArgs);
         },
-        'nk': function ($el, value, context, addArgs) {
+        'nk': function($el, value, context, addArgs) {
             return dataBind('nk', $el, value, context, addArgs);
         }
     };
 
 
     ViewModel.filters._sysUnwrap = {
-        format: function (value) {
+        format: function(value) {
             if (Observable.isObservable(value)) {
                 return value();
             }
@@ -1637,44 +1637,41 @@
     };
 
     ViewModel.filters._sysEmpty = {
-        format: function (value) {
-            return value || (value === 0 ? '0' : '');
-        }
+        format: zeroEmpty
     };
 
     ViewModel.inlineModificators = {
-        '{{}}': function (textNode, context, addArgs) {
+        '{{}}': function(textNode, context, addArgs) {
             var str = textNode.nodeValue,
-                vm = this,
-                parent,
-                docFragment,
-                div,
-                nodeList = [textNode],
-                breakersRegex = ViewModel.inlineModificators['{{}}'].regex,
-                $el;
+                    vm = this,
+                    parent,
+                    docFragment,
+                    div,
+                    nodeList = [textNode],
+                    breakersRegex = ViewModel.inlineModificators['{{}}'].regex,
+                    $el;
             breakersRegex.lastIndex = 0;
             if (breakersRegex.test(str)) {
 
                 parent = textNode.parentNode;
-                $el=$(parent);
+                $el = $(parent);
                 div = document.createElement('div');
 
 
                 var i = 0;
 
                 var ctx = {
-
                 };
                 breakersRegex.lastIndex = 0;
 
-                str = '"' + str.replace(breakersRegex, function (exprWithBreakers, expr) {
+                str = '"' + str.replace(breakersRegex, function(exprWithBreakers, expr) {
                     i++;
                     ctx['___comp' + i] = vm.applyFilters(expr + ' | _sysUnwrap | _sysEmpty', context, addArgs, undefined, $el).getter;
                     return '"+___comp' + i + '()+"';
                 }) + '"';
 
 
-                vm.findCallAndSubscribe(str, ctx, addArgs, parent.childNodes.length == 1 ? function (value) {
+                vm.findCallAndSubscribe(str, ctx, addArgs, parent.childNodes.length === 1 ? function(value) {
                     //if this is the only child
                     try {
                         parent.innerHTML = value;
@@ -1682,7 +1679,7 @@
                         console.log(e);
                     }
 
-                } : function (value) {
+                } : function(value) {
 
                     docFragment = document.createDocumentFragment();
 
@@ -1705,7 +1702,7 @@
 
 
                     if (!newNodeList.length) {
-                        firstNode.textContent = '';
+                        firstNode.nodeValue = '';
                         nodeList = [firstNode];
                         return;
                     }
@@ -1906,16 +1903,9 @@
             templateConstructor = function (rawTemplate) {
                 return function (model, $index, $parent) {
 
-                    var args, $children, tempDiv = document.createElement(elName);
+                    var args, $children=$(rawTemplate);
 
-                    try {
-                        tempDiv.innerHTML = rawTemplate;
-                    } catch (e) {
-                        console.log(e);
-                    }
-
-                    $children = $(tempDiv).children();
-
+                   
                     args = createRow($children, Computed({
                         initial: model,
                         $el: $children

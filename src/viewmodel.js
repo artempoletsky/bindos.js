@@ -160,23 +160,7 @@
         vals.unshift(context);
         return function () {
             try {
-                switch (vals.length) {
-                    case 1:
-                        return fn.call(context, context);
-                    case 2:
-                        return fn.call(context, context, vals[1]);
-                    case 3:
-                        return fn.call(context, context, vals[1], vals[2]);
-                    case 4:
-                        return fn.call(context, context, vals[1], vals[2], vals[3]);
-                    case 5:
-                        return fn.call(context, context, vals[1], vals[2], vals[3], vals[4]);
-                    case 6:
-                        return fn.call(context, context, vals[1], vals[2], vals[3], vals[4], vals[5]);
-                    default:
-                        return fn.apply(context, vals);
-                }
-
+                 return fn.apply(context, vals);
             } catch (exception) {
                 if (throwError) {
                     throw exception;
