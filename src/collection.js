@@ -47,7 +47,7 @@
         reset: function(json, options) {
             options = options || {};
             if (!options.add) {
-                this.fire('beforeReset', this.models);
+                this.fire('cut', this.models);
                 this.models = [];
                 this.length = 0;
                 this._hashId = [];

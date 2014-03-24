@@ -383,15 +383,13 @@
 
 
         makeBind = function (event, fn, context, isSignal) {
-            event = String(event);
             var arr = event.split(namespaceSplitter);
             return {
                 c: context,
                 s: isSignal,
                 fn: fn,
                 n: arr[0],
-                ns: arr.slice(1),
-                o: event
+                ns: arr.slice(1)
             };
         },
 
@@ -409,56 +407,54 @@
             self._listeners = binds;
         },
 
+        compare = function (request, target) {
+            var compared = (!request.fn || request.fn === target.fn)
+                && (!request.n || request.n === target.n)
+                && (!request.c || request.c === target.c), ns2;
+            //сравнивает пространсва имен
+            if (compared && request.ns.length) {
+                ns2 = target.ns;
+                compared = !_.any(request.ns, function (val) {
+                    return ns2.indexOf(val);
+                });
+            }
+            return compared;
+        },
+
 
         findBinds = function (binds, event, fn, context, mode) {
             var result = mode === 'any' ? false : [],
                 bind = makeBind(event, fn, context),
-                bindsArrayIndex,
                 bindsArray,
                 l,
                 i, bindObject, compared, ns2;
             if (!mode) {
                 mode = 'filter';
             }
-
-            for (bindsArrayIndex in binds) {
-                bindsArray = binds[bindsArrayIndex];
-
-                for (i = 0, l = bindsArray.length; i < l; i++) {
-                    bindObject = bindsArray[i];
-                    compared = (!bind.fn || bind.fn === bindObject.fn)
-                        && (!bind.n || bind.n === bindObject.n)
-                        && (!bind.c || bind.c === bindObject.c);
-                    //сравнивает пространсва имен
-                    if (compared && bind.ns.length) {
-                        ns2 = bindObject.ns;
-                        compared = !_.any(bind.ns, function (val) {
-                            return ns2.indexOf(val);
-                        });
-                    }
-
-                    if (compared) {
-                        if (mode === 'filter') {
-                            result.push(bindObject);
-                        } else if (mode === 'any') {
-                            result = true;
-                            break;
-                        }
-                    } else if (mode === 'invert') {
-                        result.push(bindObject);
-                    }
-                }
-                if (result === true) {
-                    break;
-                }
+            if (!binds[bind.n]) {
+                return result;
             }
 
+            bindsArray = binds[bind.n];
+
+            for (i = 0, l = bindsArray.length; i < l; i++) {
+                bindObject = bindsArray[i];
+
+                if (compare(bind, bindObject)) {
+                    if (mode === 'filter') {
+                        result.push(bindObject);
+                    } else if (mode === 'any') {
+                        result = true;
+                        break;
+                    }
+                }
+            }
 
             return result;
         },
 
         remove = function (me, event, fn, context) {
-            var bind, binds, i;
+            var bind, i, l;
             if (!me._listeners) {
                 return;
             }
@@ -474,12 +470,26 @@
                 return;
             }
 
-            binds = findBinds(me._listeners, event, fn, context, 'invert');
-
-            delete me._listeners;
-            for (i = binds.length - 1; i >= 0; i--) {
-                add(me, binds[i]);
+            if (bind.n && !me._listeners[bind.n]) {
+                return;
             }
+
+            var listeners = {};
+            if (bind.n) {
+                listeners[bind.n] = me._listeners[bind.n];
+            } else {
+                listeners = me._listeners;
+            }
+
+            _.each(listeners, function (binds) {
+                for (i = 0; i < binds.length; i++) {
+                    if (compare(bind, binds[i])) {
+                        binds.splice(i, 1);
+                        i--;
+                    }
+                }
+            });
+
         },
         Events = Class.extend({
             on: function (events, fn, context, callOnce) {
@@ -487,7 +497,12 @@
                     ctx,
                     eventNames,
                     i,
-                    l, event_name;
+                    l,
+                    event_name,
+                    bind,
+                    binds,
+                    curBind;
+
                 if (_.isObject(events)) {
                     ctx = fn || self;
                     for (event_name in events) {
@@ -506,10 +521,20 @@
 
                 eventNames = events.split(eventSplitter);
                 for (i = 0, l = eventNames.length; i < l; i++) {
-                    add(self, makeBind(eventNames[i], fn, context, callOnce));
+                    bind = makeBind(eventNames[i], fn, context, callOnce);
+
+                    binds = self._listeners || {};
+
+                    curBind = binds[bind.n] || [];
+
+                    curBind.push(bind);
+
+                    binds[bind.n] = curBind;
+
+                    self._listeners = binds;
+
+
                 }
-
-
                 return self;
             },
             off: function (events, fn, context) {
@@ -532,20 +557,44 @@
                 }
                 //все кроме events передается аргументами в каждый колбек
                 var args = _.rest(arguments, 1),
-                    me = this, i, l, eventNames, foundBinds, j, k, bind;
+                    me = this,
+                    i,
+                    l,
+                    eventNames,
+                    bind,
+                    bindsArray,
+                    j,
+                    bindObject;
 
                 eventNames = events.split(eventSplitter);
                 for (i = 0, l = eventNames.length; i < l; i++) {
-                    foundBinds = findBinds(me._listeners, eventNames[i], false, false);
 
-                    for (j = 0, k = foundBinds.length; j < k; j++) {
-                        bind = foundBinds[j];
-                        //если забинден через one  удаляем
-                        if (bind.s) {
-                            me.off(0, bind.fn);
+                    bind = makeBind(eventNames[i], false, false);
+
+                    if (bind.n) {
+                        bindsArray = me._listeners[bind.n];
+                        if (!bindsArray) {
+                            return me;
                         }
-                        bind.fn.apply(bind.c, args);
+
+                        for (j = 0; j < bindsArray.length; j++) {
+                            bindObject = bindsArray[j];
+
+                            if (compare(bind, bindObject)) {
+                                //если забинден через one  удаляем
+                                if (bindObject.s) {
+                                    bindsArray.splice(j, 1);
+                                    j--;
+                                }
+
+                                bindObject.fn.apply(bindObject.c, args);
+                            }
+                        }
+                    } else {
+                        throw 'not implemented';
                     }
+
+
                 }
                 return me;
             },
@@ -800,7 +849,7 @@
         reset: function(json, options) {
             options = options || {};
             if (!options.add) {
-                this.fire('beforeReset', this.models);
+                this.fire('cut', this.models);
                 this.models = [];
                 this.length = 0;
                 this._hashId = [];
@@ -1915,7 +1964,12 @@
             ctx = {},
             oldCollection,
             rawTemplate,
-            elName = elem.tagName.toLowerCase();
+            elName = elem.tagName.toLowerCase(),
+            $bufferView,
+            $bufferContainer = $(document.createElement(elName)),
+            args = [],
+            bufferArgs,
+            lastCreatedArgs;
 
 
         values = value.split(/\s*,\s*/);
@@ -1954,15 +2008,18 @@
             templateConstructor = function (rawTemplate) {
                 return function (model, $index, $parent) {
 
-                    var args, $children=$(rawTemplate);
+                    var args, $children = $(rawTemplate);
 
-                   
+
                     args = createRow($children, Computed({
                         initial: model,
                         $el: $children
                     }).obj, collection, {
                         $index: $index
                     }, ctx);
+
+                    lastCreatedArgs = args;
+
 
                     tempChildrenLen = $children.length;
                     return $children;
@@ -1987,9 +2044,11 @@
 
                 collection.each(function (model) {
                     $el.append(template(model, i++, collection));
+                    args.push(lastCreatedArgs);
                 });
             };
             onReset();
+
 
             collection.on('add', function (newModels, index, lastIndex) {
                 var i = 0,
@@ -1999,7 +2058,17 @@
 
                 html = $(document.createElement(elName));
                 _.each(newModels, function (model) {
-                    html.append(template(model, _index + i++, collection));
+
+                    if ($bufferView) {
+                        html.append($bufferView);
+                        $bufferView = undefined;
+                        bufferArgs.$index = _index + i++;
+                        bufferArgs.$self(model);
+                    } else {
+                        html.append(template(model, _index + i++, collection));
+                    }
+
+
                 });
                 html = html.children();
 
@@ -2012,23 +2081,26 @@
                 }
             }, ctx);
 
-
-            collection.on('beforeReset', function (models) {
-                _.each(models, function (model) {
-                    model.off(0, 0, ctx);
-                });
-            }, ctx);
-
             collection.on('reset', onReset, ctx);
             collection.on('cut', function (rejectedModels) {
 
-                var $children = $el.children();
+                var $children = $el.children(), index, model, $slice;
 
-                _.each(rejectedModels, function (model, index) {
-                    index *= 1;
+                for (index in rejectedModels) {
+                    model = rejectedModels[index];
+
                     model.off(0, 0, ctx);
-                    $children.slice(index, index + tempChildrenLen).clearBinds().empty().remove();
-                });
+                    $slice = $children.slice(index, index + tempChildrenLen);
+                    if (!$bufferView) {
+                        $bufferView = $slice;
+                        $bufferContainer.append($bufferView);
+                        bufferArgs = args[index];
+                    } else {
+                        $slice.clearBinds().empty().remove();
+                    }
+
+                }
+
             }, ctx);
             collection.on('sort', function (indexes) {
                 var $tempDiv = $(document.createElement('div')),

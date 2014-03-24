@@ -73,7 +73,12 @@
             ctx = {},
             oldCollection,
             rawTemplate,
-            elName = elem.tagName.toLowerCase();
+            elName = elem.tagName.toLowerCase(),
+            $bufferView,
+            $bufferContainer = $(document.createElement(elName)),
+            args = [],
+            bufferArgs,
+            lastCreatedArgs;
 
 
         values = value.split(/\s*,\s*/);
@@ -112,15 +117,18 @@
             templateConstructor = function (rawTemplate) {
                 return function (model, $index, $parent) {
 
-                    var args, $children=$(rawTemplate);
+                    var args, $children = $(rawTemplate);
 
-                   
+
                     args = createRow($children, Computed({
                         initial: model,
                         $el: $children
                     }).obj, collection, {
                         $index: $index
                     }, ctx);
+
+                    lastCreatedArgs = args;
+
 
                     tempChildrenLen = $children.length;
                     return $children;
@@ -145,9 +153,11 @@
 
                 collection.each(function (model) {
                     $el.append(template(model, i++, collection));
+                    args.push(lastCreatedArgs);
                 });
             };
             onReset();
+
 
             collection.on('add', function (newModels, index, lastIndex) {
                 var i = 0,
@@ -157,7 +167,17 @@
 
                 html = $(document.createElement(elName));
                 _.each(newModels, function (model) {
-                    html.append(template(model, _index + i++, collection));
+
+                    if ($bufferView) {
+                        html.append($bufferView);
+                        $bufferView = undefined;
+                        bufferArgs.$index = _index + i++;
+                        bufferArgs.$self(model);
+                    } else {
+                        html.append(template(model, _index + i++, collection));
+                    }
+
+
                 });
                 html = html.children();
 
@@ -170,23 +190,26 @@
                 }
             }, ctx);
 
-
-            collection.on('beforeReset', function (models) {
-                _.each(models, function (model) {
-                    model.off(0, 0, ctx);
-                });
-            }, ctx);
-
             collection.on('reset', onReset, ctx);
             collection.on('cut', function (rejectedModels) {
 
-                var $children = $el.children();
+                var $children = $el.children(), index, model, $slice;
 
-                _.each(rejectedModels, function (model, index) {
-                    index *= 1;
+                for (index in rejectedModels) {
+                    model = rejectedModels[index];
+
                     model.off(0, 0, ctx);
-                    $children.slice(index, index + tempChildrenLen).clearBinds().empty().remove();
-                });
+                    $slice = $children.slice(index, index + tempChildrenLen);
+                    if (!$bufferView) {
+                        $bufferView = $slice;
+                        $bufferContainer.append($bufferView);
+                        bufferArgs = args[index];
+                    } else {
+                        $slice.clearBinds().empty().remove();
+                    }
+
+                }
+
             }, ctx);
             collection.on('sort', function (indexes) {
                 var $tempDiv = $(document.createElement('div')),
