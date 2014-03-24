@@ -103,15 +103,15 @@
         };
     ViewModel = Events.extend(ViewModel);
 
+
+    var datasetSupported = !!document.createElement('div').dataset;
+
     $.fn.clearBinds = function () {
         var $self = $();
         $self.length = 1;
         this.each(function () {
             $self[0] = this;
-            _.each($self.data('nk_observers'), function (obs) {
-                obs.destroy();
-            });
-            $self.data('nk_observers', []);
+            ObjectObservable.clearBinds(datasetSupported ? this.dataset.nkObservers : $self.data('nkObservers'));
             $self.children().clearBinds();
         });
         return this;
@@ -122,9 +122,7 @@
         $self.length = 1;
         this.each(function () {
             $self[0] = this;
-            _.each($self.data('nk_observers'), function (obs) {
-                obs.notify();
-            });
+            ObjectObservable.refreshBinds(datasetSupported ? this.dataset.nkObservers : $self.data('nkObservers'));
             $self.children().refreshBinds();
         });
         return this;

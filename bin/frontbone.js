@@ -44,6 +44,10 @@
         }, BaseObservable;
 
 
+    var hashObservers = {};
+
+    var datasetSupported = !!document.createElement('div').dataset;
+
     var ObjectObservable = window.ObjectObservable = function (params) {
         params = params || {};
         this.dependencies = [];
@@ -83,10 +87,16 @@
         }
 
         if ($el) {
-            var observers = $el.data('nk_observers');
-            observers = observers || [];
+            var id = (datasetSupported ? $el[0].dataset.nkObservers : $el.data('nkObservers')) || _.uniqueId('nk_observers');
+            var observers = hashObservers[id] || [];
+            hashObservers[id] = observers;
             observers.push(this);
-            $el.data('nk_observers', observers);
+            if (datasetSupported) {
+                $el[0].dataset.nkObservers = id;
+            } else {
+                $el.data('nkObservers', id);
+            }
+
         }
 
         if (params.set) {
@@ -95,6 +105,28 @@
         this.lastValue = this.value = initial;
         //TODO: implement dirty behavior
         this.dirty = params.dirty;
+    };
+
+    ObjectObservable.clearBinds = function (id) {
+        if (!id)
+            return;
+        var observers = hashObservers[id], i, l;
+        if (observers)
+            while (observers.length) {
+                observers.pop().destroy();
+            }
+        delete hashObservers[id];
+    };
+
+    ObjectObservable.refreshBinds = function (id) {
+        if (!id)
+            return;
+        var observers = hashObservers[id], i, l;
+        if (observers)
+            for (i = 0, l = observers.length; i < l; i++) {
+                observers[i].notify();
+            }
+        delete observers[id];
     };
 
     ObjectObservable.prototype = {
@@ -1155,15 +1187,15 @@
         };
     ViewModel = Events.extend(ViewModel);
 
+
+    var datasetSupported = !!document.createElement('div').dataset;
+
     $.fn.clearBinds = function () {
         var $self = $();
         $self.length = 1;
         this.each(function () {
             $self[0] = this;
-            _.each($self.data('nk_observers'), function (obs) {
-                obs.destroy();
-            });
-            $self.data('nk_observers', []);
+            ObjectObservable.clearBinds(datasetSupported ? this.dataset.nkObservers : $self.data('nkObservers'));
             $self.children().clearBinds();
         });
         return this;
@@ -1174,9 +1206,7 @@
         $self.length = 1;
         this.each(function () {
             $self[0] = this;
-            _.each($self.data('nk_observers'), function (obs) {
-                obs.notify();
-            });
+            ObjectObservable.refreshBinds(datasetSupported ? this.dataset.nkObservers : $self.data('nkObservers'));
             $self.children().refreshBinds();
         });
         return this;
