@@ -2042,6 +2042,8 @@
                     i = 0;
                 }
 
+                args=[];
+
                 collection.each(function (model) {
                     $el.append(template(model, i++, collection));
                     args.push(lastCreatedArgs);
@@ -2055,30 +2057,40 @@
                     html = '';
                 var _index = lastIndex || index;
 
-
                 html = $(document.createElement(elName));
+
+
                 _.each(newModels, function (model) {
 
                     if ($bufferView) {
+
+
+                        bufferArgs.$index = _index + i++;
+
+                        bufferArgs.$self._oModel.set(model);
                         html.append($bufferView);
                         $bufferView = undefined;
-                        bufferArgs.$index = _index + i++;
-                        bufferArgs.$self(model);
+
+                        lastCreatedArgs=bufferArgs;
                     } else {
                         html.append(template(model, _index + i++, collection));
                     }
-
-
                 });
+
+                args.splice(index, 0, lastCreatedArgs);
+
+
                 html = html.children();
 
                 if (index === 0) {
+
                     $el.prepend(html);
                 } else if (!index || index === collection.length - newModels.length) {
                     $el.append(html);
                 } else {
                     $el.children().eq(index * tempChildrenLen).before(html);
                 }
+
             }, ctx);
 
             collection.on('reset', onReset, ctx);
@@ -2098,6 +2110,9 @@
                     } else {
                         $slice.clearBinds().empty().remove();
                     }
+
+                    args.splice(index, 1);
+
 
                 }
 
