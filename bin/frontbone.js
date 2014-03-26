@@ -1904,6 +1904,9 @@
             $el: $children
         });
 
+        addArgs.$self._oModel = oModel;
+        var refresh = false;
+
         var cb = function (value) {
             addArgs.$self(value);
             if (model) {
@@ -1916,7 +1919,11 @@
                 //слушает новую
                 value.on('change', function (changed) {
                     _.extend(newContext, changed);
-                    $children.refreshBinds();
+                    if (!refresh) {
+                        refresh = true;
+                        $children.refreshBinds();
+                    }
+                    refresh = false;
                 }, ctx);
 
 
@@ -1925,7 +1932,13 @@
                     delete newContext[prop];
                 }
             }
-            $children.refreshBinds();
+
+            if (!refresh) {
+                refresh = true;
+                $children.refreshBinds();
+            }
+            refresh = false;
+
             model = value;
 
         };
@@ -2042,7 +2055,7 @@
                     i = 0;
                 }
 
-                args=[];
+                args = [];
 
                 collection.each(function (model) {
                     $el.append(template(model, i++, collection));
@@ -2071,7 +2084,7 @@
                         html.append($bufferView);
                         $bufferView = undefined;
 
-                        lastCreatedArgs=bufferArgs;
+                        lastCreatedArgs = bufferArgs;
                     } else {
                         html.append(template(model, _index + i++, collection));
                     }
