@@ -155,14 +155,9 @@
 
             //склеивает все представления всех моделей в коллекции
             onReset = function () {
-                var i = collection.getIndex(collection.at(0)) - 1,
-                    html = '';
+                var html = '', i = 0;
                 $el.children().clearBinds();
                 $el.empty();
-
-                if (i < 0) {
-                    i = 0;
-                }
 
                 args = [];
 

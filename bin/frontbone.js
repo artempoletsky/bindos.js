@@ -814,8 +814,6 @@
             this.models = [];
             this.length = 0;
 
-            // хэш вида  id : глобальный индекс
-            this._hashId = [];
             if (models) {
                 this.reset(models);
             }
@@ -852,7 +850,6 @@
                 this.fire('cut', this.models);
                 this.models = [];
                 this.length = 0;
-                this._hashId = [];
             }
             if (!json) {
                 this.fire('reset');
@@ -875,10 +872,7 @@
         add: function(models, index, silent) {
 
             var me = this,
-                    hashIndex,
-                    addedModels = [],
-                    _models,
-                    _index = 0;
+                    addedModels = [];
 
             if (!(models instanceof Array)) {
                 models = [models];
@@ -886,39 +880,6 @@
 
             if (typeof index !== 'number') {
                 index = this.length;
-                _index = this.getIndex(this.models[this.length - 1]);
-            } else if (index === 0) {
-                _models = _.clone(models).reverse();
-                _index = this.getIndex(this.models[0]) - _models.length - 1;
-            }
-
-
-            function addHashIndex(model, index) {
-                if (index === 0 && me.length) {
-                    // берем наименьший порядковый индекс из первого элемента хэша
-                    hashIndex = me._hashId[0].index - 1;
-                    // добавляем элемент в начало хэша
-                    me._hashId.unshift({
-                        id: model.id,
-                        index: hashIndex
-                    });
-                }
-                else {
-                    var length = me._hashId.length;
-                    // проверка для пустого хэша
-                    if (length === 0) {
-                        hashIndex = 1;
-                    }
-                    else {
-                        // берем порядковый индекс из последнего элемента в хэше
-                        hashIndex = me._hashId[length - 1].index + 1;
-                    }
-                    // добавляем элемент в конец хэша
-                    me._hashId.push({
-                        id: model.id,
-                        index: hashIndex
-                    });
-                }
             }
 
             _.each(models, function(model, ind) {
@@ -927,11 +888,6 @@
                 }
                 addedModels.push(model);
 
-                if (_models) {
-                    addHashIndex(_models[ind], 0);
-                } else {
-                    addHashIndex(model, (index + ind));
-                }
 
                 model.one('remove', function() {
                     me.cutByCid(this.cid);
@@ -943,7 +899,7 @@
 
             this.length = this.models.length;
             if (!silent) {
-                this.fire('add', addedModels, index, _index);
+                this.fire('add', addedModels, index);
             }
             return this;
         },
@@ -980,8 +936,8 @@
             }
 
             var model = this.models.splice(index, 1)[0], cutted;
-            // удаление элемента из хеша
-            this._hashId.splice(index, 1);
+
+
             this.length = this.models.length;
             cutted = {};
             cutted[index] = model;
@@ -1016,19 +972,6 @@
                 }
             });
             return found;
-        },
-        /**
-         * Возвращение порядкового индекса модели
-         * во всей коллекции
-         * @param model
-         * @return {Number}
-         */
-        getIndex: function(model) {
-            if (!model) {
-                return 0;
-            }
-            var i = this.indexOf(model);
-            return this._hashId[i].index;
         }
     }),
     whereMethods=['detect', 'filter', 'select', 'reject', 'find','every', 'all', 'some', 'any','max', 'min','sortBy', 'sortByDesc', 'first', 'initial', 'rest', 'last', 'groupBy'],
@@ -2046,14 +1989,9 @@
 
             //склеивает все представления всех моделей в коллекции
             onReset = function () {
-                var i = collection.getIndex(collection.at(0)) - 1,
-                    html = '';
+                var html = '', i = 0;
                 $el.children().clearBinds();
                 $el.empty();
-
-                if (i < 0) {
-                    i = 0;
-                }
 
                 args = [];
 
