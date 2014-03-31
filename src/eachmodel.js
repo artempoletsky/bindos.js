@@ -8,10 +8,15 @@
         var model, newContext = {}, prop;
 
         addArgs.$parent = context;
-        addArgs.$self = Computed({
-            initial: oModel.value,
-            $el: $children
-        });
+        if (_.isFunction(oModel)) {
+            addArgs.$self = oModel;
+            oModel = oModel.obj;
+        } else {
+            addArgs.$self = Computed({
+                initial: oModel.value,
+                $el: $children
+            });
+        }
 
         addArgs.$self._oModel = oModel;
         var refresh = false;
