@@ -92,8 +92,8 @@
             oldCollection,
             rawTemplate,
             elName = elem.tagName.toLowerCase(),
-            $bufferView,
-            $bufferContainer = $(document.createElement(elName)),
+            //$bufferView,
+            //$bufferContainer = $(document.createElement(elName)),
             args = [],
             bufferArgs,
             lastCreatedArgs;
@@ -131,22 +131,27 @@
 
             tempChildrenLen = 1;
 
+            var compiledModels = {};
 
             templateConstructor = function (rawTemplate) {
+                var $tmplEl = $(rawTemplate);
                 return function (model, $index, $parent) {
 
-                    var args, $children = $(rawTemplate);
+                    var args, $children = compiledModels[model.id];
 
-
-                    args = createRow($children, Computed({
+                    if ( !$children ) {
+                      $children = $tmplEl.clone();
+                      args = createRow($children, Computed({
                         initial: model,
                         $el: $children
-                    }).obj, collection, {
+                      }).obj, collection, {
                         $index: $index
-                    }, ctx);
+                      }, ctx);
+
+                      compiledModels[model.id] = $children;
+                    }
 
                     lastCreatedArgs = args;
-
 
                     tempChildrenLen = $children.length;
                     return $children;
@@ -160,16 +165,20 @@
 
             //склеивает все представления всех моделей в коллекции
             onReset = function () {
-                var html = '', i = 0;
-                $el.children().clearBinds();
-                $el.empty();
+
+                var html = $(document.createElement(elName)),
+                  i = 0;
+                  //$el.children().clearBinds();
+                  $el.empty();
 
                 args = [];
 
                 collection.each(function (model) {
-                    $el.append(template(model, i++, collection));
+                    html.append(template(model, i++, collection));
                     args.push(lastCreatedArgs);
                 });
+
+                $el.append(html.children());
             };
             onReset();
 
@@ -184,19 +193,8 @@
 
                 _.each(newModels, function (model) {
 
-                    if ($bufferView) {
 
-
-                        bufferArgs.$index = _index + i++;
-
-                        bufferArgs.$self._oModel.set(model);
-                        html.append($bufferView);
-                        $bufferView = undefined;
-
-                        lastCreatedArgs = bufferArgs;
-                    } else {
-                        html.append(template(model, _index + i++, collection));
-                    }
+                  html.append(template(model, _index + i++, collection));
                 });
 
                 args.splice(index, 0, lastCreatedArgs);
@@ -218,22 +216,19 @@
             collection.on('reset', onReset, ctx);
             collection.on('cut', function (rejectedModels) {
 
-                var $children = $el.children(), index, model, $slice;
+                var index, model, $slice, $cutEl;
 
                 for (index in rejectedModels) {
                     model = rejectedModels[index];
+                    $cutEl = compiledModels[model.id];
 
-                    model.off(0, 0, ctx);
-                    $slice = $children.slice(index, index + tempChildrenLen);
-                    if (!$bufferView) {
-                        $bufferView = $slice;
-                        $bufferContainer.append($bufferView);
-                        bufferArgs = args[index];
-                    } else {
-                        $slice.clearBinds().empty().remove();
-                    }
+                    $cutEl & $cutEl.detach();
 
-                    args.splice(index, 1);
+                    //var $children = $el.children();
+                    //model.off(0, 0, ctx);
+                    //$slice = $children.slice(index, index + tempChildrenLen);
+
+                    //args.splice(index, 1);
 
 
                 }
