@@ -21,7 +21,7 @@
         addArgs.$self._oModel = oModel;
         var refresh = false;
 
-        var cb = function (value) {
+        oModel.callAndSubscribe(function (value) {
             addArgs.$self(value);
             if (model) {
                 //перестает слушать старую модель
@@ -30,6 +30,7 @@
 
             if (value) {
                 _.extend(newContext, value.attributes);
+
                 //слушает новую
                 value.on('change', function (changed) {
                     _.extend(newContext, changed);
@@ -55,18 +56,15 @@
 
             model = value;
 
-        };
+        });
 
-        cb(oModel.value);
-        oModel.subscribe(cb);
-
-        //oModel.callAndSubscribe();
 
         //парсит внутренний html как темплейт
         $children.each(function () {
             ViewModel.findBinds(this, newContext, addArgs);
         });
 
+        $children.data('nkModel', addArgs);
 
         return addArgs;
     };
@@ -81,6 +79,45 @@
         return false;
     };
 
+
+    var bufferViews = {};
+
+
+    var getCompiledRow = function (templateName, model, index) {
+        if (!bufferViews[templateName]) {
+            return false;
+        }
+
+        if (!bufferViews[templateName].length) {
+            return false;
+        }
+
+
+        var $row = bufferViews[templateName].pop();
+
+        var addArgs = $row.data('nkModel');
+
+        //console.log($row);
+
+        addArgs.$index = index;
+        addArgs.$self._oModel.set(model);
+
+        return $row;
+    };
+
+    setInterval(function () {
+
+        _.each(bufferViews, function (arr, key) {
+            _.each(arr, function ($view) {
+                $view.clearBinds();
+                $view.data('nkModel', '');
+            });
+            bufferViews[key] = [];
+        });
+
+    }, 5 * 60 * 1000);
+
+
     ViewModel.binds.eachModel = function ($el, value, context, addArgs) {
         var
             values,
@@ -92,11 +129,7 @@
             oldCollection,
             rawTemplate,
             elName = elem.tagName.toLowerCase(),
-            //$bufferView,
-            //$bufferContainer = $(document.createElement(elName)),
-            args = [],
-            bufferArgs,
-            lastCreatedArgs;
+            compiledTemplateName;
 
 
         values = value.split(/\s*,\s*/);
@@ -106,8 +139,15 @@
 
         rawTemplate = templateName ? '' : $el.html();
 
+
+        compiledTemplateName = templateName ? templateName : _.uniqueId('nkEachModelTemplate');
+
+        bufferViews[compiledTemplateName]=[];
+
+
         //когда меняется целая коллекция
-        this.findObservable(collectionName, context, addArgs, $el).callAndSubscribe(function (collection) {
+        this.findCallAndSubscribe(collectionName, context, addArgs, function (collection) {
+
 
             if (oldCollection) {
                 oldCollection.off(0, 0, ctx);
@@ -131,27 +171,23 @@
 
             tempChildrenLen = 1;
 
-            var compiledModels = {};
 
             templateConstructor = function (rawTemplate) {
                 var $tmplEl = $(rawTemplate);
                 return function (model, $index, $parent) {
 
-                    var args, $children = compiledModels[model.id];
+                    var $children = getCompiledRow(compiledTemplateName, model, $index);
 
-                    if ( !$children ) {
-                      $children = $tmplEl.clone();
-                      args = createRow($children, Computed({
-                        initial: model,
-                        $el: $children
-                      }).obj, collection, {
-                        $index: $index
-                      }, ctx);
 
-                      compiledModels[model.id] = $children;
+                    if (!$children) {
+                        $children = $tmplEl.clone();
+                        createRow($children, Computed({
+                            initial: model,
+                            $el: $children
+                        }).obj, collection, {
+                            $index: $index
+                        }, ctx);
                     }
-
-                    lastCreatedArgs = args;
 
                     tempChildrenLen = $children.length;
                     return $children;
@@ -167,15 +203,13 @@
             onReset = function () {
 
                 var html = $(document.createElement(elName)),
-                  i = 0;
-                  //$el.children().clearBinds();
-                  $el.empty();
+                    i = 0;
+                //$el.children().clearBinds();
+                $el.empty();
 
-                args = [];
 
                 collection.each(function (model) {
                     html.append(template(model, i++, collection));
-                    args.push(lastCreatedArgs);
                 });
 
                 $el.append(html.children());
@@ -188,16 +222,17 @@
                     html = '';
                 var _index = lastIndex || index;
 
+
+                //console.log(newModels);
+
                 html = $(document.createElement(elName));
 
 
                 _.each(newModels, function (model) {
 
 
-                  html.append(template(model, _index + i++, collection));
+                    html.append(template(model, _index + i++, collection));
                 });
-
-                args.splice(index, 0, lastCreatedArgs);
 
 
                 html = html.children();
@@ -213,22 +248,21 @@
 
             }, ctx);
 
-            collection.on('reset', onReset, ctx);
+            //collection.on('reset', onReset, ctx);
             collection.on('cut', function (rejectedModels) {
 
                 var index, model, $slice, $cutEl;
 
+                var $children = $el.children();
                 for (index in rejectedModels) {
                     model = rejectedModels[index];
-                    $cutEl = compiledModels[model.id];
+                    model.off(0, 0, ctx);
 
-                    $cutEl & $cutEl.detach();
+                    $slice = $children.slice(index, index + tempChildrenLen);
 
-                    //var $children = $el.children();
-                    //model.off(0, 0, ctx);
-                    //$slice = $children.slice(index, index + tempChildrenLen);
+                    bufferViews[compiledTemplateName].push($slice);
 
-                    //args.splice(index, 1);
+                    $slice.detach();
 
 
                 }
@@ -244,11 +278,9 @@
                 });
                 $el.append($tempDiv.children());
             }, ctx);
-        });
+        }, $el);
 
         return false;
     };
 
 }());
-
-

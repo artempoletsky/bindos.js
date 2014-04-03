@@ -55,7 +55,8 @@
             }
 
             var modelsArr = this.parse(json);
-            this.add(modelsArr, 'end', !options.add);
+            this.add(modelsArr, 'end');
+
             if (!options.add) {
                 this.fire('reset');
             }
