@@ -104,14 +104,13 @@
     ViewModel = Events.extend(ViewModel);
 
 
-    var datasetSupported = !!document.createElement('div').dataset;
 
     $.fn.clearBinds = function () {
         var $self = $();
         $self.length = 1;
         this.each(function () {
             $self[0] = this;
-            ObjectObservable.clearBinds(datasetSupported ? this.dataset.nkObservers : $self.data('nkObservers'));
+            ObjectObservable.clearBinds($self.data('nkObservers'));
             $self.children().clearBinds();
         });
         return this;
@@ -122,7 +121,7 @@
         $self.length = 1;
         this.each(function () {
             $self[0] = this;
-            ObjectObservable.refreshBinds(datasetSupported ? this.dataset.nkObservers : $self.data('nkObservers'));
+            ObjectObservable.refreshBinds($self.data('nkObservers'));
             $self.children().refreshBinds();
         });
         return this;

@@ -46,7 +46,7 @@
 
     var hashObservers = {};
 
-    var datasetSupported = !!document.createElement('div').dataset;
+
 
     var ObjectObservable = window.ObjectObservable = function (params) {
         params = params || {};
@@ -87,15 +87,12 @@
         }
 
         if ($el) {
-            var id = (datasetSupported ? $el[0].dataset.nkObservers : $el.data('nkObservers')) || _.uniqueId('nk_observers');
+            var id = $el.data('nkObservers') || _.uniqueId('nk_observers');
             var observers = hashObservers[id] || [];
             hashObservers[id] = observers;
             observers.push(this);
-            if (datasetSupported) {
-                $el[0].dataset.nkObservers = id;
-            } else {
+
                 $el.data('nkObservers', id);
-            }
 
         }
 
