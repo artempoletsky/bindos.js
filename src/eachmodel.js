@@ -255,6 +255,7 @@
 
                 var $children = $el.children();
                 for (index in rejectedModels) {
+                    index*=1;
                     model = rejectedModels[index];
                     model.off(0, 0, ctx);
 
