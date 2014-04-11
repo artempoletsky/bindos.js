@@ -10,6 +10,7 @@
         parsePairs,
         commaSplitter = /\s*,\s*/,
         ViewModel = {
+            shortcuts: {},
             setElement: function (el) {
                 this.undelegateEvents();
                 this.el = el;
@@ -48,6 +49,11 @@
                 me.$ = function (selector) {
                     return me.$el.find(selector);
                 };
+
+                _.each(me.shortcuts, function(selector, name){
+                    me[name]=me.$(selector);
+                });
+
                 me.initialize();
 
                 if (me.autoParseBinds) {

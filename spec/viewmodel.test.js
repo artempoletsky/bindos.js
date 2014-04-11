@@ -7,7 +7,7 @@ describe('ViewModel', function () {
         var ctx = {
             value: Observable(0)
         };
-        var spy=jasmine.createSpy();
+        var spy = jasmine.createSpy();
         ctx.value.subscribe(spy);
         expect(spy).not.toHaveBeenCalled();
         ViewModel.findBinds($div, ctx);
@@ -34,8 +34,6 @@ describe('ViewModel', function () {
     });
 
 
-
-
     it('adds jquery refresh binds method', function () {
         var $div = $('<div><div nk="html: value"></div></div>');
         var ctx = {
@@ -44,7 +42,7 @@ describe('ViewModel', function () {
         ViewModel.findBinds($div, ctx);
 
         expect($div.text()).toBe('0');
-        ctx.value=1;
+        ctx.value = 1;
         $div.refreshBinds();
         expect($div.text()).toBe('1');
     });
@@ -165,7 +163,6 @@ describe('ViewModel', function () {
     });
 
 
-
     it('each method must return this', function () {
         var vm = new ViewModel();
         var exclude = 'on,initialize,hasListener,get,$,setElement,one,bindToModel,_constructor';
@@ -237,7 +234,6 @@ describe('ViewModel', function () {
     });
 
 
-
     it('parseOptionsObject', function () {
 
         //console.log(ViewModel.parseOptionsObject('a:b'));
@@ -264,6 +260,17 @@ describe('ViewModel', function () {
 											asdvccbt:\n\
 											erwer\n\
 											}').asdvccbt).toBe('erwer');
+    });
+
+    it('supports shortcuts', function () {
+        var $html = $('<div><div class="foo"></div></div>');
+        var view = ViewModel.create({
+            el: $html,
+            shortcuts: {
+                '$foo': '.foo'
+            }
+        });
+        expect(view.$foo[0]).toBe($html.find('.foo')[0]);
     });
 
 
@@ -303,7 +310,7 @@ describe('ViewModel', function () {
         });
 
         it('has optional parameters', function () {
-            var spy=ViewModel.binds.spy = jasmine.createSpy()
+            var spy = ViewModel.binds.spy = jasmine.createSpy()
 
             var $div = $('<div nk="spy"></div>');
 
