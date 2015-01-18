@@ -4,26 +4,58 @@
     var modelsMap = {},
 
         Model = Events.extend({
+            setComputed: function (names) {
+
+                var self = this;
+                _.each(names, function (name) {
+                    var comp = self.computed[name];
+                    var getter = comp.get, vals = _.foldl(comp.deps, function (array, name) {
+                        array.push(self.prop(name));
+                        return array;
+                    }, []);
+                    comp.value = getter.apply(self, vals);
+                    self.fire('change:' + name);
+                });
+            },
             constructor: function (data) {
+
+                var self = this;
+
 
                 data = data || {};
 
-                this.attributes = _.extend({}, this.defaults, this.parse(data));
-                this._changed = {};
-                this.id = this.attributes[this.idAttribute];
-                this.cid = _.uniqueId('c');
+                self.attributes = _.extend({}, self.defaults, self.parse(data));
+
+                var rdps = self.reverseComputedDeps = {}, computedNames = [];
+
+                _.each(self.computed, function (comp, compName) {
+                    computedNames.push(compName);
+                    _.each(comp.deps, function (name) {
+                        if (!rdps[name]) {
+                            rdps[name] = [];
+                        }
+                        rdps[name].push(compName);
+                    });
+                });
+
+                self.setComputed(computedNames);
+
+                self._changed = {};
+                self.id = self.attributes[self.idAttribute];
+                self.cid = _.uniqueId('c');
                 //заносим в глобальную коллекцию
-                if (this.mapping && this.id) {
-                    modelsMap[this.mapping] = modelsMap[this.mapping] || {};
-                    modelsMap[this.mapping][this.id] = this;
+                if (self.mapping && self.id) {
+                    modelsMap[self.mapping] = modelsMap[self.mapping] || {};
+                    modelsMap[self.mapping][self.id] = self;
                 }
-                this.initialize();
+                self.initialize();
             },
             initialize: function () {
                 return this;
             },
             idAttribute: 'id',
             mapping: false,
+            computed: {},
             defaults: {},
             toJSON: function () {
                 return _.clone(this.attributes);
@@ -41,10 +73,21 @@
                 return this;
             },
             prop: function (key, value) {
+                var self = this, comp;
+
+                //if set
                 if (arguments.length === 1 && typeof key === 'string') {
-                    return this.attributes[key];
+
+                    //if computed
+                    if (comp = self.computed[key]) {
+                        return comp.value;
+                    }
+                    //if attribute
+                    return self.attributes[key];
                 }
-                var values = {}, self = this, changed = {};
+
+                //if get
+                var values = {}, changed = {};
                 if (typeof key === 'string') {
                     values[key] = value;
                 } else {
@@ -52,7 +95,17 @@
                 }
 
                 _.each(values, function (val, key) {
-                    changed[key] = self._changed[key] = self.attributes[key] = val;
+                    changed[key] = self._changed[key] = val;
+
+                    if (comp = self.computed[key]) {
+                        comp.set.call(self, val);
+                    } else {
+                        self.attributes[key] = val;
+                    }
+
+                    if (self.reverseComputedDeps[key]) {
+                        self.setComputed(self.reverseComputedDeps[key]);
+                    }
                     if (key === self.idAttribute) {
                         self.id = val;
                     }
@@ -61,18 +114,7 @@
                 this.fire('change', changed);
                 return this;
             },
-            /**
-             * DEPRECATED since 26.01.2013
-             */
-            get: function (key) {
-                return this.prop.apply(this, arguments);
-            },
-            /**
-             * синоним для prop
-             */
-            set: function () {
-                return this.prop.apply(this, arguments);
-            },
+
             validate: function () {
                 return false;
             },
@@ -96,7 +138,7 @@
                 Model.sync('get', this.url(), _.extend({}, options, opt));
                 return this;
             },
-			save: function (data) {
+            save: function (data) {
 
                 var me = this,
                     errors = this.validate(data),
@@ -108,7 +150,7 @@
                 }
 
 
-                if ( _.isFunction(this.url)) {
+                if (_.isFunction(this.url)) {
                     url = this.url();
                 } else {
                     url = this.url;
