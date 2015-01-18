@@ -262,7 +262,7 @@
                     newModels = self[method].apply(self, arguments),
                     indexes = {};
             _.each(newModels, function(model, index) {
-                indexes[self.indexOf(model)] = index;
+                indexes[index] = self.indexOf(model);
             });
             self.models = newModels;
             self.length = newModels.length;
