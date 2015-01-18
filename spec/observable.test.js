@@ -1,7 +1,7 @@
 describe('Observable', function () {
     it('fires when object is changed', function () {
-        var obs=Observable({});
-        var spy=jasmine.createSpy();
+        var obs = Observable({});
+        var spy = jasmine.createSpy();
         obs.subscribe(spy);
         expect(spy).not.toHaveBeenCalled();
         obs({
@@ -9,7 +9,6 @@ describe('Observable', function () {
         });
         expect(spy).toHaveBeenCalled();
     });
-
 
 
     it('construct', function () {
@@ -136,7 +135,6 @@ describe('Observable', function () {
         expect(alltext()).toBe('Цена: 300 RUR. Служба поддержки: 13322444');
 
 
-
     });
 
 
@@ -202,5 +200,15 @@ describe('Observable', function () {
             expect(spy.calls.length).toBe(0);
             expect(comp()).toBe(5);
         });
+    });
+
+    it('can observe model property', function () {
+        var model = new Model(),
+            obs = new Observable(model, 'foo');
+        expect(obs()).toBeUndefined();
+        model.prop('foo', 'bar');
+        expect(obs()).toBe('bar');
+        obs('baz');
+        expect(model.prop('foo')).toBe('baz');
     });
 });

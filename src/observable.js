@@ -47,7 +47,6 @@
     var hashObservers = {};
 
 
-
     var ObjectObservable = window.ObjectObservable = function (params) {
         params = params || {};
         this.dependencies = [];
@@ -55,7 +54,18 @@
         this.listeners = [];
 
         var initial = params.initial, $el = params.$el;
-        if (params.evil) {
+        var me = this;
+        if (params.model) {
+            me.prop = params.prop;
+            me.model = params.model;
+            me.set(params.model.prop(params.prop));
+            params.model.on('change:' + params.prop, function () {
+                var val = params.model.prop(params.prop);
+                if (val != me.value) {
+                    me.set(val);
+                }
+            }, me);
+        } else if (params.evil) {
 
             var evil = ViewModel.evil(params.evil.string, params.evil.context, params.evil.addArgs);
 
@@ -92,7 +102,7 @@
             hashObservers[id] = observers;
             observers.push(this);
 
-                $el.data('nkObservers', id);
+            $el.data('nkObservers', id);
 
         }
 
@@ -105,24 +115,28 @@
     };
 
     ObjectObservable.clearBinds = function (id) {
-        if (!id)
+        if (!id) {
             return;
+        }
         var observers = hashObservers[id], i, l;
-        if (observers)
+        if (observers) {
             while (observers.length) {
                 observers.pop().destroy();
             }
+        }
         delete hashObservers[id];
     };
 
     ObjectObservable.refreshBinds = function (id) {
-        if (!id)
+        if (!id) {
             return;
+        }
         var observers = hashObservers[id], i, l;
-        if (observers)
+        if (observers) {
             for (i = 0, l = observers.length; i < l; i++) {
                 observers[i].notify();
             }
+        }
         delete observers[id];
     };
 
@@ -139,6 +153,10 @@
         set: function (value) {
 
             this.value = this.setter(value);
+
+            if (this.model) {
+                this.model.prop(this.prop, this.value);
+            }
             return this.notify();
         },
         get: function () {
@@ -146,6 +164,11 @@
         },
         destroy: function () {
             var me = this;
+
+            if (me.model) {
+                me.model.off(0, 0, this);
+                me.model = undefined;
+            }
             _.each(me.dependencies, function (obs, index) {
                 obs.unsubscribe(me.selfCallbacks[index]);
             });
@@ -244,9 +267,15 @@
         };
         return fn;
     };
-    Observable = function (initial) {
+    Observable = function (modelInitial, prop) {
+        if (prop) {
+            return BaseObservable({
+                model: modelInitial,
+                prop: prop
+            });
+        }
         return BaseObservable({
-            initial: initial
+            initial: modelInitial
         });
     };
     Observable.isObservable = function (fn) {
