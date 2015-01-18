@@ -1061,7 +1061,7 @@
                     newModels = self[method].apply(self, arguments),
                     indexes = {};
             _.each(newModels, function(model, index) {
-                indexes[self.indexOf(model)] = index;
+                indexes[index] = self.indexOf(model);
             });
             self.models = newModels;
             self.length = newModels.length;
@@ -2107,12 +2107,11 @@
 
             }, ctx);
             collection.on('sort', function (indexes) {
-                var $tempDiv = $(document.createElement('div')),
+                var $tempDiv = $(document.createElement(elName)),
                     $children = $el.children();
 
                 _.each(indexes, function (newIndex, oldIndex) {
-                    oldIndex *= 1;
-                    $tempDiv.append($children.slice(oldIndex, oldIndex + tempChildrenLen));
+                    $tempDiv.append($children.slice(newIndex, newIndex + tempChildrenLen));
                 });
                 $el.append($tempDiv.children());
             }, ctx);
