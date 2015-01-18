@@ -257,10 +257,6 @@
     };
 
     Computed = function (options, context) {
-        //TODO: удалить исключение после 17.08.2013
-        if (context) {
-            throw Error('Context for computed is obsolete');
-        }
         return BaseObservable(typeof options === 'function' ? {
             get: options
         } : options);
