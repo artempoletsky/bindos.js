@@ -1,276 +1,6 @@
 (function (window) {
     "use strict";
     /*globals _*/
-    var waitForRefresh = [],
-        refreshActive = false,
-        computedInit = false,
-        Observable,
-        Computed,
-        refreshFn = window.requestAnimationFrame
-            || window.webkitRequestAnimationFrame
-            || window.mozRequestAnimationFrame
-            || window.msRequestAnimationFrame
-            || window.oRequestAnimationFrame
-            || function (cb) {
-            setTimeout(function () {
-                cb();
-            }, 1000 / 15);
-        },
-        addToRefresh = function (observable) {
-            if (waitForRefresh.indexOf(observable) === -1) {
-                waitForRefresh.push(observable);
-            }
-        },
-        refresher = window.ComputedRefresher = {
-            refreshAll: function () {
-                _.each(waitForRefresh, function (val) {
-                    val.notify();
-                });
-                waitForRefresh = [];
-            },
-            startRefresh: function () {
-                var self = this;
-                refreshActive = true;
-                refreshFn(function () {
-                    if (refreshActive) {
-                        self.refreshAll();
-                        self.startRefresh();
-                    }
-                });
-            },
-            stopRefresh: function () {
-                refreshActive = false;
-            }
-        }, BaseObservable;
-
-
-    var hashObservers = {};
-
-
-
-    var ObjectObservable = window.ObjectObservable = function (params) {
-        params = params || {};
-        this.dependencies = [];
-        this.selfCallbacks = [];
-        this.listeners = [];
-
-        var initial = params.initial, $el = params.$el;
-        if (params.evil) {
-
-            var evil = ViewModel.evil(params.evil.string, params.evil.context, params.evil.addArgs);
-
-            computedInit = this;
-            var obs = evil();
-            if (Observable.isObservable(obs)) {
-                initial = obs();
-                this.getter = function () {
-                    return obs();
-                };
-                this.setter = function (value) {
-                    obs(value);
-                    return value;
-                };
-            } else {
-                initial = obs;
-                this.getter = function () {
-                    return evil();
-                };
-            }
-            computedInit = false;
-
-
-        } else if (params.get) {
-            computedInit = this;
-            initial = params.get();
-            computedInit = false;
-            this.getter = params.get;
-        }
-
-        if ($el) {
-            var id = $el.data('nkObservers') || _.uniqueId('nk_observers');
-            var observers = hashObservers[id] || [];
-            hashObservers[id] = observers;
-            observers.push(this);
-
-                $el.data('nkObservers', id);
-
-        }
-
-        if (params.set) {
-            this.setter = params.set;
-        }
-        this.lastValue = this.value = initial;
-        //TODO: implement dirty behavior
-        this.dirty = params.dirty;
-    };
-
-    ObjectObservable.clearBinds = function (id) {
-        if (!id)
-            return;
-        var observers = hashObservers[id], i, l;
-        if (observers)
-            while (observers.length) {
-                observers.pop().destroy();
-            }
-        delete hashObservers[id];
-    };
-
-    ObjectObservable.refreshBinds = function (id) {
-        if (!id)
-            return;
-        var observers = hashObservers[id], i, l;
-        if (observers)
-            for (i = 0, l = observers.length; i < l; i++) {
-                observers[i].notify();
-            }
-        delete observers[id];
-    };
-
-    ObjectObservable.prototype = {
-        setter: function (value) {
-            return value;
-        },
-        getter: function () {
-            if (computedInit) {
-                computedInit.dependsOn(this);
-            }
-            return this.value;
-        },
-        set: function (value) {
-
-            this.value = this.setter(value);
-            return this.notify();
-        },
-        get: function () {
-            return this.getter();
-        },
-        destroy: function () {
-            var me = this;
-            _.each(me.dependencies, function (obs, index) {
-                obs.unsubscribe(me.selfCallbacks[index]);
-            });
-            me.dependencies = undefined;
-            me.selfCallbacks = undefined;
-            me.listeners = [];
-            me.value = undefined;
-            me.lastValue = undefined;
-
-        },
-        dependsOn: function (obs) {
-            var me = this;
-
-            if (me.dependencies.indexOf(obs) === -1) {
-                me.dependencies.push(obs);
-                var callback = function () {
-                    me.notify();
-                };
-                me.selfCallbacks.push(callback);
-                obs.subscribe(callback);
-            }
-            return me;
-        },
-        subscribe: function (callback) {
-            this.listeners.push(callback);
-            return this;
-        },
-        unsubscribe: function (callback) {
-            this.listeners = _.filter(this.listeners, function (listener) {
-                return listener !== callback;
-            });
-            return this;
-        },
-        notify: function () {
-            var me = this,
-                value = me.get();
-            if (me.lastValue !== value) {
-                _.each(me.listeners, function (callback) {
-                    callback(value);
-                });
-            }
-            me.lastValue = value;
-            return me;
-        },
-        fire: function () {
-            var me = this,
-                value = me.get();
-            _.each(me.listeners, function (callback) {
-                callback(value);
-            });
-            return me;
-        },
-        callAndSubscribe: function (callback) {
-            callback(this.get());
-            return this.subscribe(callback);
-        },
-        valueOf: function () {
-            return this.get();
-        },
-        toString: function () {
-            return this.get();
-        }
-    };
-
-    BaseObservable = function (params) {
-        var object = new ObjectObservable(params);
-
-        var fn = function (newValue) {
-            if (arguments.length !== 0) {
-                object.set(newValue);
-                return newValue;
-            }
-            return object.get();
-        };
-
-        _.extend(fn, {
-            obj: object,
-            subscribe: function (callback) {
-                object.subscribe(callback);
-                return this;
-            },
-            unsubscribe: function (callback) {
-                object.unsubscribe(callback);
-                return this;
-            },
-            fire: function () {
-                object.fire();
-                return this;
-            },
-            _notSimple: true,
-            __observable: true
-        });
-        //fn.fire = fn.notify;
-        fn.valueOf = fn.toString = function () {
-            return fn();
-        };
-        return fn;
-    };
-    Observable = function (initial) {
-        return BaseObservable({
-            initial: initial
-        });
-    };
-    Observable.isObservable = function (fn) {
-        if (typeof fn !== 'function') {
-            return false;
-        }
-        return fn.__observable || false;
-    };
-
-    Computed = function (options, context) {
-        return BaseObservable(typeof options === 'function' ? {
-            get: options
-        } : options);
-    };
-
-    //window.BaseObservable = BaseObservable;
-    window.Observable = Observable;
-    window.Computed = Computed;
-    //window.Subscribeable = Subscribeable;
-}(this));
-
-(function (window) {
-    "use strict";
-    /*globals _*/
     var ctor = function () {
         },
         Class = function () {
@@ -606,30 +336,52 @@
 }(this));
 (function (window) {
     "use strict";
-    /*globals Events, _, $*/
+
+
     var modelsMap = {},
 
         Model = Events.extend({
+            reverseComputedDeps: {},
+            setComputeds: function (names) {
+                var self = this;
+                _.each(names, function (name) {
+                    self.computeds[name].get();
+                    self.fire('change:' + name);
+                });
+            },
             constructor: function (data) {
+
+                var self = this;
+
 
                 data = data || {};
 
-                this.attributes = _.extend({}, this.defaults, this.parse(data));
-                this._changed = {};
-                this.id = this.attributes[this.idAttribute];
-                this.cid = _.uniqueId('c');
+                self.attributes = _.extend({}, self.defaults, self.parse(data));
+
+                this.reverseComputedDeps = {};
+
+                _.each(self.computeds, function (comp, compName) {
+                    comp.name = compName;
+                    comp.model = self;
+                    self.computeds[compName] = new Model.Computed(comp);
+                });
+
+                self._changed = {};
+                self.id = self.attributes[self.idAttribute];
+                self.cid = _.uniqueId('c');
                 //заносим в глобальную коллекцию
-                if (this.mapping && this.id) {
-                    modelsMap[this.mapping] = modelsMap[this.mapping] || {};
-                    modelsMap[this.mapping][this.id] = this;
+                if (self.mapping && self.id) {
+                    modelsMap[self.mapping] = modelsMap[self.mapping] || {};
+                    modelsMap[self.mapping][self.id] = self;
                 }
-                this.initialize();
+                self.initialize();
             },
             initialize: function () {
                 return this;
             },
             idAttribute: 'id',
             mapping: false,
+            computeds: {},
             defaults: {},
             toJSON: function () {
                 return _.clone(this.attributes);
@@ -647,10 +399,21 @@
                 return this;
             },
             prop: function (key, value) {
+                var self = this, comp;
+
+                //if get
                 if (arguments.length === 1 && typeof key === 'string') {
-                    return this.attributes[key];
+
+                    //if computed
+                    if (comp = self.computeds[key]) {
+                        return comp.value;
+                    }
+                    //if attribute
+                    return self.attributes[key];
                 }
-                var values = {}, self = this, changed = {};
+
+                //if set
+                var values = {}, changed = {};
                 if (typeof key === 'string') {
                     values[key] = value;
                 } else {
@@ -658,27 +421,29 @@
                 }
 
                 _.each(values, function (val, key) {
-                    changed[key] = self._changed[key] = self.attributes[key] = val;
+                    changed[key] = self._changed[key] = val;
+
+                    //if computed
+                    if (comp = self.computeds[key]) {
+
+                        comp.set(val);
+                    } else {
+                        self.attributes[key] = val;
+                    }
+
+                    if (self.reverseComputedDeps[key]) {
+                        self.setComputeds(self.reverseComputedDeps[key]);
+                    }
                     if (key === self.idAttribute) {
                         self.id = val;
                     }
+
                     self.fire('change:' + key);
                 });
                 this.fire('change', changed);
                 return this;
             },
-            /**
-             * DEPRECATED since 26.01.2013
-             */
-            get: function (key) {
-                return this.prop.apply(this, arguments);
-            },
-            /**
-             * синоним для prop
-             */
-            set: function () {
-                return this.prop.apply(this, arguments);
-            },
+
             validate: function () {
                 return false;
             },
@@ -702,7 +467,7 @@
                 Model.sync('get', this.url(), _.extend({}, options, opt));
                 return this;
             },
-			save: function (data) {
+            save: function (data) {
 
                 var me = this,
                     errors = this.validate(data),
@@ -714,7 +479,7 @@
                 }
 
 
-                if ( _.isFunction(this.url)) {
+                if (_.isFunction(this.url)) {
                     url = this.url();
                 } else {
                     url = this.url;
@@ -789,6 +554,88 @@
             error: options.error
         });
     };
+
+    Model.filters = {};
+
+
+    var filtersSplitter = /\s*\|\s*/,
+        filtersSplitter2 = /(\w+)(\s*:\s*['"]([^'"]+)['"])?/;
+
+    Model.Computed = Class.extend({
+
+        constructor: function (options) {
+            this.deps = options.deps || [];
+            this.name = options.name;
+            this.model = options.model;
+            this.filters = options.filters || {};
+            this.getter = options.get;
+            this.setter = options.set;
+            this.get();
+
+
+            var rdps = this.model.reverseComputedDeps;
+            _.each(this.deps, function (name) {
+                if (!rdps[name]) {
+                    rdps[name] = [];
+                }
+                rdps[name].push(options.name);
+            });
+        },
+        value: undefined,
+        deps: [],
+        model: undefined,
+        filters: {
+            /*
+             filt1: options,
+             filt2: options
+             */
+        },
+        getter: function (dep1, dep2, depN) {
+            return undefined;
+        },
+        setter: function (value) {
+
+        },
+        parseFilters: function (string) {
+            var result = {};
+            var filters = string.split(filtersSplitter);
+            if (filters.length <= 1) {
+                return result;
+            }
+            this.deps = [filters.shift()];
+
+            result = _.foldl(filters, function (result, string) {
+                var matches = filtersSplitter2.exec(string);
+                var options = matches[3];
+                var filterName = matches[1];
+                result[filterName] = options;
+                return result;
+            }, {});
+
+            return result;
+        },
+        get: function () {
+            var self = this, vals = _.foldl(self.deps, function (array, name) {
+                array.push(self.model.prop(name));
+                return array;
+            }, []);
+            var lastValue = self.value;
+            var value = self.getter.apply(self, vals);
+
+
+            self.value = _.foldl(this.filters, function (result, options, filterName) {
+                return Model.filters[filterName].format(result, options);
+            }, value);
+
+            return self.value;
+        },
+        set: function (value) {
+            this.setter.call(this.model, _.foldl(this.filters, function (result, options, filterName) {
+                return Model.filters[filterName].unformat(result, options);
+            }, value));
+            this.get();
+        }
+    });
 
     window.Model = Model;
 }(this));
@@ -1070,7 +917,9 @@
 }(this));
 (function (window) {
     "use strict";
-    /*global _, Computed, Observable, Model, Events, BaseObservable */
+
+
+
     var $ = window.$,
         eventSplitter = /\s+/,
 
@@ -1079,6 +928,7 @@
     //breakersRegex = /^\{([\s\S]*)\}$/,
         parsePairs,
         commaSplitter = /\s*,\s*/,
+
         ViewModel = {
             shortcuts: {},
             setElement: function (el) {
@@ -1120,8 +970,8 @@
                     return me.$el.find(selector);
                 };
 
-                _.each(me.shortcuts, function(selector, name){
-                    me[name]=me.$(selector);
+                _.each(me.shortcuts, function (selector, name) {
+                    me[name] = me.$(selector);
                 });
 
                 me.initialize();
@@ -1177,8 +1027,7 @@
                 return this;
             }
         };
-    ViewModel = Events.extend(ViewModel);
-
+    ViewModel = Model.extend(ViewModel);
 
 
     $.fn.clearBinds = function () {
@@ -1256,20 +1105,23 @@
     };
 
     ViewModel.findObservable = function (string, context, addArgs, $el) {
-
-
-        var result = new ObjectObservable({
-            evil: {
+        var result = {
+            $el: $el
+        };
+        if (context && context.prop && context.attributes) {//if model
+            result.model = context;
+            result.prop = string;
+        } else {
+            result.evil = {
                 string: string,
                 context: context,
                 addArgs: addArgs
-            },
-            $el: $el
-        });
-        return result;
+            }
+        }
+        return new ObjectObservable(result);
     };
 
-    ViewModel.findBinds = function (selector, context, addArgs) {
+    ViewModel.findBinds = function (selector, model) {
         var newctx,
             breakContextIsSent = false,
             self = this,
@@ -1284,7 +1136,7 @@
 
 
         if (tagBehavior) {
-            tagBehavior.call(self, $el, context, addArgs);
+            tagBehavior.call(self, $el, model);
             return;
         }
 
@@ -1298,11 +1150,11 @@
                 if (!attrFn) {
                     return;
                 }
-                newctx = attrFn.call(self, $el, value, context, addArgs);
+                newctx = attrFn.call(self, $el, value, model);
                 if (newctx === false) {
                     breakContextIsSent = true;
                 } else if (newctx) {
-                    context = newctx;
+                    model = newctx;
                 }
             });
 
@@ -1312,10 +1164,10 @@
                 var node = this;
                 if (this.nodeType == 3) {
                     _.forIn(self.inlineModificators, function (mod) {
-                        mod.call(self, node, context, addArgs);
+                        mod.call(self, node, model);
                     });
                 } else if (this.nodeType == 1) {
-                    self.findBinds(node, context, addArgs);
+                    self.findBinds(node, model);
                 }
             });
 
@@ -1374,54 +1226,12 @@
 /*globals ViewModel, $, _, Computed, Observable, ObjectObservable*/
 (function() {
     "use strict";
-    var filtersSplitter = /\s*\|\s*/;
-    var filtersSplitter2 = /(\w+)(:['"]([^'"]+)['"])?/;
+
 
     var zeroEmpty = function(value) {
         return value || (value === 0 ? '0' : '');
     };
 
-    ViewModel.filters = {};
-
-    ViewModel.applyFilters = function(value, context, addArgs, callback, $el) {
-        var filters = value.split(filtersSplitter);
-        if (filters.length <= 1) {
-            return this.findCallAndSubscribe(value, context, addArgs, callback, $el);
-        }
-        value = filters.shift();
-        var computed = this.findObservable(value, context, addArgs, $el);
-        filters = _.foldl(filters, function(result, string) {
-            var matches = filtersSplitter2.exec(string);
-            var key = matches[1];
-            result.push({
-                unformat: ViewModel.filters[key].unformat,
-                format: ViewModel.filters[key].format,
-                key: key,
-                value: matches[3] || ''
-            });
-            return result;
-        }, []);
-        var result = new ObjectObservable({
-            get: function() {
-                return _.foldl(filters, function(result, obj) {
-                    return obj.format.call(ViewModel, result, obj.value);
-                }, computed.get());
-            },
-            set: function(value) {
-                computed.set(_.foldr(filters, function(result, obj) {
-                    return obj.unformat.call(ViewModel, result, obj.value);
-                }, value));
-            },
-            $el: $el
-        });
-
-        if (callback) {
-            callback(result.value);
-            result.subscribe(callback);
-        }
-
-        return result;
-    };
 
     ViewModel.binds = {
         log: function($el, value, context, addArgs) {
@@ -1669,19 +1479,12 @@
     };
 
 
-    ViewModel.filters._sysUnwrap = {
-        format: function(value) {
-            if (Observable.isObservable(value)) {
-                return value();
-            }
-            return value;
-        }
-    };
+/*
 
     ViewModel.filters._sysEmpty = {
         format: zeroEmpty
     };
-
+  */
     ViewModel.inlineModificators = {
         '{{}}': function(textNode, context, addArgs) {
             var str = textNode.nodeValue,
@@ -1906,7 +1709,7 @@
     ViewModel.binds.withModel = function ($el, value, context, addArgs) {
         addArgs = addArgs || {};
 
-
+             console.log(context);
         createRow($el.children(), this.findObservable(value, context, addArgs, $el), context, addArgs, {});
         //останавливает внешний парсер
         return false;

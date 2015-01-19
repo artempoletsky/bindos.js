@@ -1,19 +1,15 @@
 (function (window) {
     "use strict";
-    /*globals Events, _, $*/
+
+
     var modelsMap = {},
 
         Model = Events.extend({
-            setComputed: function (names) {
-
+            reverseComputedDeps: {},
+            setComputeds: function (names) {
                 var self = this;
                 _.each(names, function (name) {
-                    var comp = self.computed[name];
-                    var getter = comp.get, vals = _.foldl(comp.deps, function (array, name) {
-                        array.push(self.prop(name));
-                        return array;
-                    }, []);
-                    comp.value = getter.apply(self, vals);
+                    self.computeds[name].get();
                     self.fire('change:' + name);
                 });
             },
@@ -26,19 +22,13 @@
 
                 self.attributes = _.extend({}, self.defaults, self.parse(data));
 
-                var rdps = self.reverseComputedDeps = {}, computedNames = [];
+                this.reverseComputedDeps = {};
 
-                _.each(self.computed, function (comp, compName) {
-                    computedNames.push(compName);
-                    _.each(comp.deps, function (name) {
-                        if (!rdps[name]) {
-                            rdps[name] = [];
-                        }
-                        rdps[name].push(compName);
-                    });
+                _.each(self.computeds, function (comp, compName) {
+                    comp.name = compName;
+                    comp.model = self;
+                    self.computeds[compName] = new Model.Computed(comp);
                 });
-
-                self.setComputed(computedNames);
 
                 self._changed = {};
                 self.id = self.attributes[self.idAttribute];
@@ -55,7 +45,7 @@
             },
             idAttribute: 'id',
             mapping: false,
-            computed: {},
+            computeds: {},
             defaults: {},
             toJSON: function () {
                 return _.clone(this.attributes);
@@ -75,18 +65,18 @@
             prop: function (key, value) {
                 var self = this, comp;
 
-                //if set
+                //if get
                 if (arguments.length === 1 && typeof key === 'string') {
 
                     //if computed
-                    if (comp = self.computed[key]) {
+                    if (comp = self.computeds[key]) {
                         return comp.value;
                     }
                     //if attribute
                     return self.attributes[key];
                 }
 
-                //if get
+                //if set
                 var values = {}, changed = {};
                 if (typeof key === 'string') {
                     values[key] = value;
@@ -97,18 +87,21 @@
                 _.each(values, function (val, key) {
                     changed[key] = self._changed[key] = val;
 
-                    if (comp = self.computed[key]) {
-                        comp.set.call(self, val);
+                    //if computed
+                    if (comp = self.computeds[key]) {
+
+                        comp.set(val);
                     } else {
                         self.attributes[key] = val;
                     }
 
                     if (self.reverseComputedDeps[key]) {
-                        self.setComputed(self.reverseComputedDeps[key]);
+                        self.setComputeds(self.reverseComputedDeps[key]);
                     }
                     if (key === self.idAttribute) {
                         self.id = val;
                     }
+
                     self.fire('change:' + key);
                 });
                 this.fire('change', changed);
@@ -225,6 +218,88 @@
             error: options.error
         });
     };
+
+    Model.filters = {};
+
+
+    var filtersSplitter = /\s*\|\s*/,
+        filtersSplitter2 = /(\w+)(\s*:\s*['"]([^'"]+)['"])?/;
+
+    Model.Computed = Class.extend({
+
+        constructor: function (options) {
+            this.deps = options.deps || [];
+            this.name = options.name;
+            this.model = options.model;
+            this.filters = options.filters || {};
+            this.getter = options.get;
+            this.setter = options.set;
+            this.get();
+
+
+            var rdps = this.model.reverseComputedDeps;
+            _.each(this.deps, function (name) {
+                if (!rdps[name]) {
+                    rdps[name] = [];
+                }
+                rdps[name].push(options.name);
+            });
+        },
+        value: undefined,
+        deps: [],
+        model: undefined,
+        filters: {
+            /*
+             filt1: options,
+             filt2: options
+             */
+        },
+        getter: function (dep1, dep2, depN) {
+            return undefined;
+        },
+        setter: function (value) {
+
+        },
+        parseFilters: function (string) {
+            var result = {};
+            var filters = string.split(filtersSplitter);
+            if (filters.length <= 1) {
+                return result;
+            }
+            this.deps = [filters.shift()];
+
+            result = _.foldl(filters, function (result, string) {
+                var matches = filtersSplitter2.exec(string);
+                var options = matches[3];
+                var filterName = matches[1];
+                result[filterName] = options;
+                return result;
+            }, {});
+
+            return result;
+        },
+        get: function () {
+            var self = this, vals = _.foldl(self.deps, function (array, name) {
+                array.push(self.model.prop(name));
+                return array;
+            }, []);
+            var lastValue = self.value;
+            var value = self.getter.apply(self, vals);
+
+
+            self.value = _.foldl(this.filters, function (result, options, filterName) {
+                return Model.filters[filterName].format(result, options);
+            }, value);
+
+            return self.value;
+        },
+        set: function (value) {
+            this.setter.call(this.model, _.foldl(this.filters, function (result, options, filterName) {
+                return Model.filters[filterName].unformat(result, options);
+            }, value));
+            this.get();
+        }
+    });
 
     window.Model = Model;
 }(this));

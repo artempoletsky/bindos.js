@@ -1,6 +1,8 @@
 (function (window) {
     "use strict";
-    /*global _, Computed, Observable, Model, Events, BaseObservable */
+
+
+
     var $ = window.$,
         eventSplitter = /\s+/,
 
@@ -9,6 +11,7 @@
     //breakersRegex = /^\{([\s\S]*)\}$/,
         parsePairs,
         commaSplitter = /\s*,\s*/,
+
         ViewModel = {
             shortcuts: {},
             setElement: function (el) {
@@ -50,8 +53,8 @@
                     return me.$el.find(selector);
                 };
 
-                _.each(me.shortcuts, function(selector, name){
-                    me[name]=me.$(selector);
+                _.each(me.shortcuts, function (selector, name) {
+                    me[name] = me.$(selector);
                 });
 
                 me.initialize();
@@ -107,8 +110,7 @@
                 return this;
             }
         };
-    ViewModel = Events.extend(ViewModel);
-
+    ViewModel = Model.extend(ViewModel);
 
 
     $.fn.clearBinds = function () {
@@ -186,20 +188,23 @@
     };
 
     ViewModel.findObservable = function (string, context, addArgs, $el) {
-
-
-        var result = new ObjectObservable({
-            evil: {
+        var result = {
+            $el: $el
+        };
+        if (context && context.prop && context.attributes) {//if model
+            result.model = context;
+            result.prop = string;
+        } else {
+            result.evil = {
                 string: string,
                 context: context,
                 addArgs: addArgs
-            },
-            $el: $el
-        });
-        return result;
+            }
+        }
+        return new ObjectObservable(result);
     };
 
-    ViewModel.findBinds = function (selector, context, addArgs) {
+    ViewModel.findBinds = function (selector, model) {
         var newctx,
             breakContextIsSent = false,
             self = this,
@@ -214,7 +219,7 @@
 
 
         if (tagBehavior) {
-            tagBehavior.call(self, $el, context, addArgs);
+            tagBehavior.call(self, $el, model);
             return;
         }
 
@@ -228,11 +233,11 @@
                 if (!attrFn) {
                     return;
                 }
-                newctx = attrFn.call(self, $el, value, context, addArgs);
+                newctx = attrFn.call(self, $el, value, model);
                 if (newctx === false) {
                     breakContextIsSent = true;
                 } else if (newctx) {
-                    context = newctx;
+                    model = newctx;
                 }
             });
 
@@ -242,10 +247,10 @@
                 var node = this;
                 if (this.nodeType == 3) {
                     _.forIn(self.inlineModificators, function (mod) {
-                        mod.call(self, node, context, addArgs);
+                        mod.call(self, node, model);
                     });
                 } else if (this.nodeType == 1) {
-                    self.findBinds(node, context, addArgs);
+                    self.findBinds(node, model);
                 }
             });
 

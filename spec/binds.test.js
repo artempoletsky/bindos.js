@@ -34,10 +34,13 @@ describe('ViewModel.binds', function() {
         it('can create filtered computed', function() {
             expect(ViewModel.filters.tf1).toBeDefined();
             expect(ViewModel.filters.tf2).toBeDefined();
-            var ctx = {
-                value: Observable(5)
-            };
-            var filtComp = ViewModel.applyFilters('value | tf1:\'13\' | tf2', ctx);
+            var vm=ViewModel.create({
+                defaults: {
+                    value: 5
+                }
+            });
+
+            var filtComp = ViewModel.applyFilters("value | tf1:'13' | tf2", ctx);
             expect(filtComp.get()).toBe(18 * 18);
 
             filtComp.set(4 * 4);

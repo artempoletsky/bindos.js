@@ -187,7 +187,7 @@ describe('Model', function () {
             defaults: {
                 x: 10
             },
-            computed: {
+            computeds: {
                 x2: {
                     deps: ['x'],
                     get: function (x) {
@@ -199,6 +199,9 @@ describe('Model', function () {
                 }
             }
         });
+
+        expect(m.computeds.x2).toBeDefined();
+
 
         //check init
         expect(m.prop('x')).toBe(10);
@@ -219,6 +222,58 @@ describe('Model', function () {
         expect(m.prop('x')).toBe(5);
 
 
+    });
+
+
+    describe('Model.Computed', function () {
+        it('can construct', function () {
+            var model = new Model();
+            model.prop('x', 11);
+            var comp = new Model.Computed({
+                model: model,
+                deps: ['x'],
+                get: function (x) {
+                    return x * 2;
+                },
+                set: function (value) {
+                    this.prop('x', value / 2);
+                }
+            });
+
+            expect(comp.value).toBe(22);
+        });
+
+
+        it('can parse filters', function () {
+
+
+            var comp = new Model.Computed({
+                get: function () {
+                },
+                model: new Model()
+            });
+
+            Model.filters.filter1 = {
+                format: function (value, options) {
+
+                },
+                unformat: function (value, options) {
+
+                }
+            }
+            Model.filters.filter2 = {
+                format: function (value, options) {
+
+                },
+                unformat: function (value, options) {
+
+                }
+            }
+
+            var filters = comp.parseFilters('x | filter1 | filter2: "8"');
+            expect(filters.filter2).toBe('8');
+            expect(comp.deps[0]).toBe('x');
+        });
     });
 
 

@@ -4,6 +4,7 @@ describe('ViewModel', function () {
 
     it('adds jquery clear binds method', function () {
         var $div = $('<div><div nk="html: value"></div></div>');
+
         var ctx = {
             value: Observable(0)
         };

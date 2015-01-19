@@ -1,54 +1,12 @@
 /*globals ViewModel, $, _, Computed, Observable, ObjectObservable*/
 (function() {
     "use strict";
-    var filtersSplitter = /\s*\|\s*/;
-    var filtersSplitter2 = /(\w+)(:['"]([^'"]+)['"])?/;
+
 
     var zeroEmpty = function(value) {
         return value || (value === 0 ? '0' : '');
     };
 
-    ViewModel.filters = {};
-
-    ViewModel.applyFilters = function(value, context, addArgs, callback, $el) {
-        var filters = value.split(filtersSplitter);
-        if (filters.length <= 1) {
-            return this.findCallAndSubscribe(value, context, addArgs, callback, $el);
-        }
-        value = filters.shift();
-        var computed = this.findObservable(value, context, addArgs, $el);
-        filters = _.foldl(filters, function(result, string) {
-            var matches = filtersSplitter2.exec(string);
-            var key = matches[1];
-            result.push({
-                unformat: ViewModel.filters[key].unformat,
-                format: ViewModel.filters[key].format,
-                key: key,
-                value: matches[3] || ''
-            });
-            return result;
-        }, []);
-        var result = new ObjectObservable({
-            get: function() {
-                return _.foldl(filters, function(result, obj) {
-                    return obj.format.call(ViewModel, result, obj.value);
-                }, computed.get());
-            },
-            set: function(value) {
-                computed.set(_.foldr(filters, function(result, obj) {
-                    return obj.unformat.call(ViewModel, result, obj.value);
-                }, value));
-            },
-            $el: $el
-        });
-
-        if (callback) {
-            callback(result.value);
-            result.subscribe(callback);
-        }
-
-        return result;
-    };
 
     ViewModel.binds = {
         log: function($el, value, context, addArgs) {
@@ -296,19 +254,12 @@
     };
 
 
-    ViewModel.filters._sysUnwrap = {
-        format: function(value) {
-            if (Observable.isObservable(value)) {
-                return value();
-            }
-            return value;
-        }
-    };
+/*
 
     ViewModel.filters._sysEmpty = {
         format: zeroEmpty
     };
-
+  */
     ViewModel.inlineModificators = {
         '{{}}': function(textNode, context, addArgs) {
             var str = textNode.nodeValue,

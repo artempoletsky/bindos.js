@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <link rel="stylesheet" href="lib/jasmine.css"/>
+
+    <script type="text/javascript" src="lib/jquery-1.11.2.js"></script>
+    <script type="text/javascript" src="lib/lodash.min.js"></script>
+    <script type="text/javascript" src="bin/frontbone.js"></script>
+    <script type="text/javascript">
+        $(function () {
+
+            ViewModel.create({
+                el: 'body',
+                autoParseBinds: true,
+                initialize: function () {
+                },
+                course: Observable(0),
+                dollarsPerHour: Observable(0)
+            }, {
+                model: Model.create({
+                    defaults: {
+                        value: 10
+                    },
+                    computed: {
+                        valueX2: {
+                            deps: ['value'],
+                            get: function (value) {
+                                return value * 2;
+                            },
+                            set: function (value) {
+                                this.prop('value', value / 2);
+                            }
+                        }
+                    }
+                })
+            });
+        });
+    </script>
+
+</head>
+<body>
+<div data-bind="withModel: model">
+    <input type="text" data-bind="value: value"/>
+    <input type="text" data-bind="value: valueX2 "/>
+</div>
+</body>
+</html>
+
