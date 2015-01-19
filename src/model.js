@@ -9,9 +9,14 @@
             setComputeds: function (names) {
                 var self = this;
                 _.each(names, function (name) {
-                    self.computeds[name].get();
-                    self.fire('change:' + name);
+                    var val = self._computeds[name].get();
+                    self.fire('change:' + name, val);
                 });
+            },
+            addComputed: function (name, options) {
+                options.name = name;
+                options.model = this;
+                this._computeds[name] = new Model.Computed(options);
             },
             constructor: function (data) {
 
@@ -24,10 +29,8 @@
 
                 this.reverseComputedDeps = {};
 
-                _.each(self.computeds, function (comp, compName) {
-                    comp.name = compName;
-                    comp.model = self;
-                    self.computeds[compName] = new Model.Computed(comp);
+                _.each(self.computeds, function (options, compName) {
+                    self.addComputed(compName, options);
                 });
 
                 self._changed = {};
@@ -46,6 +49,7 @@
             idAttribute: 'id',
             mapping: false,
             computeds: {},
+            _computeds: {},
             defaults: {},
             toJSON: function () {
                 return _.clone(this.attributes);
@@ -69,7 +73,7 @@
                 if (arguments.length === 1 && typeof key === 'string') {
 
                     //if computed
-                    if (comp = self.computeds[key]) {
+                    if (comp = self._computeds[key]) {
                         return comp.value;
                     }
                     //if attribute
@@ -88,7 +92,7 @@
                     changed[key] = self._changed[key] = val;
 
                     //if computed
-                    if (comp = self.computeds[key]) {
+                    if (comp = self._computeds[key]) {
 
                         comp.set(val);
                     } else {
@@ -102,7 +106,7 @@
                         self.id = val;
                     }
 
-                    self.fire('change:' + key);
+                    self.fire('change:' + key, val);
                 });
                 this.fire('change', changed);
                 return this;
@@ -225,6 +229,10 @@
     var filtersSplitter = /\s*\|\s*/,
         filtersSplitter2 = /(\w+)(\s*:\s*['"]([^'"]+)['"])?/;
 
+    Model.hasFilters = function (string) {
+        return string.contains('|');
+    };
+
     Model.Computed = Class.extend({
 
         constructor: function (options) {
@@ -232,8 +240,15 @@
             this.name = options.name;
             this.model = options.model;
             this.filters = options.filters || {};
-            this.getter = options.get;
-            this.setter = options.set;
+            if (options.filtersString) {
+                this.parseFilters(options.filtersString);
+            }
+            if (options.get) {
+                this.getter = options.get;
+            }
+            if (options.set) {
+                this.setter = options.set;
+            }
             this.get();
 
 
@@ -254,19 +269,21 @@
              filt2: options
              */
         },
-        getter: function (dep1, dep2, depN) {
-            return undefined;
+        getter: function (value) {
+            return value;
         },
-        setter: function (value) {
-
+        setter: function (value, name) {
+            this.prop(name, value);
         },
         parseFilters: function (string) {
             var result = {};
             var filters = string.split(filtersSplitter);
-            if (filters.length <= 1) {
+
+            this.deps = [filters.shift()];
+            if (filters.length == 0) {
                 return result;
             }
-            this.deps = [filters.shift()];
+
 
             result = _.foldl(filters, function (result, string) {
                 var matches = filtersSplitter2.exec(string);
@@ -276,6 +293,8 @@
                 return result;
             }, {});
 
+            this.filters = result;
+
             return result;
         },
         get: function () {
@@ -283,7 +302,8 @@
                 array.push(self.model.prop(name));
                 return array;
             }, []);
-            var lastValue = self.value;
+            //var lastValue = self.value;
+
             var value = self.getter.apply(self, vals);
 
 
@@ -296,7 +316,7 @@
         set: function (value) {
             this.setter.call(this.model, _.foldl(this.filters, function (result, options, filterName) {
                 return Model.filters[filterName].unformat(result, options);
-            }, value));
+            }, value), this.name);
             this.get();
         }
     });

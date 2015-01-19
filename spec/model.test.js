@@ -185,7 +185,8 @@ describe('Model', function () {
     it('supports computed properties', function () {
         var m = Model.create({
             defaults: {
-                x: 10
+                x: 10,
+                y: 0
             },
             computeds: {
                 x2: {
@@ -209,7 +210,7 @@ describe('Model', function () {
 
 
         //check set by attribute
-        var spy = jasmine.createSpy();
+        var spy = jasmine.createSpy('double spy');
         m.on('change:x2', spy);
         expect(spy).not.toHaveBeenCalled();
 
@@ -220,6 +221,25 @@ describe('Model', function () {
         //check set by computed
         m.prop('x2', 10);
         expect(m.prop('x')).toBe(5);
+
+
+        m.addComputed('sum', {
+            deps: ['x', 'y'],
+            get: function (x, y) {
+                return x + y;
+            }
+        });
+        var spy2 = jasmine.createSpy('sum spy');
+
+        expect(m.prop('sum')).toBe(5);
+
+        m.on('change:sum', spy2);
+
+        m.prop('y', 10);
+
+        expect(spy2).toHaveBeenCalled();
+
+        expect(m.prop('sum')).toBe(15);
 
 
     });
@@ -276,5 +296,67 @@ describe('Model', function () {
         });
     });
 
+
+    var filter = Model.filters.tf1 = {
+        format: function (value, option) {
+            return value * 1 + option * 1;
+        },
+        unformat: function (value, option) {
+            return value * 1 - option * 1;
+        }
+    };
+
+    var filter2 = Model.filters.tf2 = {
+        format: function (value, option) {
+            return 1 * value * value;
+        },
+        unformat: function (value, option) {
+            return Math.sqrt(1 * value);
+        }
+    };
+
+
+    describe('filters', function () {
+
+        it('can create reusable filter', function () {
+            expect(filter.format(123, '2')).toBe(125);
+            expect(filter.unformat('125', '2')).toBe(123);
+            expect(filter2.format(2)).toBe(4);
+            expect(filter2.unformat('4')).toBe(2);
+        });
+
+
+        it('can create filtered computed', function () {
+            expect(Model.filters.tf1).toBeDefined();
+            expect(Model.filters.tf2).toBeDefined();
+            var vm = ViewModel.create({
+                defaults: {
+                    value: 5
+                }
+            });
+
+            console.log(vm);
+            return;
+
+            var comp = new Model.Computed({
+                model: vm,
+                name: 'tempComputedName1'
+            });
+
+
+            comp.parseFilters("value | tf1:'13' | tf2");
+
+
+            expect(comp.get()).toBe(18 * 18);
+
+            comp.set(4 * 4);
+            expect(vm.prop('value')).toBe(4 - 13);
+
+            comp.set(18 * 18);
+            expect(vm.prop('value')).toBe(5);
+        });
+
+
+    });
 
 })

@@ -2,7 +2,7 @@
 describe('ViewModel', function () {
     "use strict";
 
-    it('adds jquery clear binds method', function () {
+    xit('adds jquery clear binds method', function () {
         var $div = $('<div><div nk="html: value"></div></div>');
 
         var ctx = {
@@ -35,7 +35,7 @@ describe('ViewModel', function () {
     });
 
 
-    it('adds jquery refresh binds method', function () {
+    xit('adds jquery refresh binds method', function () {
         var $div = $('<div><div nk="html: value"></div></div>');
         var ctx = {
             value: 0
@@ -191,7 +191,7 @@ describe('ViewModel', function () {
         expect(me).toBe(vm);
     });
 
-    it('observables has no _super', function () {
+    xit('observables has no _super', function () {
         var obs = Observable(' _super(); ');
         var vm = ViewModel.create({
             obs: obs
@@ -279,17 +279,21 @@ describe('ViewModel', function () {
         it('can parse binds from html', function () {
 
             var $div = $('<div data-bind="html: name"></div>');
-            ViewModel.findBinds($div, {
-                name: 'Moe'
+            ViewModel.create({
+                el: $div,
+                autoParseBinds: true,
+                defaults: {
+                    name: 'Moe'
+                }
             });
             expect($div.html()).toBe('Moe');
         });
 
         it('has not strong binds syntax', function () {
-            ViewModel.binds.foo = function (elem, value, context, addArgs) {
+            ViewModel.binds.foo = function (elem, value, context) {
 
             };
-            ViewModel.binds.bar = function (elem, value, context, addArgs) {
+            ViewModel.binds.bar = function (elem, value, context) {
 
             };
             spyOn(ViewModel.binds, 'foo');

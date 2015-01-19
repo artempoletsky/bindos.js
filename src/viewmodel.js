@@ -18,11 +18,14 @@
                 this.undelegateEvents();
                 this.el = el;
                 this.$el = $(el);
-                this.parse().delegateEvents();
+                this.parseBinds().delegateEvents();
                 return this;
             },
             constructor: function (options) {
                 options = options || {};
+
+
+
                 this.options = options;
                 if (options.collection) {
                     this.collection = options.collection;
@@ -39,6 +42,7 @@
                 if (!me.el) {
                     me.el = 'div';
                 }
+
 
                 if (typeof me.el === 'string') {
                     if (simpleTagRegex.test(me.el) && me.el !== 'html' && me.el !== 'body') {
@@ -57,10 +61,10 @@
                     me[name] = me.$(selector);
                 });
 
-                me.initialize();
+                this._super();
 
                 if (me.autoParseBinds) {
-                    me.parse();
+                    me.parseBinds();
                 }
 
                 me.delegateEvents();
@@ -69,7 +73,7 @@
                 this.$el.remove();
                 return this;
             },
-            parse: function () {
+            parseBinds: function () {
                 ViewModel.findBinds(this.el, this);
                 return this;
             },
@@ -112,7 +116,7 @@
         };
     ViewModel = Model.extend(ViewModel);
 
-
+    /*
     $.fn.clearBinds = function () {
         var $self = $();
         $self.length = 1;
@@ -203,6 +207,7 @@
         }
         return new ObjectObservable(result);
     };
+    //*/
 
     ViewModel.findBinds = function (selector, model) {
         var newctx,

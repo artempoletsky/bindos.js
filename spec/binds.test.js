@@ -1,166 +1,101 @@
 /*globals describe, jasmine, expect, $, _, it, ViewModel, Observable*/
-describe('ViewModel.binds', function() {
+describe('ViewModel.binds', function () {
     "use strict";
 
-    var filter = ViewModel.filters.tf1 = {
-        format: function(value, option) {
-            return value * 1 + option * 1;
-        },
-        unformat: function(value, option) {
-            return value * 1 - option * 1;
-        }
-    };
 
-    var filter2 = ViewModel.filters.tf2 = {
-        format: function(value, option) {
-            return 1 * value * value;
-        },
-        unformat: function(value, option) {
-            return Math.sqrt(1 * value);
-        }
-    };
+    describe('standart', function () {
 
+        describe('.html', function () {
 
-    describe('filters', function() {
+            it('replaces innerHTML of HTMLElement the value of the concerned observable', function () {
 
-        it('can create reusable filter', function() {
-            expect(filter.format(123, '2')).toBe(125);
-            expect(filter.unformat('125', '2')).toBe(123);
-            expect(filter2.format(2)).toBe(4);
-            expect(filter2.unformat('4')).toBe(2);
-        });
-
-
-        it('can create filtered computed', function() {
-            expect(ViewModel.filters.tf1).toBeDefined();
-            expect(ViewModel.filters.tf2).toBeDefined();
-            var vm=ViewModel.create({
-                defaults: {
-                    value: 5
-                }
-            });
-
-            var filtComp = ViewModel.applyFilters("value | tf1:'13' | tf2", ctx);
-            expect(filtComp.get()).toBe(18 * 18);
-
-            filtComp.set(4 * 4);
-            expect(ctx.value()).toBe(4 - 13);
-
-            filtComp.set(18 * 18);
-            expect(ctx.value()).toBe(5);
-        });
-
-
-    });
-
-
-    describe('standart', function() {
-        describe('.with', function() {
-            it('replaces context of view render', function() {
-
-                var $div = $('<div class="nav_target header-item header-speed-test"' +
-                        'data-bind="with: SpeedTest;' +
-                        //'voice: speedtest,v_navigation;' +
-                        "!css: {voicelink: rating()<2,nav_target: rating()<2};" +
-                        'events: {click: click, voice: click}">' +
-                        '<b class="l"></b><b class="r"></b>' +
-                        '<span class="c"><i class="speedtest_icon" data-bind="className: \'speedtest_icon_\'+rating()"></i></span>' +
-                        '</div>');
-                ViewModel.findBinds($div, {
-                    SpeedTest: {
-                        click: function() {
-                        },
-                        rating: Observable('1')
+                var vm = ViewModel.create({
+                    el: '<div nk="html: value"></div>',
+                    autoParseBinds: true,
+                    defaults: {
+                        value: '<span>Hello</span>'
                     }
                 });
 
-                expect($div.find('.speedtest_icon').hasClass('speedtest_icon_1')).toBe(true);
+
+                expect(vm.$el.html().toLowerCase()).toBe('<span>hello</span>');
+
+                vm.prop('value', undefined);
+                expect(vm.$el.html()).toBe('');
+
+                vm.prop('value', false);
+                expect(vm.$el.html()).toBe('');
+
+                vm.prop('value', null);
+                expect(vm.$el.html()).toBe('');
+
+                vm.prop('value', 0);
+                expect(vm.$el.html()).toBe('0');
+            });
+
+
+            it('supports filters', function () {
+                var vm = ViewModel.create({
+                    el: '<div nk="html: value | tf1:\'321\'"></div>',
+                    autoParseBinds: true,
+                    defaults: {
+                        value: 123
+                    }
+                });
+
+                expect(vm.$el.html()).toBe('444');
             });
         });
 
 
-        describe('.html', function() {
+        describe('.value', function () {
 
-            it('replaces innerHTML of HTMLElement the value of the concerned observable', function() {
-                var $div = $('<div nk="html: value"></div>'),
-                        ctx = {
-                    value: Observable('<span>Hello</span>')
-                };
-                ViewModel.findBinds($div, ctx);
-                expect($div.html().toLowerCase()).toBe('<span>hello</span>');
+            it('binds observable to input value', function () {
 
-                ctx.value(undefined);
-                expect($div.html()).toBe('');
-
-                ctx.value(false);
-                expect($div.html()).toBe('');
-
-                ctx.value(null);
-                expect($div.html()).toBe('');
-
-                ctx.value(0);
-                expect($div.html()).toBe('0');
-            });
+                var vm = ViewModel.create({
+                    el: '<input nk="value: value"/>',
+                    autoParseBinds: true,
+                    defaults: {
+                        value: 'Hello'
+                    }
+                });
+                expect(vm.$el.val()).toBe('Hello');
 
 
-            it('supports filters', function() {
-                var $div = $('<div nk="html: value | tf1:\'321\'"></div>'),
-                        ctx = {
-                    value: Observable(123)
-                };
-                ViewModel.findBinds($div, ctx);
-                expect($div.html()).toBe('444');
-            });
-        });
+                vm.prop('value', undefined);
+                expect(vm.$el.val()).toBe('');
+
+                vm.prop('value', false);
+                expect(vm.$el.val()).toBe('');
+
+                vm.prop('value', null);
+                expect(vm.$el.val()).toBe('');
+
+                vm.prop('value', 0);
+                expect(vm.$el.val()).toBe('0');
 
 
-        describe('.value', function() {
-
-            it('binds observable to input value', function() {
-                var $input = $('<input nk="value: value"/>'),
-                        ctx = {
-                    value: Observable('Hello')
-                };
-                ViewModel.findBinds($input, ctx);
-                expect($input.val()).toBe('Hello');
-
-                ctx.value(undefined);
-                expect($input.val()).toBe('');
-
-                ctx.value(false);
-                expect($input.val()).toBe('');
-
-                ctx.value(null);
-                expect($input.val()).toBe('');
-
-                ctx.value(0);
-                expect($input.val()).toBe('0');
-
-
-                $input.val('abc');
-                $input.trigger('keyup');
-                expect(ctx.value()).toBe('abc');
-            });
-        });
-
-        describe('.each', function() {
-            it('draws tr', function() {
-                var $table = $('<table><tr nk="each: array"><td>{{$value}}</td></tr></table>');
-                var ctx = {
-                    array: [1, 2, 3]
-                };
-                ViewModel.findBinds($table, ctx);
-                expect($table.html().toLowerCase().replace(/\s+/g, '')).toBe('<tbody><tr><td>1</td><td>2</td><td>3</td></tr></tbody>')
+                vm.$el.val('abc');
+                vm.$el.trigger('keyup');
+                expect(vm.prop('value')).toBe('abc');
             });
         });
 
 
-        describe('.withModel', function() {
-            it('draws model', function() {
+        describe('.withModel', function () {
+            it('draws model', function () {
 
                 var Hero = Model.extend({
-                    greet: function() {
-                        return 'My name is ' + this.prop('name');
+                    defaults: {
+                        name: ''
+                    },
+                    computeds: {
+                        greet: {
+                            deps: ['name'],
+                            get: function (name) {
+                                return 'My name is ' + name;
+                            }
+                        }
                     }
                 });
 
@@ -168,32 +103,37 @@ describe('ViewModel.binds', function() {
                     name: 'Superman'
                 });
 
-                var $cont = $('<div><ul nk="withModel: hero"><li>{{name}} {{$self().greet()}}</li></ul></div>');
-                var ctx = {
-                    hero: Observable(superman)
-                };
+                var vm = ViewModel.create({
+                    el: '<div><ul nk="withModel: hero"><li>{{name}} {{greet}}</li></ul></div>',
+                    autoParseBinds: true,
+                    defaults: {
+                        hero: superman
+                    },
+                    computeds: {
+                    }
+                });
 
-                ViewModel.findBinds($cont, ctx);
 
-                ctx.hero(superman);
+                vm.prop('hero', superman);
 
-                expect($cont.find('li').html()).toBe('Superman My name is Superman');
+
+                expect(vm.$el.find('li').html()).toBe('Superman My name is Superman');
 
                 var batman = new Hero({
                     name: 'Batman'
                 });
 
-                ctx.hero(batman);
+                vm.prop('hero', batman);
 
-                expect($cont.find('li').html()).toBe('Batman My name is Batman');
+                expect(vm.$el.find('li').html()).toBe('Batman My name is Batman');
 
             });
 
 
         });
 
-        describe('.eachModel', function() {
-            it('draws collection', function() {
+        describe('.eachModel', function () {
+            it('draws collection', function () {
 
 
                 var collection = new Collection([
@@ -214,10 +154,10 @@ describe('ViewModel.binds', function() {
                 expect($cont.find('li:eq(0)').html()).toBe('Sasha');
             });
 
-            it("'s multiple refresh fix", function() {
+            it("'s multiple refresh fix", function () {
                 var AbilitiesCollection = Collection.extend({
-                    parse: function(json) {
-                        return _.map(json, function(name) {
+                    parse: function (json) {
+                        return _.map(json, function (name) {
                             return {
                                 name: name
                             };
@@ -225,7 +165,7 @@ describe('ViewModel.binds', function() {
                     }
                 });
                 var Hero = Model.extend({
-                    initialize: function() {
+                    initialize: function () {
                         this.abilities = new AbilitiesCollection(this.prop('abilities'));
                     }
                 });
@@ -242,19 +182,19 @@ describe('ViewModel.binds', function() {
                     heroes: Observable(heroes)
                 };
                 var calls0 = 0;
-                window.spy0 = function() {
+                window.spy0 = function () {
                     calls0++;
                     return '';
                 };
 
                 var calls1 = 0;
-                window.spy1 = function() {
+                window.spy1 = function () {
                     calls1++;
                     return '';
                 };
 
                 var calls2 = 0;
-                window.spy2 = function() {
+                window.spy2 = function () {
                     calls2++;
                     return '';
                 };
@@ -299,49 +239,54 @@ describe('ViewModel.binds', function() {
 
             });
 
-            it('supports table', function() {
+            it('supports table', function () {
                 var table = $('<table nk="eachModel: collection"><tr><td>{{value}}</td></tr></table>');
                 var ctx = {
-                    collection: new Collection([{value: "foo"}])
+                    collection: new Collection([
+                        {value: "foo"}
+                    ])
                 };
                 ViewModel.findBinds(table, ctx);
-                expect(table.html().toLowerCase().replace(/\s+/g,'')).toBe('<tbody><tr><td>foo</td></tr></tbody>')
+                expect(table.html().toLowerCase().replace(/\s+/g, '')).toBe('<tbody><tr><td>foo</td></tr></tbody>')
             });
         });
     });
 
 
-    describe('inline modificators', function() {
+    describe('inline modificators', function () {
 
-        describe('{{}}', function() {
-            it('inserts value of observable', function() {
+        describe('{{}}', function () {
+            it('inserts value of observable', function () {
 
 
-                var $div = $('<div>Hello{{name}}! {{value}}<div>asd</div></div>');
-                var ctx = {
-                    name: Observable('<span style="color: green;">Moe</span>'),
-                    value: Observable('')
-                };
-                ViewModel.findBinds($div[0], ctx);
+                var vm = ViewModel.create({
+                    el: '<div>Hello{{name}}! {{value}}<div>asd</div></div>',
+                    autoParseBinds: true,
+                    defaults: {
+                        name: '<span style="color: green;">Moe</span>',
+                        value: ''
+                    }
+                });
 
-                expect($div.text()).toEqual('HelloMoe! asd');
-                ctx.value(12);
-                expect($div.text()).toEqual('HelloMoe! 12asd');
+
+                expect(vm.$el.text()).toEqual('HelloMoe! asd');
+                vm.prop('value', 12);
+                expect(vm.$el.text()).toEqual('HelloMoe! 12asd');
 
 
             });
 
 
-            it('supports filters', function() {
+            it('supports filters', function () {
                 var $div = $('<div>{{value | tf1:\'321\'}}</div>'),
-                        ctx = {
-                    value: Observable(123)
-                };
+                    ctx = {
+                        value: Observable(123)
+                    };
                 ViewModel.findBinds($div, ctx);
                 expect($div.html()).toBe('444');
             });
 
-            it('supports custom regex', function() {
+            it('supports custom regex', function () {
 
                 var ctx = {
                     name: Observable('<span style="color: green;">Moe</span>'),
@@ -361,7 +306,7 @@ describe('ViewModel.binds', function() {
             });
 
 
-            it('supports empty values', function() {
+            it('supports empty values', function () {
                 var ctx = {
                     name: Observable('<span style="color: green;">Moe</span>')
                 };
@@ -375,11 +320,11 @@ describe('ViewModel.binds', function() {
             });
 
 
-            it('0 is not empty string', function() {
+            it('0 is not empty string', function () {
                 var $div = $('<div>{{value()}}</div>'),
-                        ctx = {
-                    value: Observable(0)
-                };
+                    ctx = {
+                        value: Observable(0)
+                    };
                 ViewModel.findBinds($div, ctx);
 
 
@@ -389,7 +334,7 @@ describe('ViewModel.binds', function() {
                 expect($div.html()).toBe('');
             });
 
-            it('supports line breaks', function() {
+            it('supports line breaks', function () {
                 var ctx = {
                     name: Observable('')
                 };
@@ -408,9 +353,9 @@ describe('ViewModel.binds', function() {
     });
 
 
-    it('support custom tags', function() {
+    it('support custom tags', function () {
         //add custom tag
-        ViewModel.tag('smartinput', function($el, context, addArgs) {
+        ViewModel.tag('smartinput', function ($el, context, addArgs) {
             //template
             var $markup = $('<div class="my_cool_style"><input type="text"/></div>');
 
@@ -423,9 +368,9 @@ describe('ViewModel.binds', function() {
             //$el.attr('value') == 'name'
             //bind ctx.name to value of input
             this.findObservable($el.attr('value'), context, addArgs)
-                    .callAndSubscribe(function(value) {
-                $input.val(value);
-            });
+                .callAndSubscribe(function (value) {
+                    $input.val(value);
+                });
         });
         var $div = $('<div><smartinput value="name"></smartinput></div>');
         var ctx = {
@@ -436,20 +381,20 @@ describe('ViewModel.binds', function() {
     });
 
 
-    it('support custom attributes', function() {
+    it('support custom attributes', function () {
         //en locale
         var lang = Observable({
             hello: 'Hello friend!',
             bye: 'Good bye friend!'
         });
         //creating new custom attribute
-        ViewModel.customAttributes.lang = function($el, value) {
+        ViewModel.customAttributes.lang = function ($el, value) {
             //value now is "hello"
             //$el now is $div
 
             //subscribe to change locale
             $el.html(lang()[value]);
-            lang.subscribe(function(lang) {
+            lang.subscribe(function (lang) {
                 $el.html(lang[value]);
             });
         };

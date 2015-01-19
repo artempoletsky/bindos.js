@@ -70,13 +70,8 @@
     };
 
 
-    ViewModel.binds.withModel = function ($el, value, context, addArgs) {
-        addArgs = addArgs || {};
-
-             console.log(context);
-        createRow($el.children(), this.findObservable(value, context, addArgs, $el), context, addArgs, {});
-        //останавливает внешний парсер
-        return false;
+    ViewModel.binds.withModel = function ($el, value, viewModel) {
+        return viewModel.prop(value);
     };
 
 
