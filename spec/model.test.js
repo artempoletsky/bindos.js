@@ -265,34 +265,9 @@ describe('Model', function () {
 
 
         it('can parse filters', function () {
+            var f = Model.parseFilters('x | filter1 | filter2: "8"');
+            expect(f.filters.filter2).toBe('8');
 
-
-            var comp = new Model.Computed({
-                get: function () {
-                },
-                model: new Model()
-            });
-
-            Model.filters.filter1 = {
-                format: function (value, options) {
-
-                },
-                unformat: function (value, options) {
-
-                }
-            }
-            Model.filters.filter2 = {
-                format: function (value, options) {
-
-                },
-                unformat: function (value, options) {
-
-                }
-            }
-
-            var filters = comp.parseFilters('x | filter1 | filter2: "8"');
-            expect(filters.filter2).toBe('8');
-            expect(comp.deps[0]).toBe('x');
         });
     });
 

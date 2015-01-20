@@ -114,9 +114,6 @@ describe('ViewModel.binds', function () {
                 });
 
 
-                vm.prop('hero', superman);
-
-
                 expect(vm.$el.find('li').html()).toBe('Superman My name is Superman');
 
                 var batman = new Hero({
@@ -278,28 +275,35 @@ describe('ViewModel.binds', function () {
 
 
             it('supports filters', function () {
-                var $div = $('<div>{{value | tf1:\'321\'}}</div>'),
-                    ctx = {
-                        value: Observable(123)
-                    };
-                ViewModel.findBinds($div, ctx);
-                expect($div.html()).toBe('444');
+
+                var vm = ViewModel.create({
+                    el: '<div>{{value | tf1:"321"}}</div>',
+                    autoParseBinds: true,
+                    defaults: {
+                        value: 123
+                    }
+                });
+
+
+                expect(vm.$el.html()).toBe('444');
             });
 
             it('supports custom regex', function () {
-
-                var ctx = {
-                    name: Observable('<span style="color: green;">Moe</span>'),
-                    value: Observable('')
-                };
 
                 var lastRegex = ViewModel.inlineModificators['{{}}'].regex;
 
                 ViewModel.inlineModificators['{{}}'].regex = /\$\{([\s\S]+?)\}/g;
 
-                var $div2 = $('<div>Hello ${name}! ${value}<div>asd</div></div>');
-                ViewModel.findBinds($div2[0], ctx);
-                expect($div2.text()).toBe('Hello Moe! asd');
+                var vm = ViewModel.create({
+                    el: '<div>Hello ${name}! ${value}<div>asd</div></div>',
+                    autoParseBinds: true,
+                    defaults: {
+                        name: '<span style="color: green;">Moe</span>',
+                        value: ''
+                    }
+                });
+
+                expect(vm.$el.text()).toBe('Hello Moe! asd');
 
                 ViewModel.inlineModificators['{{}}'].regex = lastRegex;
 
@@ -307,44 +311,54 @@ describe('ViewModel.binds', function () {
 
 
             it('supports empty values', function () {
-                var ctx = {
-                    name: Observable('<span style="color: green;">Moe</span>')
-                };
-                var $div3 = $('<div>{{name}}</div>');
-                ViewModel.findBinds($div3[0], ctx);
-                expect($div3.text()).toBe('Moe');
-                ctx.name('');
-                expect($div3.text()).toBe('');
-                ctx.name('Moe');
-                expect($div3.text()).toBe('Moe');
+
+                var vm = ViewModel.create({
+                    el: '<div>{{name}}</div>',
+                    autoParseBinds: true,
+                    defaults: {
+                        name: '<span style="color: green;">Moe</span>'
+                    }
+                });
+
+                expect(vm.$el.text()).toBe('Moe');
+                vm.prop('name', '');
+                expect(vm.$el.text()).toBe('');
+                vm.prop('name', 'Moe');
+                expect(vm.$el.text()).toBe('Moe');
             });
 
 
             it('0 is not empty string', function () {
-                var $div = $('<div>{{value()}}</div>'),
-                    ctx = {
-                        value: Observable(0)
-                    };
-                ViewModel.findBinds($div, ctx);
+
+                var vm = ViewModel.create({
+                    el: '<div>{{value}}</div>',
+                    autoParseBinds: true,
+                    defaults: {
+                        value: 0
+                    }
+                });
 
 
-                expect($div.html()).toBe('0');
+                expect(vm.$el.html()).toBe('0');
 
-                ctx.value(null);
-                expect($div.html()).toBe('');
+                vm.prop('value', null);
+                expect(vm.$el.html()).toBe('');
             });
 
             it('supports line breaks', function () {
-                var ctx = {
-                    name: Observable('')
-                };
 
-                var $div3 = $('<div>\n\
+                var vm = ViewModel.create({
+                    el: '<div>\n\
         {{name}} \n\
-            </div>');
+            </div>',
+                    autoParseBinds: true,
+                    defaults: {
+                        name: 'foo'
+                    }
+                });
 
-                ViewModel.findBinds($div3, ctx);
-                expect($.trim($div3.text())).toBe('');
+
+                expect($.trim(vm.$el.text())).toBe('foo');
             });
 
         });

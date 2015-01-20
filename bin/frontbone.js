@@ -354,6 +354,13 @@
                 options.model = this;
                 this._computeds[name] = new Model.Computed(options);
             },
+            removeComputed: function (name) {
+                var self = this;
+                delete self._computeds[name];
+                _.each(self.reverseComputedDeps, function (deps, key) {
+                    self.reverseComputedDeps[key] = _.without(deps, name);
+                });
+            },
             constructor: function (data) {
 
                 var self = this;
@@ -569,6 +576,20 @@
         return string.contains('|');
     };
 
+    Model.parseFilters=function(string){
+        var filters = string.split(filtersSplitter), value=filters.shift();
+        return {
+            value: value,
+            filters: _.foldl(filters, function (result, string) {
+                var matches = filtersSplitter2.exec(string);
+                var options = matches[3];
+                var filterName = matches[1];
+                result[filterName] = options;
+                return result;
+            }, {})
+        }
+    };
+
     Model.Computed = Class.extend({
 
         constructor: function (options) {
@@ -612,26 +633,9 @@
             this.prop(name, value);
         },
         parseFilters: function (string) {
-            var result = {};
-            var filters = string.split(filtersSplitter);
-
-            this.deps = [filters.shift()];
-            if (filters.length == 0) {
-                return result;
-            }
-
-
-            result = _.foldl(filters, function (result, string) {
-                var matches = filtersSplitter2.exec(string);
-                var options = matches[3];
-                var filterName = matches[1];
-                result[filterName] = options;
-                return result;
-            }, {});
-
-            this.filters = result;
-
-            return result;
+            var f = Model.parseFilters(string);
+            this.deps = [f.value];
+            this.filters = f.filters;
         },
         get: function () {
             var self = this, vals = _.foldl(self.deps, function (array, name) {
@@ -1257,28 +1261,54 @@
         return value || (value === 0 ? '0' : '');
     };
 
+    ViewModel.replaceable = function (model, callbackNew, callbackOld) {
+        var oldModel;
+        var onReplace = function (newModel) {
+            if (oldModel) {
+                oldModel.off('replace', onReplace);
+                callbackOld(oldModel);
+            }
+
+            callbackNew(newModel);
+
+            newModel.on('replace', onReplace);
+            oldModel = newModel
+        }
+        onReplace(model);
+    }
     ViewModel.applyFilters = function (value, model, callback) {
         var name;
-        if (Model.hasFilters(value)) {
-            name = _.uniqueId('vmDynamicComputed');
-            model.addComputed(name, {
-                filtersString: value
-            });
-        } else {
-            name = value;
-        }
+
+        ViewModel.replaceable(model, function (newModel) {
+            if (Model.hasFilters(value)) {
+                name = _.uniqueId('vmDynamicComputed');
+                newModel.addComputed(name, {
+                    filtersString: value
+                });
+            } else {
+                name = value;
+            }
+
+            newModel.on('change:' + name, callback);
+            callback(newModel.prop(name));
+        }, function (oldModel) {
+
+            if (name && Model.hasFilters(value)) {
+                oldModel.removeComputed(name);
+            }
+
+            oldModel.off('change:' + name, callback);
+        });
 
 
-        model.on('change:' + name, callback);
-        callback(model.prop(name));
         return name;
     }
 
     ViewModel.binds = {
-        log: function ($el, value, context, addArgs) {
-            this.findCallAndSubscribe(value, context, addArgs, function (val) {
-                console.log(context, '.', value, '=', val);
-            }, $el);
+        log: function ($el, value, model) {
+            this.applyFilters(value, model, function (val) {
+                console.log(model, '.', value, '=', val);
+            });
         },
         src: function ($el, value, context, addArgs) {
             var elem = $el[0];
@@ -1289,47 +1319,17 @@
         html: function ($el, value, model) {
             this.applyFilters(value, model, function (val) {
                 $el.html(zeroEmpty(val));
-            }, $el);
-        },
-        text: function ($el, value, context, addArgs) {
-            this.findCallAndSubscribe(value, context, addArgs, function (val) {
-                $el.text(val);
-            }, $el);
-        },
-        'with': function ($el, value, context, addArgs) {
-            return this.evil(value, context, addArgs)();
-        },
-        each: function ($el, value, model) {
-
-            var template = $el.html();
-
-
-            this.applyFilters(value, model, function (array) {
-                //$el.children().clearBinds();
-                $el.empty();
-                var fragment = document.createDocumentFragment();
-                if (array) {
-                    _.each(array, function (val, ind) {
-                        model.prop('$index', ind);
-                        model.prop('$value', val);
-
-
-                        $(template).each(function () {
-                            ViewModel.findBinds(this, model);
-                            fragment.appendChild(this);
-                        });
-                    });
-                    $el[0].appendChild(fragment);
-                }
             });
-
-
-            return false;
+        },
+        text: function ($el, value, model) {
+            this.applyFilters(value, model, function (val) {
+                $el.text(zeroEmpty(val));
+            });
         },
         value: function ($el, value, model) {
             var name = this.applyFilters(value, model, function (val) {
                 $el.val(zeroEmpty(val));
-            }, $el);
+            });
 
             $el.on('change keyup keydown', function () {
                 var val = $el.val();
@@ -1338,42 +1338,40 @@
                 //}
             });
         },
-        attr: function ($el, value, context, addArgs) {
+        attr: function ($el, value, context) {
             var elem = $el[0];
             _.each(this.parseOptionsObject(value), function (condition, attrName) {
-                ViewModel.findCallAndSubscribe(condition, context, addArgs, function (val) {
+                ViewModel.applyFilters(condition, context, function (val) {
                     if (val !== false && val !== undefined && val !== null) {
                         elem.setAttribute(attrName, val);
                     } else {
                         elem.removeAttribute(attrName);
                     }
-                }, $el);
+                });
             });
         },
-        style: function ($el, value, context, addArgs) {
+        style: function ($el, value, context) {
             _.each(this.parseOptionsObject(value), function (condition, style) {
-                ViewModel.findObservable(condition, context, addArgs, $el)
-                    .callAndSubscribe(function (value) {
-                        $el.css(style, value);
-                    });
+                ViewModel.applyFilters(condition, context, function (val) {
+                    $el.css(style, val);
+                });
             });
         },
         css: function ($el, value, context, addArgs) {
             _.each(this.parseOptionsObject(value), function (condition, className) {
-                ViewModel.findObservable(condition, context, addArgs, $el)
-                    .callAndSubscribe(function (value) {
-                        if (value) {
-                            $el.addClass(className);
-                        }
-                        else {
-                            $el.removeClass(className);
-                        }
-                    });
+                ViewModel.applyFilters(condition, context, function (val) {
+                    if (val) {
+                        $el.addClass(className);
+                    }
+                    else {
+                        $el.removeClass(className);
+                    }
+                });
             });
         },
-        display: function ($el, value, context, addArgs) {
-            this.findObservable(value, context, addArgs, $el).callAndSubscribe(function (value) {
-                if (value) {
+        display: function ($el, value, context) {
+            ViewModel.applyFilters(value, context, function (val) {
+                if (val) {
                     $el.show();
                 }
                 else {
@@ -1387,9 +1385,10 @@
                 fn.apply(context, arguments);
             });
         },
-        className: function ($el, value, context, addArgs) {
+        className: function ($el, value, context) {
             var oldClassName;
-            this.findObservable(value, context, addArgs, $el).callAndSubscribe(function (className) {
+
+            ViewModel.applyFilters(value, context, function (className) {
                 if (oldClassName) {
                     $el.removeClass(oldClassName);
                 }
@@ -1519,15 +1518,14 @@
     };
 
     ViewModel.inlineModificators = {
-        '{{}}': function (textNode, context, addArgs) {
+        '{{}}': function (textNode, context) {
             var str = textNode.nodeValue,
-                vm = this,
                 parent,
                 docFragment,
                 div,
                 nodeList = [textNode],
-                breakersRegex = ViewModel.inlineModificators['{{}}'].regex,
-                $el;
+                breakersRegex = ViewModel.inlineModificators['{{}}'].regex;
+            breakersRegex.lastIndex = 0;
 
             if (breakersRegex.test(str)) {
 
@@ -1535,18 +1533,26 @@
 
                 _.each(parts, function (word, index) {
                     if (index % 2) {
-                        deps.push(word);
+                        word += ' | _sysEmpty';
+
+                        var f = Model.parseFilters(word);
+                        word = _.foldl(f.filters, function (value, options, name) {
+                            var opt = '';
+                            if (options !== undefined) {
+                                opt = ', "' + options + '"';
+                            }
+                            return 'Model.filters.' + name + '.format(' + value + opt + ')';
+                        }, f.value);
+                        deps.push(f.value);
+
                         code += word + '+';
                     } else {
                         code += '"' + word + '"+';
                     }
                 });
-                code += '""';
-                var name = _.uniqueId('vmDynamicComputed');
-                context.addComputed(name, {
-                    deps: deps,
-                    get: new Function(deps.join(','), code)
-                });
+                code += '"";';
+
+                code = code.replace(/\n/g, '\\n\\\n');
 
 
                 parent = textNode.parentNode;
@@ -1608,10 +1614,30 @@
                     nodeList = newNodeList;
 
                 };
+                var name;
+                ViewModel.replaceable(context, function (newModel) {
 
+                    name = _.uniqueId('vmDynamicComputed');
 
-                context.on('change:'+name, insertFunction);
-                insertFunction(context.prop(name));
+                    try {
+                        var func = new Function(deps.join(','), code);
+                    } catch (e) {
+                        console.log(e);
+                        console.log(code);
+                    }
+
+                    newModel.addComputed(name, {
+                        deps: deps,
+                        get: func
+                    });
+
+                    newModel.on('change:' + name, insertFunction);
+                    insertFunction(context.prop(name));
+                }, function (oldModel) {
+                    oldModel.removeComputed(name);
+                    oldModel.off('change:' + name, insertFunction);
+                });
+
 
             }
 
@@ -1749,8 +1775,20 @@
     };
 
 
-    ViewModel.binds.withModel = function ($el, value, viewModel) {
-        return viewModel.prop(value);
+    ViewModel.binds.withModel = function ($el, name, viewModel) {
+
+
+        var model;
+
+
+        this.applyFilters(name, viewModel, function (newModel) {
+            if (model) {
+                model.fire('replace', newModel);
+            }
+            model = newModel;
+        });
+
+        return model;
     };
 
 
@@ -1816,7 +1854,7 @@
 
         compiledTemplateName = templateName ? templateName : _.uniqueId('nkEachModelTemplate');
 
-        bufferViews[compiledTemplateName]=[];
+        bufferViews[compiledTemplateName] = [];
 
 
         //когда меняется целая коллекция
@@ -1929,7 +1967,7 @@
 
                 var $children = $el.children();
                 for (index in rejectedModels) {
-                    index*=1;
+                    index *= 1;
                     model = rejectedModels[index];
                     model.off(0, 0, ctx);
 

@@ -18,6 +18,13 @@
                 options.model = this;
                 this._computeds[name] = new Model.Computed(options);
             },
+            removeComputed: function (name) {
+                var self = this;
+                delete self._computeds[name];
+                _.each(self.reverseComputedDeps, function (deps, key) {
+                    self.reverseComputedDeps[key] = _.without(deps, name);
+                });
+            },
             constructor: function (data) {
 
                 var self = this;
@@ -233,6 +240,20 @@
         return string.contains('|');
     };
 
+    Model.parseFilters=function(string){
+        var filters = string.split(filtersSplitter), value=filters.shift();
+        return {
+            value: value,
+            filters: _.foldl(filters, function (result, string) {
+                var matches = filtersSplitter2.exec(string);
+                var options = matches[3];
+                var filterName = matches[1];
+                result[filterName] = options;
+                return result;
+            }, {})
+        }
+    };
+
     Model.Computed = Class.extend({
 
         constructor: function (options) {
@@ -276,26 +297,9 @@
             this.prop(name, value);
         },
         parseFilters: function (string) {
-            var result = {};
-            var filters = string.split(filtersSplitter);
-
-            this.deps = [filters.shift()];
-            if (filters.length == 0) {
-                return result;
-            }
-
-
-            result = _.foldl(filters, function (result, string) {
-                var matches = filtersSplitter2.exec(string);
-                var options = matches[3];
-                var filterName = matches[1];
-                result[filterName] = options;
-                return result;
-            }, {});
-
-            this.filters = result;
-
-            return result;
+            var f = Model.parseFilters(string);
+            this.deps = [f.value];
+            this.filters = f.filters;
         },
         get: function () {
             var self = this, vals = _.foldl(self.deps, function (array, name) {

@@ -70,8 +70,20 @@
     };
 
 
-    ViewModel.binds.withModel = function ($el, value, viewModel) {
-        return viewModel.prop(value);
+    ViewModel.binds.withModel = function ($el, name, viewModel) {
+
+
+        var model;
+
+
+        this.applyFilters(name, viewModel, function (newModel) {
+            if (model) {
+                model.fire('replace', newModel);
+            }
+            model = newModel;
+        });
+
+        return model;
     };
 
 
@@ -137,7 +149,7 @@
 
         compiledTemplateName = templateName ? templateName : _.uniqueId('nkEachModelTemplate');
 
-        bufferViews[compiledTemplateName]=[];
+        bufferViews[compiledTemplateName] = [];
 
 
         //когда меняется целая коллекция
@@ -250,7 +262,7 @@
 
                 var $children = $el.children();
                 for (index in rejectedModels) {
-                    index*=1;
+                    index *= 1;
                     model = rejectedModels[index];
                     model.off(0, 0, ctx);
 
