@@ -209,11 +209,11 @@
     };
     //*/
 
-    ViewModel.findBinds = function (selector, model) {
+    ViewModel.findBinds = function (element, model) {
         var newctx,
             breakContextIsSent = false,
             self = this,
-            $el = $(selector),
+            $el = $(element),
             elem = $el[0],
             tagBehavior, attrs;
 

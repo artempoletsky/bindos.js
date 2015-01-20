@@ -140,111 +140,35 @@ describe('ViewModel.binds', function () {
 
 
                 expect(collection.length).toBe(2);
-                var $cont = $('<div><ul nk="eachModel: collection"><li>{{name}}</li></ul></div>');
-                ViewModel.findBinds($cont, {
-                    collection: collection
+
+
+                var vm = ViewModel.create({
+                    el: '<div><ul nk="eachModel: collection"><li>{{name}}</li></ul></div>',
+                    autoParseBinds: true,
+                    defaults: {
+                        collection: collection
+                    }
                 });
 
-                expect($cont.find('li:eq(0)').html()).toBe('Vasya');
-                expect($cont.find('li:eq(1)').html()).toBe('Petya');
+                expect(vm.$('li:eq(0)').html()).toBe('Vasya');
+                expect(vm.$('li:eq(1)').html()).toBe('Petya');
                 collection.at(0).prop('name', 'Sasha');
-                expect($cont.find('li:eq(0)').html()).toBe('Sasha');
-            });
-
-            it("'s multiple refresh fix", function () {
-                var AbilitiesCollection = Collection.extend({
-                    parse: function (json) {
-                        return _.map(json, function (name) {
-                            return {
-                                name: name
-                            };
-                        });
-                    }
-                });
-                var Hero = Model.extend({
-                    initialize: function () {
-                        this.abilities = new AbilitiesCollection(this.prop('abilities'));
-                    }
-                });
-
-                var heroes = Collection.create({
-                    model: Hero
-                }, [
-                    {name: 'Batman', abilities: ['kung fu', 'money']},
-                    {name: 'Superman', abilities: ['laser eyes', 'flying', 'bulletproof']}
-                ]);
-
-
-                var ctx = {
-                    heroes: Observable(heroes)
-                };
-                var calls0 = 0;
-                window.spy0 = function () {
-                    calls0++;
-                    return '';
-                };
-
-                var calls1 = 0;
-                window.spy1 = function () {
-                    calls1++;
-                    return '';
-                };
-
-                var calls2 = 0;
-                window.spy2 = function () {
-                    calls2++;
-                    return '';
-                };
-
-
-                var $cont = $('<div><ul nk="eachModel: heroes; attr: {nothing: spy0()}"><li nk="attr: {nothing: spy1()}">{{name}}: <ul nk="eachModel: $self().abilities"><li nk="attr: {nothing: spy2()}">{{name}},</li></ul></li></ul></div>');
-
-                ViewModel.findBinds($cont, ctx);
-
-                expect($cont.text()).toBe('Batman: kung fu,money,Superman: laser eyes,flying,bulletproof,');
-
-
-                //console.log($cont);
-
-
-                expect(calls0).toBe(1);
-
-                expect(calls1).toBe(2);//two heroes
-
-                expect(calls2).toBe(5);//5 abilities
-
-
-                $cont.refreshBinds();
-
-
-                expect(calls0).toBe(2);
-
-                expect(calls1).toBe(4);
-
-                expect(calls2).toBe(10);
-
-
-                heroes.at(0).prop('name', 'Iron man');
-
-                expect($cont.text()).toBe('Iron man: kung fu,money,Superman: laser eyes,flying,bulletproof,');
-
-                expect(calls0).toBe(2);
-
-                expect(calls1).toBe(5);
-
-                expect(calls2).toBe(12);
-
+                expect(vm.$('li:eq(0)').html()).toBe('Sasha');
             });
 
             it('supports table', function () {
-                var table = $('<table nk="eachModel: collection"><tr><td>{{value}}</td></tr></table>');
-                var ctx = {
-                    collection: new Collection([
-                        {value: "foo"}
-                    ])
-                };
-                ViewModel.findBinds(table, ctx);
-                expect(table.html().toLowerCase().replace(/\s+/g, '')).toBe('<tbody><tr><td>foo</td></tr></tbody>')
+
+                var vm = ViewModel.create({
+                    el: '<table nk="eachModel: collection"><tr><td>{{value}}</td></tr></table>',
+                    autoParseBinds: true,
+                    defaults: {
+                        collection:  new Collection([
+                            {value: "foo"}
+                        ])
+                    }
+                });
+
+                expect(vm.$el.html().toLowerCase().replace(/\s+/g, '')).toBe('<tbody><tr><td>foo</td></tr></tbody>')
             });
         });
     });
@@ -369,7 +293,7 @@ describe('ViewModel.binds', function () {
 
     it('support custom tags', function () {
         //add custom tag
-        ViewModel.tag('smartinput', function ($el, context, addArgs) {
+        ViewModel.tag('smartinput', function ($el, context) {
             //template
             var $markup = $('<div class="my_cool_style"><input type="text"/></div>');
 
@@ -380,50 +304,54 @@ describe('ViewModel.binds', function () {
             $el.after($markup).remove();
 
             //$el.attr('value') == 'name'
-            //bind ctx.name to value of input
-            this.findObservable($el.attr('value'), context, addArgs)
-                .callAndSubscribe(function (value) {
-                    $input.val(value);
-                });
+            this.applyFilters($el.attr('value'), context, function (value) {
+                $input.val(value);
+            });
         });
-        var $div = $('<div><smartinput value="name"></smartinput></div>');
-        var ctx = {
-            name: 'Moe'
-        };
-        ViewModel.findBinds($div, ctx);
-        expect($div.find('input').val()).toBe('Moe');
+
+        var vm = ViewModel.create({
+            el: '<div><smartinput value="name"></smartinput></div>',
+            defaults: {
+                name: 'Moe'
+            },
+            autoParseBinds: true
+        });
+        expect(vm.$('input').val()).toBe('Moe');
     });
 
 
     it('support custom attributes', function () {
         //en locale
-        var lang = Observable({
+        var lang = new Model({
             hello: 'Hello friend!',
             bye: 'Good bye friend!'
         });
         //creating new custom attribute
         ViewModel.customAttributes.lang = function ($el, value) {
-            //value now is "hello"
-            //$el now is $div
 
-            //subscribe to change locale
-            $el.html(lang()[value]);
-            lang.subscribe(function (lang) {
-                $el.html(lang[value]);
+
+            $el.html(lang.prop(value));
+            lang.on('change:' + value, function (val) {
+                $el.html(val);
             });
         };
-        var $div = $('<div lang="hello"></div>');
-        ViewModel.findBinds($div);
 
-        expect($div.html()).toBe('Hello friend!');
+
+        var vm = ViewModel.create({
+            el: '<div lang="hello"></div>',
+            autoParseBinds: true
+        });
+
+
+        expect(vm.$el.html()).toBe('Hello friend!');
 
         //change locale to fr
-        lang({
+        lang.prop({
             hello: 'Bonjour ami!',
             bye: 'Au revoir ami!'
         });
 
-        expect($div.html()).toBe('Bonjour ami!');
+        expect(vm.$el.html()).toBe('Bonjour ami!');
 
     });
 

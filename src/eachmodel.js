@@ -2,74 +2,6 @@
     "use strict";
     /*globals ViewModel, Observable, Computed, _, $*/
 
-    var createRow = function ($children, oModel, context, addArgs, ctx) {
-
-
-        var model, newContext = {}, prop;
-
-        addArgs.$parent = context;
-        if (_.isFunction(oModel)) {
-            addArgs.$self = oModel;
-            oModel = oModel.obj;
-        } else {
-            addArgs.$self = Computed({
-                initial: oModel.value,
-                $el: $children
-            });
-        }
-
-        addArgs.$self._oModel = oModel;
-        var refresh = false;
-
-        oModel.callAndSubscribe(function (value) {
-            addArgs.$self(value);
-            if (model) {
-                //перестает слушать старую модель
-                model.off(0, 0, ctx);
-            }
-
-            if (value) {
-                _.extend(newContext, value.attributes);
-
-                //слушает новую
-                value.on('change', function (changed) {
-                    _.extend(newContext, changed);
-                    if (!refresh) {
-                        refresh = true;
-                        $children.refreshBinds();
-                    }
-                    refresh = false;
-                }, ctx);
-
-
-            } else {
-                for (prop in newContext) {
-                    delete newContext[prop];
-                }
-            }
-
-            if (!refresh) {
-                refresh = true;
-                $children.refreshBinds();
-            }
-            refresh = false;
-
-            model = value;
-
-        });
-
-
-        //парсит внутренний html как темплейт
-        $children.each(function () {
-            ViewModel.findBinds(this, newContext, addArgs);
-        });
-
-        $children.data('nkModel', addArgs);
-
-        return addArgs;
-    };
-
-
     ViewModel.binds.withModel = function ($el, name, viewModel) {
 
 
@@ -125,7 +57,7 @@
     }, 5 * 60 * 1000);
 
 
-    ViewModel.binds.eachModel = function ($el, value, context, addArgs) {
+    ViewModel.binds.eachModel = function ($el, value, model) {
         var
             values,
             collectionName,
@@ -152,20 +84,7 @@
         bufferViews[compiledTemplateName] = [];
 
 
-        //когда меняется целая коллекция
-        this.findCallAndSubscribe(collectionName, context, addArgs, function (collection) {
-
-
-            if (oldCollection) {
-                oldCollection.off(0, 0, ctx);
-
-                oldCollection.each(function (model) {
-                    model.off(0, 0, ctx);
-                });
-
-            }
-
-            oldCollection = collection;
+        this.applyFilters(value, model, function(collection){
             $el.empty();
             var tempChildrenLen,
                 templateConstructor,
@@ -175,6 +94,8 @@
             if (!collection) {
                 return;
             }
+
+
 
             tempChildrenLen = 1;
 
@@ -188,12 +109,9 @@
 
                     if (!$children) {
                         $children = $tmplEl.clone();
-                        createRow($children, Computed({
-                            initial: model,
-                            $el: $children
-                        }).obj, collection, {
-                            $index: $index
-                        }, ctx);
+                        $children.each(function(){
+                            ViewModel.findBinds(this, model);
+                        });
                     }
 
                     tempChildrenLen = $children.length;
@@ -202,26 +120,23 @@
             };
 
 
-            //template принимает модель и возвращает ее текстовое html представление
+
+            //template принимает модель и возвращает ее DOM html представление
             template = templateName ? ViewModel.tmpl.get(templateName, templateConstructor) : templateConstructor(rawTemplate);
 
 
-            //склеивает все представления всех моделей в коллекции
-            onReset = function () {
-
-                var html = $(document.createElement(elName)),
-                    i = 0;
-                //$el.children().clearBinds();
-                $el.empty();
+            var html = $(document.createElement(elName)),
+                i = 0;
+            //$el.children().clearBinds();
+            $el.empty();
 
 
-                collection.each(function (model) {
-                    html.append(template(model, i++, collection));
-                });
+            collection.each(function (model) {
+                html.append(template(model, i++, collection));
+            });
 
-                $el.append(html.children());
-            };
-            onReset();
+            $el.append(html.children());
+
 
 
             collection.on('add', function (newModels, index, lastIndex) {
@@ -285,7 +200,16 @@
                 });
                 $el.append($tempDiv.children());
             }, ctx);
-        }, $el);
+
+
+        }, function(oldCollection){
+            oldCollection.off(0, 0, ctx);
+
+            oldCollection.each(function (model) {
+                model.off(0, 0, ctx);
+            });
+        });
+
 
         return false;
     };

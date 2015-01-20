@@ -22,7 +22,7 @@
         }
         onReplace(model);
     }
-    ViewModel.applyFilters = function (value, model, callback) {
+    ViewModel.applyFilters = function (value, model, callbackNew, callbackOld) {
         var name;
 
         ViewModel.replaceable(model, function (newModel) {
@@ -35,15 +35,18 @@
                 name = value;
             }
 
-            newModel.on('change:' + name, callback);
-            callback(newModel.prop(name));
+            newModel.on('change:' + name, callbackNew);
+            callbackNew(newModel.prop(name));
         }, function (oldModel) {
 
-            if (name && Model.hasFilters(value)) {
+            if (Model.hasFilters(value)) {
                 oldModel.removeComputed(name);
             }
 
-            oldModel.off('change:' + name, callback);
+            oldModel.off('change:' + name, callbackNew);
+            if(callbackOld){
+                callbackOld(oldModel.prop(name));
+            }
         });
 
 
