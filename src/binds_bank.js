@@ -381,7 +381,7 @@
                     });
 
                     newModel.on('change:' + name, insertFunction);
-                    insertFunction(context.prop(name));
+                    insertFunction(newModel.prop(name));
                 }, function (oldModel) {
                     oldModel.removeComputed(name);
                     oldModel.off('change:' + name, insertFunction);

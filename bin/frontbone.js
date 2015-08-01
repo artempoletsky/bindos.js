@@ -371,6 +371,7 @@
                 self.attributes = _.extend({}, self.defaults, self.parse(data));
 
                 this.reverseComputedDeps = {};
+                this._computeds={};
 
                 _.each(self.computeds, function (options, compName) {
                     self.addComputed(compName, options);
@@ -573,7 +574,7 @@
         filtersSplitter2 = /(\w+)(\s*:\s*['"]([^'"]+)['"])?/;
 
     Model.hasFilters = function (string) {
-        return string.contains('|');
+        return string.indexOf('|')!=-1;
     };
 
     Model.parseFilters=function(string){
@@ -1635,7 +1636,7 @@
                     });
 
                     newModel.on('change:' + name, insertFunction);
-                    insertFunction(context.prop(name));
+                    insertFunction(newModel.prop(name));
                 }, function (oldModel) {
                     oldModel.removeComputed(name);
                     oldModel.off('change:' + name, insertFunction);
@@ -1731,6 +1732,7 @@
 
 
     var getCompiledRow = function (templateName, model, index) {
+        return false;
         if (!bufferViews[templateName]) {
             return false;
         }
@@ -1742,12 +1744,7 @@
 
         var $row = bufferViews[templateName].pop();
 
-        var addArgs = $row.data('nkModel');
 
-        //console.log($row);
-
-        addArgs.$index = index;
-        addArgs.$self._oModel.set(model);
 
         return $row;
     };
@@ -1792,7 +1789,7 @@
         bufferViews[compiledTemplateName] = [];
 
 
-        this.applyFilters(value, model, function(collection){
+        this.applyFilters(collectionName, model, function(collection){
             $el.empty();
             var tempChildrenLen,
                 templateConstructor,

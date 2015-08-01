@@ -35,6 +35,7 @@
                 self.attributes = _.extend({}, self.defaults, self.parse(data));
 
                 this.reverseComputedDeps = {};
+                this._computeds={};
 
                 _.each(self.computeds, function (options, compName) {
                     self.addComputed(compName, options);
@@ -237,7 +238,7 @@
         filtersSplitter2 = /(\w+)(\s*:\s*['"]([^'"]+)['"])?/;
 
     Model.hasFilters = function (string) {
-        return string.contains('|');
+        return string.indexOf('|')!=-1;
     };
 
     Model.parseFilters=function(string){

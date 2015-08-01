@@ -23,6 +23,7 @@
 
 
     var getCompiledRow = function (templateName, model, index) {
+        return false;
         if (!bufferViews[templateName]) {
             return false;
         }
@@ -34,12 +35,7 @@
 
         var $row = bufferViews[templateName].pop();
 
-        var addArgs = $row.data('nkModel');
 
-        //console.log($row);
-
-        addArgs.$index = index;
-        addArgs.$self._oModel.set(model);
 
         return $row;
     };
@@ -84,7 +80,7 @@
         bufferViews[compiledTemplateName] = [];
 
 
-        this.applyFilters(value, model, function(collection){
+        this.applyFilters(collectionName, model, function(collection){
             $el.empty();
             var tempChildrenLen,
                 templateConstructor,
