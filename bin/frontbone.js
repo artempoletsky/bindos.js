@@ -378,7 +378,7 @@
                 });
 
                 if (self.useDefineProperty) {
-                    _.each(self.toJSON(), function (value, key) {
+                    _.each(self.serialize(), function (value, key) {
                         Object.defineProperty(self, key, {
                             get: function () {
                                 return this.prop(key);
@@ -409,15 +409,13 @@
             computeds: {},
             _computeds: {},
             defaults: {},
-
-            toJSON: function (notIncludeComputeds) {
-                if (notIncludeComputeds) {
-                    return _.clone(this.attributes);
-                }
-
+            serialize: function(){
                 return _.extend({}, this.attributes, _.mapValues(this._computeds, function (comp, name) {
                     return comp.value;
-                }, this));
+                }));
+            },
+            toJSON: function () {
+                return this.serialize();
             },
             parse: function (json) {
                 return json;
