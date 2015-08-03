@@ -371,11 +371,24 @@
                 self.attributes = _.extend({}, self.defaults, self.parse(data));
 
                 this.reverseComputedDeps = {};
-                this._computeds={};
+                this._computeds = {};
 
                 _.each(self.computeds, function (options, compName) {
                     self.addComputed(compName, options);
                 });
+
+                if (self.useDefineProperty) {
+                    _.each(self.toJSON(), function (value, key) {
+                        Object.defineProperty(self, key, {
+                            get: function () {
+                                return this.prop(key);
+                            },
+                            set: function (val) {
+                                this.prop(key, val);
+                            }
+                        });
+                    });
+                }
 
                 self._changed = {};
                 self.id = self.attributes[self.idAttribute];
@@ -392,11 +405,19 @@
             },
             idAttribute: 'id',
             mapping: false,
+            useDefineProperty: false,
             computeds: {},
             _computeds: {},
             defaults: {},
-            toJSON: function () {
-                return _.clone(this.attributes);
+
+            toJSON: function (notIncludeComputeds) {
+                if (notIncludeComputeds) {
+                    return _.clone(this.attributes);
+                }
+
+                return _.extend({}, this.attributes, _.mapValues(this._computeds, function (comp, name) {
+                    return comp.value;
+                }, this));
             },
             parse: function (json) {
                 return json;
@@ -574,11 +595,11 @@
         filtersSplitter2 = /(\w+)(\s*:\s*['"]([^'"]+)['"])?/;
 
     Model.hasFilters = function (string) {
-        return string.indexOf('|')!=-1;
+        return string.indexOf('|') != -1;
     };
 
-    Model.parseFilters=function(string){
-        var filters = string.split(filtersSplitter), value=filters.shift();
+    Model.parseFilters = function (string) {
+        var filters = string.split(filtersSplitter), value = filters.shift();
         return {
             value: value,
             filters: _.foldl(filters, function (result, string) {

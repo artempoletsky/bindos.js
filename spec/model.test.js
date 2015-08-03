@@ -245,6 +245,37 @@ describe('Model', function () {
     });
 
 
+    it('supports define property syntax', function () {
+
+        var model = Model.create({
+            useDefineProperty: true,
+            defaults: {
+                foo: 'bar',
+                a: 1
+            },
+            computeds: {
+                comp1: {
+                    deps: ['foo', 'a'],
+                    get: function (foo, a) {
+                        return foo + ' ' + a;
+                    }
+                }
+            }
+        });
+
+        expect(model.foo).toBe('bar');
+        expect(model.comp1).toBe('bar 1');
+        expect(model.a).toBe(1);
+
+        model.a++;
+
+        expect(model.a).toBe(2);
+        expect(model.comp1).toBe('bar 2');
+
+        //console.log(model.toJSON());
+    });
+
+
     describe('Model.Computed', function () {
         it('can construct', function () {
             var model = new Model();
