@@ -2,6 +2,7 @@
     "use strict";
 
 
+
     var $ = window.$,
         eventSplitter = /\s+/,
 
@@ -21,30 +22,40 @@
                 return this;
             },
             wrapReady: false,
+            $: function(selector){
+                return this.$el.find(selector);
+            },
             constructor: function (options) {
                 options = options || {};
 
                 var me = this;
 
-                var ctor = function () {
-                    me.options = options;
-                    if (options.collection) {
-                        me.collection = options.collection;
-                    }
-                    me.model = options.model;
-                    if (options.el) {
-                        me.el = options.el;
-                    }
 
 
-                    if (!me._cid) {
-                        me._cid = _.uniqueId('vm');
-                    }
-                    if (!me.el) {
-                        me.el = 'div';
-                    }
+                me.options = options;
+                if (options.collection) {
+                    me.collection = options.collection;
+                }
+                me.model = options.model;
+                if (options.el) {
+                    me.el = options.el;
+                }
 
 
+                if (!me._cid) {
+                    me._cid = _.uniqueId('vm');
+                }
+                if (!me.el) {
+                    me.el = 'div';
+                }
+
+
+
+                me._super();
+
+
+
+                var ctor=function(){
                     if (typeof me.el === 'string') {
                         if (simpleTagRegex.test(me.el) && me.el !== 'html' && me.el !== 'body') {
                             me.el = document.createElement(me.el);
@@ -53,16 +64,12 @@
                         }
 
                     }
-                    me.$el = $(me.el);
-                    me.$ = function (selector) {
-                        return me.$el.find(selector);
-                    };
 
+                    me.$el = $(me.el);
                     _.each(me.shortcuts, function (selector, name) {
                         me[name] = me.$(selector);
                     });
 
-                    me._super();
 
                     if (me.autoParseBinds) {
                         me.parseBinds();
@@ -71,10 +78,9 @@
                     me.delegateEvents();
                 };
 
-
-                if (me.wrapReady) {
+                if(me.wrapReady){
                     $(ctor);
-                } else {
+                }else {
                     ctor();
                 }
 
@@ -127,97 +133,97 @@
     ViewModel = Model.extend(ViewModel);
 
     /*
-     $.fn.clearBinds = function () {
-     var $self = $();
-     $self.length = 1;
-     this.each(function () {
-     $self[0] = this;
-     ObjectObservable.clearBinds($self.data('nkObservers'));
-     $self.children().clearBinds();
-     });
-     return this;
-     };
+    $.fn.clearBinds = function () {
+        var $self = $();
+        $self.length = 1;
+        this.each(function () {
+            $self[0] = this;
+            ObjectObservable.clearBinds($self.data('nkObservers'));
+            $self.children().clearBinds();
+        });
+        return this;
+    };
 
-     $.fn.refreshBinds = function () {
-     var $self = $();
-     $self.length = 1;
-     this.each(function () {
-     $self[0] = this;
-     ObjectObservable.refreshBinds($self.data('nkObservers'));
-     $self.children().refreshBinds();
-     });
-     return this;
-     };
-
-
-     ViewModel.evil = function (string, context, addArgs, throwError) {
-     addArgs = addArgs || {};
-     if (typeof string !== 'string') {
-     throw  new TypeError('String expected in evil function');
-     }
-     string = string.replace(/\n/g, '\\n');
-     if (Observable.isObservable(context)) {
-     context = context();
-     }
-     var contextName = 'context' + Math.floor(Math.random() * 10000000),
-     keys = [contextName],
-     vals = [],
-     fn,
-     addArgKey;
-
-     for (addArgKey in addArgs) {
-     keys.push(addArgKey);
-     vals.push(addArgs[addArgKey]);
-     }
-
-     if (context) {
-     keys.push('with(' + contextName + ') return ' + string);
-     }
-     else {
-     keys.push('return ' + string);
-     }
-
-     fn = Function.apply(context, keys);
-     vals.unshift(context);
-     return function () {
-     try {
-     return fn.apply(context, vals);
-     } catch (exception) {
-     if (throwError) {
-     throw exception;
-     } else {
-     console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context, 'addArgs: ', addArgs);
-     }
-
-     }
-     };
-     };
+    $.fn.refreshBinds = function () {
+        var $self = $();
+        $self.length = 1;
+        this.each(function () {
+            $self[0] = this;
+            ObjectObservable.refreshBinds($self.data('nkObservers'));
+            $self.children().refreshBinds();
+        });
+        return this;
+    };
 
 
-     ViewModel.findCallAndSubscribe = function (string, context, addArgs, callback, $el) {
-     var obs = this.findObservable(string, context, addArgs, $el);
-     callback(obs.value);
-     obs.subscribe(callback);
-     return obs;
-     };
+    ViewModel.evil = function (string, context, addArgs, throwError) {
+        addArgs = addArgs || {};
+        if (typeof string !== 'string') {
+            throw  new TypeError('String expected in evil function');
+        }
+        string = string.replace(/\n/g, '\\n');
+        if (Observable.isObservable(context)) {
+            context = context();
+        }
+        var contextName = 'context' + Math.floor(Math.random() * 10000000),
+            keys = [contextName],
+            vals = [],
+            fn,
+            addArgKey;
 
-     ViewModel.findObservable = function (string, context, addArgs, $el) {
-     var result = {
-     $el: $el
-     };
-     if (context && context.prop && context.attributes) {//if model
-     result.model = context;
-     result.prop = string;
-     } else {
-     result.evil = {
-     string: string,
-     context: context,
-     addArgs: addArgs
-     }
-     }
-     return new ObjectObservable(result);
-     };
-     //*/
+        for (addArgKey in addArgs) {
+            keys.push(addArgKey);
+            vals.push(addArgs[addArgKey]);
+        }
+
+        if (context) {
+            keys.push('with(' + contextName + ') return ' + string);
+        }
+        else {
+            keys.push('return ' + string);
+        }
+
+        fn = Function.apply(context, keys);
+        vals.unshift(context);
+        return function () {
+            try {
+                return fn.apply(context, vals);
+            } catch (exception) {
+                if (throwError) {
+                    throw exception;
+                } else {
+                    console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context, 'addArgs: ', addArgs);
+                }
+
+            }
+        };
+    };
+
+
+    ViewModel.findCallAndSubscribe = function (string, context, addArgs, callback, $el) {
+        var obs = this.findObservable(string, context, addArgs, $el);
+        callback(obs.value);
+        obs.subscribe(callback);
+        return obs;
+    };
+
+    ViewModel.findObservable = function (string, context, addArgs, $el) {
+        var result = {
+            $el: $el
+        };
+        if (context && context.prop && context.attributes) {//if model
+            result.model = context;
+            result.prop = string;
+        } else {
+            result.evil = {
+                string: string,
+                context: context,
+                addArgs: addArgs
+            }
+        }
+        return new ObjectObservable(result);
+    };
+    //*/
 
     ViewModel.findBinds = function (element, model) {
         var newctx,
