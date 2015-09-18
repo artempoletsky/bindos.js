@@ -36,7 +36,7 @@ describe('ViewModel.binds', function () {
 
             it('supports filters', function () {
                 var vm = ViewModel.create({
-                    el: '<div nk="html: value | tf1:\'321\'"></div>',
+                    el: '<div nk="html: value | sumFilter:\'321\'"></div>',
                     autoParseBinds: true,
                     defaults: {
                         value: 123
@@ -201,7 +201,7 @@ describe('ViewModel.binds', function () {
             it('supports filters', function () {
 
                 var vm = ViewModel.create({
-                    el: '<div>{{value | tf1:"321"}}</div>',
+                    el: '<div>{{value | sumFilter:"321"}}</div>',
                     autoParseBinds: true,
                     defaults: {
                         value: 123

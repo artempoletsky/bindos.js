@@ -55,7 +55,12 @@
                 }
 
                 self._changed = {};
-                self.id = self.attributes[self.idAttribute];
+
+
+                if (self.idAttribute != 'id' || !self.useDefineProperty) {
+                    self.id = self.attributes[self.idAttribute];
+                }
+
                 self.cid = _.uniqueId('c');
                 //заносим в глобальную коллекцию
                 if (self.mapping && self.id) {
@@ -69,11 +74,11 @@
             },
             idAttribute: 'id',
             mapping: false,
-            useDefineProperty: false,
+            useDefineProperty: true,
             computeds: {},
             _computeds: {},
             defaults: {},
-            serialize: function(){
+            serialize: function () {
                 return _.extend({}, this.attributes, _.mapValues(this._computeds, function (comp, name) {
                     return comp.value;
                 }));
@@ -129,7 +134,7 @@
                     if (self.reverseComputedDeps[key]) {
                         self.setComputeds(self.reverseComputedDeps[key]);
                     }
-                    if (key === self.idAttribute) {
+                    if (key === self.idAttribute && !(self.idAttribute == 'id' && self.useDefineProperty)) {
                         self.id = val;
                     }
 
@@ -196,7 +201,7 @@
                     });
                 } else {
                     Model.sync('create', url, {
-                        data: _.clone(this.attributes),
+                        data: me.serialize(),
                         success: function (data) {
                             me.update(data);
                         }

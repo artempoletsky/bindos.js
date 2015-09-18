@@ -80,21 +80,24 @@ describe('Model', function () {
     it('save', function () {
         var oldSync = Model.sync;
         var method, url, attributes, hasId = false;
-        Model.sync = function (a, b, c) {
+        Model.sync = function (a, b, options) {
             method = a;
             url = b;
-            attributes = c;
+            attributes = options;
             if (hasId) {
-                c.success({});
+                options.success({});
             }
             else {
-                c.success({
+                options.success({
                     id: 123
                 });
             }
         }
 
         var m = Model.create({
+            defaults: {
+                id: undefined
+            },
             mapping: 'foo'
         });
         m.prop('x', 10);
@@ -272,6 +275,38 @@ describe('Model', function () {
         expect(model.a).toBe(2);
         expect(model.comp1).toBe('bar 2');
 
+
+        var ModelWithId = Model.extend({
+            useDefineProperty: true,
+            defaults: {
+                id: 0
+            }
+        });
+
+        var model2 = new ModelWithId({
+            id: 20
+        });
+        expect(model2.id).toBe(20);
+
+
+        model2.prop('id', 30)
+
+        expect(model2.id).toBe(30);
+
+
+        var ModelWithId2 = Model.extend({
+            useDefineProperty: true,
+            idAttribute: 'foo'
+        });
+
+        var model3 = new ModelWithId2();
+
+        expect(model3.id).toBeUndefined();
+
+        model3.prop('foo', 3);
+
+        expect(model3.id).toBe(3);
+
         //console.log(model.toJSON());
     });
 
@@ -295,7 +330,7 @@ describe('Model', function () {
         });
 
 
-        it('can parse filters', function () {
+        xit('can parse filters', function () {
             var f = Model.parseFilters('x | filter1 | filter2: "8"');
             expect(f.filters.filter2).toBe('8');
 
@@ -303,7 +338,7 @@ describe('Model', function () {
     });
 
 
-    var filter = Model.filters.tf1 = {
+    var sumFilter = Model.filters.sumFilter = {
         format: function (value, option) {
             return value * 1 + option * 1;
         },
@@ -312,7 +347,7 @@ describe('Model', function () {
         }
     };
 
-    var filter2 = Model.filters.tf2 = {
+    var squareFilter = Model.filters.squareFilter = {
         format: function (value, option) {
             return 1 * value * value;
         },
@@ -322,27 +357,24 @@ describe('Model', function () {
     };
 
 
-    describe('filters', function () {
+    xdescribe('filters', function () {
 
         it('can create reusable filter', function () {
-            expect(filter.format(123, '2')).toBe(125);
-            expect(filter.unformat('125', '2')).toBe(123);
-            expect(filter2.format(2)).toBe(4);
-            expect(filter2.unformat('4')).toBe(2);
+            expect(sumFilter.format(123, '2')).toBe(125);
+            expect(sumFilter.unformat('125', '2')).toBe(123);
+            expect(squareFilter.format(2)).toBe(4);
+            expect(squareFilter.unformat('4')).toBe(2);
         });
 
 
         it('can create filtered computed', function () {
-            expect(Model.filters.tf1).toBeDefined();
-            expect(Model.filters.tf2).toBeDefined();
+            expect(Model.filters.sumFilter).toBeDefined();
+            expect(Model.filters.squareFilter).toBeDefined();
             var vm = ViewModel.create({
                 defaults: {
                     value: 5
                 }
             });
-
-            console.log(vm);
-            return;
 
             var comp = new Model.Computed({
                 model: vm,
@@ -350,16 +382,16 @@ describe('Model', function () {
             });
 
 
-            comp.parseFilters("value | tf1:'13' | tf2");
+            comp.parseFilters("value | sumFilter:'2' | squareFilter");
 
 
-            expect(comp.get()).toBe(18 * 18);
+            expect(comp.get()).toBe(7 * 7);
 
             comp.set(4 * 4);
-            expect(vm.prop('value')).toBe(4 - 13);
+            expect(vm.prop('value')).toBe(2);
 
             comp.set(18 * 18);
-            expect(vm.prop('value')).toBe(5);
+            expect(vm.prop('value')).toBe(16);
         });
 
 
