@@ -6,8 +6,8 @@
     },
             Collection = Model.extend({
         constructor: function(models, attributes) {
-            this.attributes = {};
-            this._changed = {};
+            this._super();
+
             this.itself = new itself(this);
             this.models = [];
             this.length = 0;
@@ -15,7 +15,6 @@
             if (models) {
                 this.reset(models);
             }
-            this.initialize(attributes);
 
         },
         models: [],
@@ -145,12 +144,6 @@
         },
         at: function(index) {
             return this.models[index];
-        },
-        /**
-         * DEPRECATED since 26.01.2013
-         */
-        get: function() {
-            return this.getByID.apply(this, arguments);
         },
         getByID: function(id) {
             var found;

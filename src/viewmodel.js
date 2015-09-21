@@ -76,6 +76,8 @@
                     }
 
                     me.delegateEvents();
+
+                    me.initialize();
                 };
 
                 if(me.wrapReady){

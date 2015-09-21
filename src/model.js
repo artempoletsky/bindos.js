@@ -67,10 +67,6 @@
                     modelsMap[self.mapping] = modelsMap[self.mapping] || {};
                     modelsMap[self.mapping][self.id] = self;
                 }
-                self.initialize();
-            },
-            initialize: function () {
-                return this;
             },
             idAttribute: 'id',
             mapping: false,
