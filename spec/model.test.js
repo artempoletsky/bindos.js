@@ -46,9 +46,7 @@ describe('Model', function () {
         expect(m.prop('x')).toBe(0);
     });
     it('\'s prop method can get and set attribute', function () {
-        var m = Model.create({
-
-        }, {
+        var m = Model.create({}, {
             a: 10
         });
         var spy = jasmine.createSpy('spy');
@@ -327,6 +325,43 @@ describe('Model', function () {
             });
 
             expect(comp.value).toBe(22);
+        });
+
+        it('can be used without deps', function () {
+            var model = Model.create({
+                defaults: {
+                    calls: 0
+                },
+                _x: 0,
+                computeds: {
+                    x: {
+                        get: function () {
+                            return this._x;
+                        },
+                        set: function (x) {
+                            this.calls++;
+                            this._x = x;
+                        }
+                    }
+                }
+            });
+            expect(model.x).toBe(0);
+            expect(model.calls).toBe(0);
+            model.x = 20;
+            expect(model.x).toBe(20);
+            expect(model.calls).toBe(1);
+
+            var spy = jasmine.createSpy('event_test');
+
+            expect(spy).not.toHaveBeenCalled();
+
+            model.on('change:x', spy);
+
+            model.x = 10;
+
+            expect(spy).toHaveBeenCalled();
+            expect(model.x).toBe(10);
+
         });
 
 

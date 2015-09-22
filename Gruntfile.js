@@ -67,7 +67,7 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-contrib-watch');
 
 
-    grunt.registerTask('build', ['jasmine','concat', 'uglify']);
+    grunt.registerTask('build', ['concat', 'uglify']);
     grunt.registerTask('default', ['build']);
 
 

@@ -329,7 +329,7 @@
             }, []);
             //var lastValue = self.value;
 
-            var value = self.getter.apply(self, vals);
+            var value = self.getter.apply(self.model, vals);
 
 
             self.value = _.foldl(this.filters, function (result, options, filterName) {
