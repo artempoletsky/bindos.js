@@ -75,7 +75,7 @@ describe('Model', function () {
         expect(m.prop('b')).toBe("foo");
     });
 
-    it('save', function () {
+    xit('save', function () {
         var oldSync = Model.sync;
         var method, url, attributes, hasId = false;
         Model.sync = function (a, b, options) {
@@ -118,7 +118,7 @@ describe('Model', function () {
         Model.sync = oldSync;
     });
 
-    it('fetch', function () {
+    xit('fetch', function () {
         var oldSync = Model.sync;
         var method, url, attributes, hasId = false;
         Model.sync = function (a, b, c) {
@@ -150,7 +150,7 @@ describe('Model', function () {
         Model.sync = oldSync;
     });
 
-    it('remove', function () {
+    xit('remove', function () {
         var oldSync = Model.sync;
         var method, url, attributes, hasId = false;
         Model.sync = function (a, b, c) {

@@ -2,47 +2,54 @@
     "use strict";
 
 
-    var modelsMap = {},
+    let modelsMap = {},
 
-        Model = Events.extend({
-            reverseComputedDeps: {},
-            setComputeds: function (names) {
-                var self = this;
-                _.each(names, function (name) {
-                    var val = self._computeds[name].get();
-                    self.fire('change:' + name, val);
-                });
+        Model = window.Events.extend({
+
+            setComputeds(names) {
+                let self = this;
+                names.forEach((name) => self.fire('change:' + name, self._computeds[name].get()));
             },
-            addComputed: function (name, options) {
+
+            addComputed(name, options) {
                 options.name = name;
                 options.model = this;
                 this._computeds[name] = new Model.Computed(options);
             },
-            removeComputed: function (name) {
+
+            removeComputed(name) {
                 var self = this;
                 delete self._computeds[name];
-                _.each(self.reverseComputedDeps, function (deps, key) {
-                    self.reverseComputedDeps[key] = _.without(deps, name);
-                });
+                for (let key in self.reverseComputedDeps) {
+                    let deps = self.reverseComputedDeps[key];
+                    self.reverseComputedDeps[key] = deps.filter((n) => n != name);
+                }
             },
-            constructor: function (data) {
+
+            useDefineProperty: true,
+            mapping: false,
+            computeds: {},
+            defaults: {},
+            idAttribute: 'id',
+            constructor(data = {}) {
 
                 var self = this;
 
 
-                data = data || {};
-
-                self.attributes = _.extend({}, self.defaults, self.parse(data));
-
                 this.reverseComputedDeps = {};
+
                 this._computeds = {};
 
-                _.each(self.computeds, function (options, compName) {
-                    self.addComputed(compName, options);
-                });
+                self.attributes = $.extend({}, self.defaults, self.parse(data));
+
+
+                for (let compName in self.computeds) {
+                    self.addComputed(compName, self.computeds[compName]);
+                }
 
                 if (self.useDefineProperty) {
-                    _.each(self.serialize(), function (value, key) {
+                    let serialized = self.serialize();
+                    for (let key in serialized) {
                         Object.defineProperty(self, key, {
                             get: function () {
                                 return this.prop(key);
@@ -51,7 +58,7 @@
                                 this.prop(key, val);
                             }
                         });
-                    });
+                    }
                 }
 
                 self._changed = {};
@@ -61,40 +68,39 @@
                     self.id = self.attributes[self.idAttribute];
                 }
 
-                self.cid = _.uniqueId('c');
+                self.cid = $.uniqueId('c');
                 //заносим в глобальную коллекцию
                 if (self.mapping && self.id) {
                     modelsMap[self.mapping] = modelsMap[self.mapping] || {};
                     modelsMap[self.mapping][self.id] = self;
                 }
             },
-            idAttribute: 'id',
-            mapping: false,
-            useDefineProperty: true,
-            computeds: {},
-            _computeds: {},
-            defaults: {},
-            serialize: function () {
-                return _.extend({}, this.attributes, _.mapValues(this._computeds, function (comp, name) {
+
+            serialize() {
+                return $.extend({}, this.attributes, $.mapValues(this._computeds, function (comp) {
                     return comp.value;
                 }));
             },
-            toJSON: function () {
+
+
+            toJSON() {
                 return this.serialize();
             },
-            parse: function (json) {
+
+
+            parse(json) {
                 return json;
             },
-            baseURL: '/',
-            url: function () {
-                return this.baseURL + (this.mapping ? this.mapping + '/' : '') + (this.id ? this.id + '/' : '');
-            },
-            update: function (json) {
+
+
+            update(json) {
                 this.prop(this.parse(json));
                 this._changed = {};
                 return this;
             },
-            prop: function (key, value) {
+
+
+            prop(key, value) {
                 var self = this, comp;
 
                 //if get
@@ -116,7 +122,8 @@
                     values = key;
                 }
 
-                _.each(values, function (val, key) {
+                for (let key in values) {
+                    let val = values[key];
                     changed[key] = self._changed[key] = val;
 
                     //if computed
@@ -135,15 +142,19 @@
                     }
 
                     self.fire('change:' + key, val);
-                });
+                }
+
                 this.fire('change', changed);
                 return this;
             },
 
-            validate: function () {
+
+            validate() {
                 return false;
             },
-            fetch: function (options) {
+
+
+            fetch(options) {
                 options = options || {};
                 var me = this,
                     opt = {
@@ -160,10 +171,12 @@
                         }
                     };
 
-                Model.sync('get', this.url(), _.extend({}, options, opt));
+                Model.sync('get', this.url(), $.extend({}, options, opt));
                 return this;
             },
-            save: function (data) {
+
+
+            save(data) {
 
                 var me = this,
                     errors = this.validate(data),
@@ -175,7 +188,7 @@
                 }
 
 
-                if (_.isFunction(this.url)) {
+                if (typeof this.url == 'function') {
                     url = this.url();
                 } else {
                     url = this.url;
@@ -186,7 +199,7 @@
                 }
                 if (this.id) {
 
-                    if (_.keys(me._changed).length === 0) {//нечего сохранять
+                    if (Object.keys(me._changed).length === 0) {//нечего сохранять
                         return this;
                     }
                     Model.sync('update', url, {
@@ -205,13 +218,16 @@
                 }
                 return this;
             },
-            remove: function () {
+
+
+            remove() {
                 this.fire('remove');
                 if (this.id) {
                     Model.sync('delete', this.url(), {});
                 }
             }
         });
+
 
     Model.fromStorage = function (name, id) {
         modelsMap[name] = modelsMap[name] || {};
@@ -231,25 +247,6 @@
         return new constuctor(json);
     };
 
-    Model.sync = function (method, url, options) {
-        options = options || {};
-        var data = {
-            method: method
-        };
-        if (method === 'PUT') {
-            method = 'POST';
-        }
-
-        $.extend(data, options.data);
-        $.ajax({
-            url: url,
-            dataType: 'json',
-            type: method,
-            data: data,
-            success: options.success,
-            error: options.error
-        });
-    };
 
     Model.filters = {};
 
@@ -265,7 +262,7 @@
         var filters = string.split(filtersSplitter), value = filters.shift();
         return {
             value: value,
-            filters: _.foldl(filters, function (result, string) {
+            filters: filters.reduce(function (result, string) {
                 var matches = filtersSplitter2.exec(string);
                 var options = matches[3];
                 var filterName = matches[1];
@@ -275,13 +272,14 @@
         }
     };
 
-    Model.Computed = Class.extend({
+    class Computed {
 
-        constructor: function (options) {
+        constructor(options) {
             this.deps = options.deps || [];
             this.name = options.name;
             this.model = options.model;
             this.filters = options.filters || {};
+            this.value = undefined;
             if (options.filtersString) {
                 this.parseFilters(options.filtersString);
             }
@@ -295,56 +293,59 @@
 
 
             var rdps = this.model.reverseComputedDeps;
-            _.each(this.deps, function (name) {
+
+            this.deps.forEach(function (name) {
                 if (!rdps[name]) {
                     rdps[name] = [];
                 }
                 rdps[name].push(options.name);
             });
-        },
-        value: undefined,
-        deps: [],
-        model: undefined,
-        filters: {
-            /*
-             filt1: options,
-             filt2: options
-             */
-        },
-        getter: function (value) {
+        }
+
+
+        getter(value) {
             return value;
-        },
-        setter: function (value, name) {
+        }
+
+        setter(value, name) {
             this.prop(name, value);
-        },
-        parseFilters: function (string) {
+        }
+
+        parseFilters(string) {
             var f = Model.parseFilters(string);
             this.deps = [f.value];
             this.filters = f.filters;
-        },
-        get: function () {
-            var self = this, vals = _.foldl(self.deps, function (array, name) {
+        }
+
+        get() {
+            var self = this, vals = self.deps.reduce(function (array, name) {
                 array.push(self.model.prop(name));
                 return array;
             }, []);
             //var lastValue = self.value;
 
             var value = self.getter.apply(self.model, vals);
-
-
-            self.value = _.foldl(this.filters, function (result, options, filterName) {
-                return Model.filters[filterName].format(result, options);
-            }, value);
+            let result = value;
+            for (let filterName in this.filters) {
+                let options = this.filters[key];
+                result = Model.filters[filterName].format(result, options);
+            }
+            this.value = result;
 
             return self.value;
-        },
-        set: function (value) {
-            this.setter.call(this.model, _.foldl(this.filters, function (result, options, filterName) {
-                return Model.filters[filterName].unformat(result, options);
-            }, value), this.name);
+        }
+
+        set(value) {
+            let result = value;
+            for (let filterName in this.filters) {
+                let options = this.filters[filterName];
+                result = Model.filters[filterName].unformat(result, options);
+            }
+            this.setter.call(this.model, result, this.name);
             this.get();
         }
-    });
+    }
 
+    Model.Computed = Computed;
     window.Model = Model;
 }(this));
