@@ -1,7 +1,7 @@
-$ = function (selector) {
+var $ = function (selector) {
     return document.querySelector(selector);
 };
-$$ = function (selector) {
+var $$ = function (selector) {
     return document.querySelectorAll(selector);
 };
 

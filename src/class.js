@@ -39,13 +39,15 @@
                     val._notSimple === undefined &&
                     //и содержит _super
                     fnTest.test(val.toString())
-                        ? function () {
-                            var oldSuper = this._super, result;
-                            this._super = ParentClass.prototype[key];
-                            result = val.apply(this, arguments);
-                            this._super = oldSuper;
-                            return result;
-                        } : val;
+                        ? function (key) {
+                            return function () {
+                                var oldSuper = this._super, result;
+                                this._super = ParentClass.prototype[key];
+                                result = val.apply(this, arguments);
+                                this._super = oldSuper;
+                                return result;
+                            }
+                        }(key) : val;
             }
         }
 
