@@ -1,7 +1,7 @@
 (function (window) {
     "use strict";
     /*globals _*/
-    var ctor = function () {
+    let ctor = function () {
         },
         Class = function () {
 
@@ -17,7 +17,7 @@
                 constructor: props
             };
         }
-        var ParentClass = this,
+        let ParentClass = this,
             Constructor = function () {
                 this._constructor.apply(this, arguments);
             };
@@ -29,23 +29,25 @@
         Constructor.prototype = new ctor();
         //_.extend(Constructor.prototype,props);
 
-        //*
-        _.forOwn(props, function (val, key) {
-            Constructor.prototype[key] =
-                //если функция
-                typeof val === 'function' &&
+        for (let key in props) {
+            if (props.hasOwnProperty(key)) {
+                let val = props[key];
+                Constructor.prototype[key] =
+                    //если функция
+                    typeof val === 'function' &&
                     //не Observable и не конструктор
                     val._notSimple === undefined &&
                     //и содержит _super
                     fnTest.test(val.toString())
-                    ? function () {
-                    var oldSuper = this._super, result;
-                    this._super = ParentClass.prototype[key];
-                    result = val.apply(this, arguments);
-                    this._super = oldSuper;
-                    return result;
-                } : val;
-        });//*/
+                        ? function () {
+                            var oldSuper = this._super, result;
+                            this._super = ParentClass.prototype[key];
+                            result = val.apply(this, arguments);
+                            this._super = oldSuper;
+                            return result;
+                        } : val;
+            }
+        }
 
         Constructor.prototype.constructor = Constructor;
         Constructor._notSimple = true;
@@ -57,7 +59,7 @@
 
 
     Class.create = function (proto) {
-        var args = _.toArray(arguments),
+        var args = Array.from(arguments),
             child = this.extend(proto),
             fnBody = 'return new child(',
             keys = ['child'],

@@ -214,7 +214,7 @@ describe('Events', function () {
         test.on('foo', (_one, _two) => {
             one = _one;
             two = _two;
-        })
+        });
         test.fire('foo', {
             a: 'b'
         }, 4);

@@ -5,7 +5,7 @@
         namespaceSplitter = '.',
 
 
-        makeBind = (event, fn, context, isSignal)=> {
+        makeBind = (event, fn, context, isSignal) => {
             let arr = event.split(namespaceSplitter);
             return {
                 c: context,
@@ -103,7 +103,7 @@
 
         };
 
-    class Events {
+    let Events = Class.extend({
         on(events, fn, context, callOnce) {
             let self = this,
                 ctx,
@@ -148,7 +148,7 @@
 
             }
             return self;
-        }
+        },
 
         off(events, fn, context) {
             let me = this, i, l, eventNames;
@@ -163,7 +163,7 @@
                 remove(me, eventNames[i], fn, context);
             }
             return me;
-        }
+        },
 
         fire(events, ...rest) {
             if (!this._listeners) {
@@ -210,11 +210,11 @@
 
             }
             return me;
-        }
+        },
 
         one(events, fn, context) {
             return this.on(events, fn, context, true);
-        }
+        },
 
         hasListener(event) {
             if (!this._listeners) {
@@ -222,7 +222,7 @@
             }
             return findBinds(this._listeners, event, false, false, 'any');
         }
-    }
+    });
     Events.prototype.trigger = Events.prototype.fire;
     window.Events = Events;
 }(this));
