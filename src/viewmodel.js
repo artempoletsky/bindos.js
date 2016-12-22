@@ -227,57 +227,79 @@
      };
      //*/
 
-    ViewModel.findBinds = function (element, model) {
-        var newctx,
+    ViewModel.findBinds = function (elem, model) {
+        var
             breakContextIsSent = false,
             self = this,
-            $el = $(element),
-            elem = $el[0],
-            tagBehavior, attrs;
+            tagBehavior;
 
+        if (typeof elem == 'string') {
+            elem = $(elem);
+        }
         if (!elem) {
             throw new Error('Element not exists');
         }
-        tagBehavior = self.tags[elem.tagName.toLowerCase()];
+        /*
+         tagBehavior = self.tags[elem.tagName.toLowerCase()];
 
 
-        if (tagBehavior) {
-            tagBehavior.call(self, $el, model);
-            return;
-        }
-
-
-        _.forIn(_.foldl(elem.attributes, function (result, attr) {
-                result[attr.nodeName] = attr.nodeValue;
-                return result;
-            }, {}),
-            function (value, name) {
-                var attrFn = self.customAttributes[name];
-                if (!attrFn) {
-                    return;
-                }
-                newctx = attrFn.call(self, $el, value, model);
+         if (tagBehavior) {
+         tagBehavior.call(self, $el, model);
+         return;
+         }
+         */
+        for (let selector in ViewModel.bindSelectors) {
+            let fn = ViewModel.bindSelectors[selector];
+            let elements = Array.from(elem.$$(selector));
+            if (elem.matches(selector)) {
+                elements.unshift(elem);
+            }
+            for (let el of elements) {
+                let newctx = fn.call(self, el, model);
                 if (newctx === false) {
                     breakContextIsSent = true;
+                    break;
                 } else if (newctx) {
                     model = newctx;
                 }
-            });
-
-
-        if (!breakContextIsSent) {
-            $el.contents().each(function () {
-                var node = this;
-                if (this.nodeType == 3) {
-                    _.forIn(self.inlineModificators, function (mod) {
-                        mod.call(self, node, model);
-                    });
-                } else if (this.nodeType == 1) {
-                    self.findBinds(node, model);
-                }
-            });
-
+            }
+            if (breakContextIsSent) {
+                break;
+            }
         }
+
+        /*
+         _.forIn(_.foldl(elem.attributes, function (result, attr) {
+         result[attr.nodeName] = attr.nodeValue;
+         return result;
+         }, {}),
+         function (value, name) {
+         var attrFn = self.customAttributes[name];
+         if (!attrFn) {
+         return;
+         }
+         newctx = attrFn.call(self, $el, value, model);
+         if (newctx === false) {
+
+         } else if (newctx) {
+         model = newctx;
+         }
+         });
+
+
+         if (!breakContextIsSent) {
+         $el.contents().each(function () {
+         var node = this;
+         if (this.nodeType == 3) {
+         _.forIn(self.inlineModificators, function (mod) {
+         mod.call(self, node, model);
+         });
+         } else if (this.nodeType == 1) {
+         self.findBinds(node, model);
+         }
+         });
+
+         }*/
     };
 
     /*var anotherBreakersRegEx = /\{[\s\S]*\}/;

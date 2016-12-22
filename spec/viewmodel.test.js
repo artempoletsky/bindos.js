@@ -258,7 +258,7 @@ describe('ViewModel', function () {
             };
             spyOn(ViewModel.binds, 'foo');
             spyOn(ViewModel.binds, 'bar');
-            var el = $('<div data-bind="foo"><div data-bind="bar: baz;"></div></div>')[0];
+            var el = $.parse('<div data-bind="foo"><div data-bind="bar: baz;"></div></div>');
             ViewModel.findBinds(el, window);
             expect(ViewModel.binds.foo.calls.length).toBe(1);
             expect(ViewModel.binds.foo.calls[0].args[1]).toBe('');
@@ -277,12 +277,12 @@ describe('ViewModel', function () {
         it('has optional parameters', function () {
             var spy = ViewModel.binds.spy = jasmine.createSpy()
 
-            var $div = $('<div nk="spy"></div>');
+            var div = $.parse('<div data-bind="spy"></div>');
 
-            ViewModel.findBinds($div);
+            ViewModel.findBinds(div);
             expect(spy.calls.length).toBe(1);
             expect(spy.calls[0].object).toBe(ViewModel);
-            expect(spy.calls[0].args[0][0]).toBe($div[0]);
+            expect(spy.calls[0].args[0]).toBe(div);
             expect(spy.calls[0].args[1]).toBe('');
             expect(spy.calls[0].args[2]).toBeUndefined();
             expect(spy.calls[0].args[3]).toBeUndefined();

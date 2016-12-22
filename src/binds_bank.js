@@ -44,7 +44,7 @@
             }
 
             oldModel.off('change:' + name, callbackNew);
-            if(callbackOld){
+            if (callbackOld) {
                 callbackOld(oldModel.prop(name));
             }
         });
@@ -65,9 +65,9 @@
                 elem.src = val || '';
             }, $el);
         },
-        html: function ($el, value, model) {
+        html: function (el, value, model) {
             this.applyFilters(value, model, function (val) {
-                $el.html(zeroEmpty(val));
+                el.innerHTML = zeroEmpty(val);
             });
         },
         text: function ($el, value, model) {
@@ -75,16 +75,13 @@
                 $el.text(zeroEmpty(val));
             });
         },
-        value: function ($el, value, model) {
+        value: function (el, value, model) {
             var name = this.applyFilters(value, model, function (val) {
-                $el.val(zeroEmpty(val));
+                el.value = zeroEmpty(val);
             });
 
-            $el.on('change keyup keydown', function () {
-                var val = $el.val();
-                //if ($el.get() !== val) {
-                model.prop(name, val);
-                //}
+            el.on('change keyup keydown', function () {
+                model.prop(name, el.value);
             });
         },
         attr: function ($el, value, context) {
@@ -199,12 +196,12 @@
     var bindSplitter = /\s*;\s*/,
         firstColonRegex = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/,
         commaSplitter = /\s*,\s*/,
-        dataBind = function (name, $el, value, context, addArgs) {
-            $el.removeAttr(name);
+        dataBind = function (name, el, value, context, addArgs) {
+            el.removeAttribute(name);
             var newCtx, breakContextIsSent;
             if (value) {
-
-                _.each(value.split(bindSplitter), function (cBind) {
+                let binds = value.split(bindSplitter);
+                for (let cBind of binds) {
                     var arr = cBind.match(firstColonRegex), bindName, bindVal, bindFn;
                     if (!arr) {
                         bindName = cBind;
@@ -216,12 +213,12 @@
 
                     bindName = bindName.split(commaSplitter);
 
-                    _.each(bindName, function (ccBind) {
+                    for (let ccBind of bindName) {
                         if (ccBind && ccBind.charAt(0) !== '!') {
                             bindFn = ViewModel.binds[ccBind];
 
                             if (bindFn) {
-                                newCtx = bindFn.call(ViewModel, $el, bindVal, context, addArgs);
+                                newCtx = bindFn.call(ViewModel, el, bindVal, context, addArgs);
 
                                 if (newCtx === false) {
                                     breakContextIsSent = true;
@@ -232,8 +229,8 @@
                                 console.warn('Bind: "' + ccBind + '" not exists');
                             }
                         }
-                    });
-                });
+                    }
+                }
             }
             if (breakContextIsSent) {
                 return false;
@@ -243,21 +240,9 @@
         };
 
 
-    ViewModel.tag = function (tagName, behavior) {
-        document.createElement(tagName);// for IE
-        ViewModel.tags[tagName] = behavior;
-    };
-    ViewModel.removeTag = function (tagName) {
-        delete ViewModel.tags[tagName];
-    };
-    ViewModel.tags = {};
-
-    ViewModel.customAttributes = {
-        'data-bind': function ($el, value, context, addArgs) {
-            return dataBind('data-bind', $el, value, context, addArgs);
-        },
-        'nk': function ($el, value, context, addArgs) {
-            return dataBind('nk', $el, value, context, addArgs);
+    ViewModel.bindSelectors = {
+        '[data-bind]': function (el, context) {
+            return dataBind('data-bind', el, el.getAttribute('data-bind'), context);
         }
     };
 
@@ -310,59 +295,59 @@
 
 
                 var insertFunction = parent.childNodes.length === 1 ? function (value) {
-                    //if this is the only child
-                    try {
-                        parent.innerHTML = value;
-                    } catch (e) {
-                        console.log(e);
-                    }
-
-                } : function (value) {
-
-                    docFragment = document.createDocumentFragment();
-
-                    try {
-                        div.innerHTML = value;
-                    } catch (e) {
-                        console.log(e);
-                    }
-
-
-                    var newNodeList = _.toArray(div.childNodes), firstNode;
-
-
-                    firstNode = nodeList[0];
-
-                    while (nodeList[1]) {
-                        parent.removeChild(nodeList[1]);
-                        nodeList.splice(1, 1);
-                    }
-
-
-                    if (!newNodeList.length) {
-                        firstNode.nodeValue = '';
-                        nodeList = [firstNode];
-                        return;
-                    }
-
-
-                    while (div.childNodes[0]) {
-                        docFragment.appendChild(div.childNodes[0]);
-                    }
-
-
-                    if (docFragment.childNodes.length) {
+                        //if this is the only child
                         try {
-                            parent.insertBefore(docFragment, firstNode);
-                        } catch (er) {
-                            throw  er;
+                            parent.innerHTML = value;
+                        } catch (e) {
+                            console.log(e);
                         }
-                    }
 
-                    parent.removeChild(firstNode);
-                    nodeList = newNodeList;
+                    } : function (value) {
 
-                };
+                        docFragment = document.createDocumentFragment();
+
+                        try {
+                            div.innerHTML = value;
+                        } catch (e) {
+                            console.log(e);
+                        }
+
+
+                        var newNodeList = _.toArray(div.childNodes), firstNode;
+
+
+                        firstNode = nodeList[0];
+
+                        while (nodeList[1]) {
+                            parent.removeChild(nodeList[1]);
+                            nodeList.splice(1, 1);
+                        }
+
+
+                        if (!newNodeList.length) {
+                            firstNode.nodeValue = '';
+                            nodeList = [firstNode];
+                            return;
+                        }
+
+
+                        while (div.childNodes[0]) {
+                            docFragment.appendChild(div.childNodes[0]);
+                        }
+
+
+                        if (docFragment.childNodes.length) {
+                            try {
+                                parent.insertBefore(docFragment, firstNode);
+                            } catch (er) {
+                                throw  er;
+                            }
+                        }
+
+                        parent.removeChild(firstNode);
+                        nodeList = newNodeList;
+
+                    };
                 var name;
                 ViewModel.replaceable(context, function (newModel) {
 

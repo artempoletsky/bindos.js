@@ -61,6 +61,17 @@ $.extend(HTMLElement.prototype, {
     let isReady = false;
     let uniq = {};
     $.extend($, {
+        parse: function (html) {
+            let div = $.make('div');
+            div.innerHTML = html;
+            let result = div.childNodes;
+            if (result.length == 1) {
+                return result[0];
+            } else if (result.length == 0) {
+                return undefined;
+            }
+            return result;
+        },
         mapValues(object, iterator, context){
             let result = {};
             for (let key in object) {
