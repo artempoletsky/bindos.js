@@ -50,14 +50,16 @@
                 if (self.useDefineProperty) {
                     let serialized = self.serialize();
                     for (let key in serialized) {
-                        Object.defineProperty(self, key, {
-                            get: function () {
-                                return this.prop(key);
-                            },
-                            set: function (val) {
-                                this.prop(key, val);
-                            }
-                        });
+                        (function (key) {
+                            Object.defineProperty(self, key, {
+                                get: function () {
+                                    return this.prop(key);
+                                },
+                                set: function (val) {
+                                    this.prop(key, val);
+                                }
+                            });
+                        }(key));
                     }
                 }
 
