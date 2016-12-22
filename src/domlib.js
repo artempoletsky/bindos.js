@@ -18,13 +18,19 @@ $.extend = function (o1, ...objects) {
 
 $.extend(HTMLElement.prototype, {
     on(event, delegate, callback) {
+        //@todo implement namespaces
+        let self = this,
+            ns = event.split('.');
+        event = ns.shift();
+
+
         if (!callback) {
-            this.addEventListener(event, delegate);
+            self.addEventListener(event, delegate);
             return this;
         }
-        var self = this;
+
         self.addEventListener(event, function (e) {
-            var currentTarget = e.target;
+            let currentTarget = e.target;
             while (currentTarget != self) {
                 if (currentTarget.matches(delegate)) {
                     e.delegate = currentTarget;
@@ -35,6 +41,10 @@ $.extend(HTMLElement.prototype, {
             }
         });
         return this;
+    },
+    fire(eventName, data = {bubbles: true, cancelable: true, view: window}){
+        let event = new Event(eventName, data);
+        this.dispatchEvent(event);
     },
     $: HTMLElement.prototype.querySelector,
     $$: HTMLElement.prototype.querySelectorAll,
