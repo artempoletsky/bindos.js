@@ -287,6 +287,26 @@ describe('ViewModel', function () {
             expect(spy.calls[0].args[2]).toBeUndefined();
             expect(spy.calls[0].args[3]).toBeUndefined();
         });
+
+        it('supports value bind', function () {
+            var vm = ViewModel.create({
+                el: $.parse('<input data-bind="value: value"/>'),
+                autoParseBinds: true,
+                defaults: {
+                    value: 3
+                }
+            });
+            expect(vm.value).toBe(3);
+            expect(vm.el.value).toBe('3');
+            vm.value = 10;
+            expect(vm.el.value).toBe('10');
+
+            vm.el.value = 50;
+
+            vm.el.fire('change');
+
+            expect(vm.value).toBe('50');
+        });
     });
 
 });

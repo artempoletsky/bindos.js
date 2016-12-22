@@ -27,7 +27,7 @@
 
         ViewModel.replaceable(model, function (newModel) {
             if (Model.hasFilters(value)) {
-                name = _.uniqueId('vmDynamicComputed');
+                name = $.uniqueId('vmDynamicComputed');
                 newModel.addComputed(name, {
                     filtersString: value
                 });
@@ -79,10 +79,12 @@
             var name = this.applyFilters(value, model, function (val) {
                 el.value = zeroEmpty(val);
             });
-
-            el.on('change keyup keydown', function () {
-                model.prop(name, el.value);
+            ['change', 'keyup', 'keydown'].forEach(function (event) {
+                el.on(event, function () {
+                    model.prop(name, el.value);
+                });
             });
+
         },
         attr: function ($el, value, context) {
             var elem = $el[0];

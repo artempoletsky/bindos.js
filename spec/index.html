@@ -55,32 +55,39 @@
 <body>
 <script>
     $.ready(function () {
-        ViewModel.filters.tel = {
-            format: function (text) {
-                text = text || '';
-                text = text.replace(/\D+/g, '');
-                return text.split('').reduce(function (result, char, index) {
-                    result += char;
-                    switch (index) {
-                        case 0:
-                            result += ' (';
-                            break;
-                        case 3:
-                            result += ') ';
-                            break;
-                    }
-                    return result;
-                }, '+');
-            },
-            unformat: function (value) {
-                return value.replace(/\D+/g, '');
-            }
-        };
+        /*Model.filters.tel = {
+         format: function (text) {
+         },
+         unformat: function (value) {
+         return value.replace(/\D+/g, '');
+         }
+         };*/
         ViewModel.create({
             autoParseBinds: true,
             el: '#el',
             defaults: {
                 value: 0
+            },
+            computeds: {
+                filtered: {
+                    deps: ['value'],
+                    get: function (text) {
+                        text = text || '';
+                        text = text.replace(/\D+/g, '');
+                        return text.split('').reduce(function (result, char, index) {
+                            result += char;
+                            switch (index) {
+                                case 0:
+                                    result += ' (';
+                                    break;
+                                case 3:
+                                    result += ') ';
+                                    break;
+                            }
+                            return result;
+                        }, '+');
+                    }
+                }
             }
         });
     });
@@ -91,8 +98,8 @@
      });*/
 </script>
 <div id="el">
-    <input type="text" data-bind="value: value | tel"/>
-    <div data-bind="html: value"></div>
+    <input type="text" data-bind="value: value "/>
+    <div data-bind="html: filtered"></div>
 </div>
 </body>
 </html>
