@@ -99,7 +99,7 @@ describe('ViewModel', function () {
         expect(spy.calls[0].object).toBe(vm, 'context check');
     });
     it('can undelegate events', function () {
-        var dom = $('<div id="grand"><div class="father"><div class="child"></div></div></div>');
+        var dom = $.parse('<div id="grand"><div class="father"><div class="child"></div></div></div>');
         var spy = jasmine.createSpy();
         var vm = ViewModel.create({
             el: dom,
@@ -108,14 +108,14 @@ describe('ViewModel', function () {
             },
             onClick: spy
         });
-        var $child = vm.$el.find('.child');
-        $child.click();
+        var child = vm.el.$('.child');
+        child.fire('click');
         expect(spy.calls.length).toBe(1);
         vm.undelegateEvents();
-        $child.click();
+        child.fire('click');
         expect(spy.calls.length).toBe(1);
         vm.delegateEvents();
-        $child.click();
+        child.fire('click');
         expect(spy.calls.length).toBe(2);
     });
 

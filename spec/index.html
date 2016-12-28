@@ -72,20 +72,24 @@
                 filtered: {
                     deps: ['value'],
                     get: function (text) {
-                        text = text || '';
-                        text = text.replace(/\D+/g, '');
-                        return text.split('').reduce(function (result, char, index) {
-                            result += char;
-                            switch (index) {
-                                case 0:
-                                    result += ' (';
-                                    break;
-                                case 3:
-                                    result += ') ';
-                                    break;
+                        if (!text) {
+                            text = '';
+                        }
+                        let i = 0;
+                        let result = '+';
+                        for (let char of text) {
+                            if (char.match(/\D/)) {
+                                continue;
                             }
-                            return result;
-                        }, '+');
+                            if (i == 1) {
+                                result += ' ('
+                            } else if (i == 4) {
+                                result += ') ';
+                            }
+                            result += char;
+                            i++;
+                        }
+                        return result;
                     }
                 }
             }

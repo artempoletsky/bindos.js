@@ -33,6 +33,7 @@
 
 
                 me.options = options;
+                me._delegatedEvents = [];
                 if (options.collection) {
                     me.collection = options.collection;
                 }
@@ -99,33 +100,42 @@
                 this.undelegateEvents();
                 var eventsPath, eventName, me = this;
                 for (let name in events) {
-                    let fnName = events[name];
+                    let fnName = events[name], fn, proxy;
 
-                    //если это простая функция или содержится в VM
-                    var fn = (typeof fnName === 'function') ? fnName : me[fnName],
-                        proxy;
+                    if (typeof fnName === 'function') {
+                        fn = fnName;
+                        proxy = function (event, delegate) {
+                            fn(me, event, delegate);
+                        };
+                    } else {
+                        fn = me[fnName];
+                        proxy = fn.bind(me);
+                    }
 
                     if (typeof fn !== 'function') {
                         throw TypeError(fnName + ' is not a function');
                     }
                     eventsPath = name.split(eventSplitter);
-                    //меняем запятые в имени события на пробелы и неймспейс
-                    eventName = eventsPath.shift().split(',').join('.' + me._cid + ' ') + '.' + me._cid;
+                    eventName = eventsPath.shift().replace(',', ' ');
 
-                    proxy = fn.bind(me);
 
-                    //fixme need vanilla implementation
-                    if (eventsPath.length) {
-                        me.el.on(eventName, eventsPath.join(' '), proxy);
-                    } else {
-                        me.el.on(eventName, proxy);
-                    }
+                    me._delegatedEvents = me._delegatedEvents.concat(
+                        me.el.on(
+                            eventName,
+                            proxy,
+                            eventsPath.length ?
+                                eventsPath.join(' ') : false
+                        )
+                    );
+
                 }
                 return this;
             },
-            undelegateEvents: function () {
-                //fixme need vanilla implementation
-                //this.$el.unbind('.' + this._cid);
+            undelegateEvents() {
+                let args;
+                while (args = this._delegatedEvents.pop()) {
+                    this.el.off(args[0], args[1]);
+                }
                 return this;
             },
             render: function () {
@@ -134,104 +144,11 @@
         };
     ViewModel = Model.extend(ViewModel);
 
-    /*
-     $.fn.clearBinds = function () {
-     var $self = $();
-     $self.length = 1;
-     this.each(function () {
-     $self[0] = this;
-     ObjectObservable.clearBinds($self.data('nkObservers'));
-     $self.children().clearBinds();
-     });
-     return this;
-     };
-
-     $.fn.refreshBinds = function () {
-     var $self = $();
-     $self.length = 1;
-     this.each(function () {
-     $self[0] = this;
-     ObjectObservable.refreshBinds($self.data('nkObservers'));
-     $self.children().refreshBinds();
-     });
-     return this;
-     };
-
-
-     ViewModel.evil = function (string, context, addArgs, throwError) {
-     addArgs = addArgs || {};
-     if (typeof string !== 'string') {
-     throw  new TypeError('String expected in evil function');
-     }
-     string = string.replace(/\n/g, '\\n');
-     if (Observable.isObservable(context)) {
-     context = context();
-     }
-     var contextName = 'context' + Math.floor(Math.random() * 10000000),
-     keys = [contextName],
-     vals = [],
-     fn,
-     addArgKey;
-
-     for (addArgKey in addArgs) {
-     keys.push(addArgKey);
-     vals.push(addArgs[addArgKey]);
-     }
-
-     if (context) {
-     keys.push('with(' + contextName + ') return ' + string);
-     }
-     else {
-     keys.push('return ' + string);
-     }
-
-     fn = Function.apply(context, keys);
-     vals.unshift(context);
-     return function () {
-     try {
-     return fn.apply(context, vals);
-     } catch (exception) {
-     if (throwError) {
-     throw exception;
-     } else {
-     console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context, 'addArgs: ', addArgs);
-     }
-
-     }
-     };
-     };
-
-
-     ViewModel.findCallAndSubscribe = function (string, context, addArgs, callback, $el) {
-     var obs = this.findObservable(string, context, addArgs, $el);
-     callback(obs.value);
-     obs.subscribe(callback);
-     return obs;
-     };
-
-     ViewModel.findObservable = function (string, context, addArgs, $el) {
-     var result = {
-     $el: $el
-     };
-     if (context && context.prop && context.attributes) {//if model
-     result.model = context;
-     result.prop = string;
-     } else {
-     result.evil = {
-     string: string,
-     context: context,
-     addArgs: addArgs
-     }
-     }
-     return new ObjectObservable(result);
-     };
-     //*/
 
     ViewModel.findBinds = function (elem, model) {
         var
             breakContextIsSent = false,
-            self = this,
-            tagBehavior;
+            self = this;
 
         if (typeof elem == 'string') {
             elem = $(elem);
@@ -239,15 +156,7 @@
         if (!elem) {
             throw new Error('Element not exists');
         }
-        /*
-         tagBehavior = self.tags[elem.tagName.toLowerCase()];
 
-
-         if (tagBehavior) {
-         tagBehavior.call(self, $el, model);
-         return;
-         }
-         */
         for (let selector in ViewModel.bindSelectors) {
             let fn = ViewModel.bindSelectors[selector];
             let elements = Array.from(elem.$$(selector));
@@ -267,39 +176,6 @@
                 break;
             }
         }
-
-        /*
-         _.forIn(_.foldl(elem.attributes, function (result, attr) {
-         result[attr.nodeName] = attr.nodeValue;
-         return result;
-         }, {}),
-         function (value, name) {
-         var attrFn = self.customAttributes[name];
-         if (!attrFn) {
-         return;
-         }
-         newctx = attrFn.call(self, $el, value, model);
-         if (newctx === false) {
-
-         } else if (newctx) {
-         model = newctx;
-         }
-         });
-
-
-         if (!breakContextIsSent) {
-         $el.contents().each(function () {
-         var node = this;
-         if (this.nodeType == 3) {
-         _.forIn(self.inlineModificators, function (mod) {
-         mod.call(self, node, model);
-         });
-         } else if (this.nodeType == 1) {
-         self.findBinds(node, model);
-         }
-         });
-
-         }*/
     };
 
     /*var anotherBreakersRegEx = /\{[\s\S]*\}/;
