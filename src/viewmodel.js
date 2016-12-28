@@ -2,13 +2,12 @@
     "use strict";
 
 
-
     var $ = window.$,
         eventSplitter = /\s+/,
 
         simpleTagRegex = /^[a-z]+$/,
         firstColonRegex = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*$/,
-    //breakersRegex = /^\{([\s\S]*)\}$/,
+        //breakersRegex = /^\{([\s\S]*)\}$/,
         parsePairs,
         commaSplitter = /\s*,\s*/,
 
@@ -17,13 +16,15 @@
             setElement: function (el) {
                 this.undelegateEvents();
                 this.el = el;
-                this.$el = $(el);
                 this.parseBinds().delegateEvents();
                 return this;
             },
             wrapReady: false,
-            $: function(selector){
-                return this.$el.find(selector);
+            $: function (selector) {
+                return this.el.querySelector(selector);
+            },
+            $$: function (selector) {
+                return this.el.querySelectorAll(selector);
             },
             constructor: function (options) {
                 options = options || {};
@@ -31,8 +32,8 @@
                 var me = this;
 
 
-
                 me.options = options;
+                me._delegatedEvents = [];
                 if (options.collection) {
                     me.collection = options.collection;
                 }
@@ -43,32 +44,28 @@
 
 
                 if (!me._cid) {
-                    me._cid = _.uniqueId('vm');
+                    me._cid = $.uniqueId('vm');
                 }
                 if (!me.el) {
                     me.el = 'div';
                 }
 
 
-
                 me._super();
 
 
-
-                var ctor=function(){
+                var ctor = function () {
                     if (typeof me.el === 'string') {
                         if (simpleTagRegex.test(me.el) && me.el !== 'html' && me.el !== 'body') {
                             me.el = document.createElement(me.el);
                         } else {
-                            me.el = $(me.el)[0];
+                            me.el = $(me.el);
                         }
-
                     }
 
-                    me.$el = $(me.el);
-                    _.each(me.shortcuts, function (selector, name) {
-                        me[name] = me.$(selector);
-                    });
+                    for (let name in me.shortcuts) {
+                        me[name] = me.$(me.shortcuts[name]);
+                    }
 
 
                     if (me.autoParseBinds) {
@@ -80,9 +77,9 @@
                     me.initialize();
                 };
 
-                if(me.wrapReady){
-                    $(ctor);
-                }else {
+                if (me.wrapReady) {
+                    $.ready(ctor);
+                } else {
                     ctor();
                 }
 
@@ -102,30 +99,43 @@
                 events = events || this.events;
                 this.undelegateEvents();
                 var eventsPath, eventName, me = this;
-                _.each(events, function (fnName, name) {
-                    //если это простая функция или содержится в VM
-                    var fn = (typeof fnName === 'function') ? fnName : me[fnName],
-                        proxy;
+                for (let name in events) {
+                    let fnName = events[name], fn, proxy;
+
+                    if (typeof fnName === 'function') {
+                        fn = fnName;
+                        proxy = function (event, delegate) {
+                            fn(me, event, delegate);
+                        };
+                    } else {
+                        fn = me[fnName];
+                        proxy = fn.bind(me);
+                    }
 
                     if (typeof fn !== 'function') {
                         throw TypeError(fnName + ' is not a function');
                     }
                     eventsPath = name.split(eventSplitter);
-                    //меняем запятые в имени события на пробелы и неймспейс
-                    eventName = eventsPath.shift().split(',').join('.' + me._cid + ' ') + '.' + me._cid;
+                    eventName = eventsPath.shift().replace(/,/g, ' ');
 
-                    proxy = _.bind(fn, me);
 
-                    if (eventsPath.length) {
-                        me.$el.delegate(eventsPath.join(' '), eventName, proxy);
-                    } else {
-                        me.$el.bind(eventName, proxy);
-                    }
-                });
+                    me._delegatedEvents = me._delegatedEvents.concat(
+                        me.el.on(
+                            eventName,
+                            proxy,
+                            eventsPath.length ?
+                                eventsPath.join(' ') : false
+                        )
+                    );
+
+                }
                 return this;
             },
-            undelegateEvents: function () {
-                this.$el.unbind('.' + this._cid);
+            undelegateEvents() {
+                let args;
+                while (args = this._delegatedEvents.pop()) {
+                    this.el.off(args[0], args[1]);
+                }
                 return this;
             },
             render: function () {
@@ -134,149 +144,37 @@
         };
     ViewModel = Model.extend(ViewModel);
 
-    /*
-    $.fn.clearBinds = function () {
-        var $self = $();
-        $self.length = 1;
-        this.each(function () {
-            $self[0] = this;
-            ObjectObservable.clearBinds($self.data('nkObservers'));
-            $self.children().clearBinds();
-        });
-        return this;
-    };
 
-    $.fn.refreshBinds = function () {
-        var $self = $();
-        $self.length = 1;
-        this.each(function () {
-            $self[0] = this;
-            ObjectObservable.refreshBinds($self.data('nkObservers'));
-            $self.children().refreshBinds();
-        });
-        return this;
-    };
-
-
-    ViewModel.evil = function (string, context, addArgs, throwError) {
-        addArgs = addArgs || {};
-        if (typeof string !== 'string') {
-            throw  new TypeError('String expected in evil function');
-        }
-        string = string.replace(/\n/g, '\\n');
-        if (Observable.isObservable(context)) {
-            context = context();
-        }
-        var contextName = 'context' + Math.floor(Math.random() * 10000000),
-            keys = [contextName],
-            vals = [],
-            fn,
-            addArgKey;
-
-        for (addArgKey in addArgs) {
-            keys.push(addArgKey);
-            vals.push(addArgs[addArgKey]);
-        }
-
-        if (context) {
-            keys.push('with(' + contextName + ') return ' + string);
-        }
-        else {
-            keys.push('return ' + string);
-        }
-
-        fn = Function.apply(context, keys);
-        vals.unshift(context);
-        return function () {
-            try {
-                return fn.apply(context, vals);
-            } catch (exception) {
-                if (throwError) {
-                    throw exception;
-                } else {
-                    console.log('Error "' + exception.message + '" in expression "' + string + '" Context: ', context, 'addArgs: ', addArgs);
-                }
-
-            }
-        };
-    };
-
-
-    ViewModel.findCallAndSubscribe = function (string, context, addArgs, callback, $el) {
-        var obs = this.findObservable(string, context, addArgs, $el);
-        callback(obs.value);
-        obs.subscribe(callback);
-        return obs;
-    };
-
-    ViewModel.findObservable = function (string, context, addArgs, $el) {
-        var result = {
-            $el: $el
-        };
-        if (context && context.prop && context.attributes) {//if model
-            result.model = context;
-            result.prop = string;
-        } else {
-            result.evil = {
-                string: string,
-                context: context,
-                addArgs: addArgs
-            }
-        }
-        return new ObjectObservable(result);
-    };
-    //*/
-
-    ViewModel.findBinds = function (element, model) {
-        var newctx,
+    ViewModel.findBinds = function (elem, model) {
+        var
             breakContextIsSent = false,
-            self = this,
-            $el = $(element),
-            elem = $el[0],
-            tagBehavior, attrs;
+            self = this;
 
+        if (typeof elem == 'string') {
+            elem = $(elem);
+        }
         if (!elem) {
             throw new Error('Element not exists');
         }
-        tagBehavior = self.tags[elem.tagName.toLowerCase()];
 
-
-        if (tagBehavior) {
-            tagBehavior.call(self, $el, model);
-            return;
-        }
-
-
-        _.forIn(_.foldl(elem.attributes, function (result, attr) {
-            result[attr.nodeName] = attr.nodeValue;
-            return result;
-        }, {}),
-            function (value, name) {
-                var attrFn = self.customAttributes[name];
-                if (!attrFn) {
-                    return;
-                }
-                newctx = attrFn.call(self, $el, value, model);
+        for (let selector in ViewModel.bindSelectors) {
+            let fn = ViewModel.bindSelectors[selector];
+            let elements = Array.from(elem.$$(selector));
+            if (elem.matches(selector)) {
+                elements.unshift(elem);
+            }
+            for (let el of elements) {
+                let newctx = fn.call(self, el, model);
                 if (newctx === false) {
                     breakContextIsSent = true;
+                    break;
                 } else if (newctx) {
                     model = newctx;
                 }
-            });
-
-
-        if (!breakContextIsSent) {
-            $el.contents().each(function () {
-                var node = this;
-                if (this.nodeType == 3) {
-                    _.forIn(self.inlineModificators, function (mod) {
-                        mod.call(self, node, model);
-                    });
-                } else if (this.nodeType == 1) {
-                    self.findBinds(node, model);
-                }
-            });
-
+            }
+            if (breakContextIsSent) {
+                break;
+            }
         }
     };
 
@@ -284,7 +182,7 @@
      var firstColonRegex2 = /^\s*([^:]+)\s*:\s*([\s\S]*\S)\s*,/;*/
     parsePairs = function (string) {
         var result = {};
-        _.each(string.split(commaSplitter), function (value) {
+        string.split(commaSplitter).forEach(function (value) {
             var matches = firstColonRegex.exec(value);
             if (matches) {
                 result[matches[1]] = matches[2];
@@ -309,18 +207,20 @@
             };
         recursiveParse(value);
 
-        _.each(parsedSimpleObjects, function (object) {
-            _.each(object, function (value, key) {
+        for (let key in parsedSimpleObjects) {
+            let object = parsedSimpleObjects[key];
+            for (let key2 in object) {
+                let value = object[key2];
                 if (parsedSimpleObjects[value]) {
-                    object[key] = parsedSimpleObjects[value];
+                    object[key2] = parsedSimpleObjects[value];
                     delete parsedSimpleObjects[value];
                 }
-            });
-        });
+            }
+        }
+        for (let key in parsedSimpleObjects) {
+            result = parsedSimpleObjects[key];
+        }
 
-        _.each(parsedSimpleObjects, function (value) {
-            result = value;
-        });
         if (!result) {
             throw new Error(value + ' is not valid options object');
         }

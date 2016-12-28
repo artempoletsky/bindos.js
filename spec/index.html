@@ -1,92 +1,109 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title></title>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-		<script type="text/javascript" src="../lib/jquery-1.11.2.js"></script>
-		
-		<link rel="stylesheet" href="../lib/jasmine.css" />
-        <script type="text/javascript" src="../lib/json2.js"></script>
-		<script type="text/javascript" src="../lib/jasmine.js"></script>
-		<script type="text/javascript" src="../lib/jasmine-html.js"></script>
-		<script type="text/javascript" src="../lib/lodash.min.js"></script>
+<head>
+    <title></title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 
-		
-		<!--script type="text/javascript" src="bin/frontbone-0.9.5.min.js"></script-->
-		<script type="text/javascript" src="../src/class.js"></script>
-		<script type="text/javascript" src="../src/events.js"></script>
-		<script type="text/javascript" src="../src/model.js"></script>
-		<script type="text/javascript" src="../src/collection.js"></script>
-		<script type="text/javascript" src="../src/viewmodel.js"></script>
-        <script type="text/javascript" src="../src/binds_bank.js"></script>
-        <script type="text/javascript" src="../src/eachmodel.js"></script>
+    <link rel="stylesheet" href="../lib/jasmine.css"/>
+    <script type="text/javascript" src="../lib/json2.js"></script>
+    <script type="text/javascript" src="../lib/jasmine.js"></script>
+    <script type="text/javascript" src="../lib/jasmine-html.js"></script>
 
-		<script type="text/javascript" src="class.test.js"></script>
-		<script type="text/javascript" src="events.test.js"></script>
-		<script type="text/javascript" src="model.test.js"></script>
-		<script type="text/javascript" src="collection.test.js"></script>
-        <script type="text/javascript" src="viewmodel.test.js"></script>
-        <script type="text/javascript" src="binds.test.js"></script>
-		
-		
-		
-		
-		<!--script type="text/javascript" src="stub/stub.js"></script>
-		<script type="text/javascript" src="stub/stub.spec.js"></script-->
-		
-		<script type="text/javascript">
-			(function(){
-				var jasmineEnv = jasmine.getEnv();
-				jasmineEnv.updateInterval = 250;
-				var htmlReporter = new jasmine.HtmlReporter();
-				jasmineEnv.addReporter(htmlReporter);
-				jasmineEnv.specFilter = function(spec) {
-					return htmlReporter.specFilter(spec);
-				};
-				var currentWindowOnload = window.onload;
-				window.onload = function() {
-					if (currentWindowOnload) {
-						currentWindowOnload();
-					}
 
-					jasmineEnv.execute();
-				};
-			})()
-		</script>
-		
-    </head>
-    <body>
-        <script>
-            $(function(){
-                /*
-                ViewModel.filters.tel={
-                    format: function(text){ 
-                        text=text||'';
-                        text=text.replace(/\D+/g, '');
-                        return _.foldl(text.split(''), function(result,char, index){
-                            result+=char;                            
-                            switch(index){
-                                case 0: result+=' ('; break;
-                                case 3: result+=') '; break;
-                            }                            
-                            return result;
-                        }, '+');
-                    },
-                    unformat: function(value){
-                        return value.replace(/\D+/g, '');
+    <!--script type="text/javascript" src="bin/frontbone-0.9.5.min.js"></script-->
+    <script type="text/javascript" src="../src/domlib.js"></script>
+    <script type="text/javascript" src="../src/class.js"></script>
+    <script type="text/javascript" src="../src/events.js"></script>
+    <script type="text/javascript" src="../src/model.js"></script>
+    <script type="text/javascript" src="../src/collection.js"></script>
+    <script type="text/javascript" src="../src/viewmodel.js"></script>
+    <script type="text/javascript" src="../src/binds_bank.js"></script>
+    <script type="text/javascript" src="../src/eachmodel.js"></script>
+
+    <script type="text/javascript" src="class.test.js"></script>
+    <script type="text/javascript" src="events.test.js"></script>
+    <script type="text/javascript" src="model.test.js"></script>
+    <script type="text/javascript" src="collection.test.js"></script>
+    <script type="text/javascript" src="viewmodel.test.js"></script>
+    <!--script type="text/javascript" src="binds.test.js"></script-->
+
+
+    <!--script type="text/javascript" src="stub/stub.js"></script>
+    <script type="text/javascript" src="stub/stub.spec.js"></script-->
+
+    <script type="text/javascript">
+        (function () {
+            var jasmineEnv = jasmine.getEnv();
+            jasmineEnv.updateInterval = 250;
+            var htmlReporter = new jasmine.HtmlReporter();
+            jasmineEnv.addReporter(htmlReporter);
+            jasmineEnv.specFilter = function (spec) {
+                return htmlReporter.specFilter(spec);
+            };
+            var currentWindowOnload = window.onload;
+            window.onload = function () {
+                if (currentWindowOnload) {
+                    currentWindowOnload();
+                }
+
+                jasmineEnv.execute();
+            };
+        })()
+    </script>
+
+</head>
+<body>
+<script>
+    $.ready(function () {
+        /*Model.filters.tel = {
+         format: function (text) {
+         },
+         unformat: function (value) {
+         return value.replace(/\D+/g, '');
+         }
+         };*/
+        ViewModel.create({
+            autoParseBinds: true,
+            el: '#el',
+            defaults: {
+                value: 0
+            },
+            computeds: {
+                filtered: {
+                    deps: ['value'],
+                    get: function (text) {
+                        if (!text) {
+                            text = '';
+                        }
+                        let i = 0;
+                        let result = '+';
+                        for (let char of text) {
+                            if (char.match(/\D/)) {
+                                continue;
+                            }
+                            if (i == 1) {
+                                result += ' ('
+                            } else if (i == 4) {
+                                result += ') ';
+                            }
+                            result += char;
+                            i++;
+                        }
+                        return result;
                     }
                 }
-                ViewModel.create({
-                    autoParseBinds: true,
-                    el: '#el',
-                    value: Observable()
-                });*/
-                
-            });
-        </script>
-        <div id="el">
-            <input type="text" nk="value: value | tel"/>
-            {{value}}
-        </div>
-    </body>
+            }
+        });
+    });
+    /*$(function(){
+
+
+
+     });*/
+</script>
+<div id="el">
+    <input type="text" data-bind="value: value "/>
+    <div data-bind="html: filtered"></div>
+</div>
+</body>
 </html>

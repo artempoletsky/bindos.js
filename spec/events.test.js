@@ -1,14 +1,5 @@
 describe('Events', function () {
 
-    it('each patch', function () {
-        var calls = 0;
-        _.each([1, 2, 3, 4], function () {
-            calls++;
-            return false;
-        });
-        expect(calls).toBe(1);
-    });
-
 
     it('should be able to bind event', function () {
         var spyHandler = jasmine.createSpy('handler');
@@ -216,5 +207,18 @@ describe('Events', function () {
 
         disp.fire('baz');
         expect(baz.calls[0].object).toBe(ctx);
-    })
-})
+    });
+
+    it('should give arguments by trigger', function () {
+        var test = new Events(), one, two;
+        test.on('foo', (_one, _two) => {
+            one = _one;
+            two = _two;
+        });
+        test.fire('foo', {
+            a: 'b'
+        }, 4);
+        expect(one.a).toBe('b');
+        expect(two).toBe(4);
+    });
+});
