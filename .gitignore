@@ -1,6 +1,9 @@
 /nbproject/
 *.rar
 *.zip
-/lib/
 /node_modules/
 /.grunt/
+/js/
+/.settings/
+/.project
+/.idea/

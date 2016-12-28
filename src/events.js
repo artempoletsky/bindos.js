@@ -1,201 +1,243 @@
-(function(){
-	var eventSplitter = /\s+/;
-	var namespaceSplitter = '.';
-	if(!Array.prototype.indexOf)
-		Array.prototype.indexOf = function (searchElement, fromIndex ) {
-			return _.indexOf(this, searchElement, fromIndex);
-		};
-	
-	function parse(event) {
-		var arr = ('' + event).split(namespaceSplitter);
-		return {
-			n: arr[0],
-			ns: arr.slice(1),
-			o: event
-		}
-	}
+(function (window) {
+    "use strict";
+    /*globals _, Class*/
 
-	function compareNames(arr1, arr2) {
-		for(var i = arr1.length - 1; i >= 0; i--) {
-			if(!~arr2.indexOf(arr1[i])) {
-				return false;
-			}
-		}
-		return true;
-	}
+    if (!Array.prototype.indexOf) {
+        Array.prototype.indexOf = function (searchElement, fromIndex) {
+            return _.indexOf(this, searchElement, fromIndex);
+        };
+    }
 
-	function compareBinds(bind1, bind2, nsInvert) {
-		if(bind1.n && bind1.n != bind2.n) {
-			return false;
-		}
-		if(bind1.fn && bind1.fn !== bind2.fn) {
-			return false;
-		}
+    var eventSplitter = /\s+/,
+        namespaceSplitter = '.',
 
-		if(bind1.c && bind1.c !== bind2.c) {
-			return false;
-		}
-		if(bind1.ns.length && !compareNames(bind1.ns, bind2.ns)) {
-			return false;
-		}
-		return true;
-	}
 
-	function makeBind(event, fn, context,isSignal) {
-		var bind = parse(event);
-		bind.fn = fn;
-		bind.c = context;
-		bind.s=isSignal;
-		return bind;
-	}
+        makeBind = function (event, fn, context, isSignal) {
+            var arr = event.split(namespaceSplitter);
+            return {
+                c: context,
+                s: isSignal,
+                fn: fn,
+                n: arr[0],
+                ns: arr.slice(1)
+            };
+        },
 
-	function add(self, bind) {
-		var binds, curBind;
+        add = function (self, bind) {
+            var binds, curBind;
 
-		binds = self._listeners || {}
+            binds = self._listeners || {};
 
-		curBind = binds[bind.n] || [];
+            curBind = binds[bind.n] || [];
 
-		curBind.push(bind);
+            curBind.push(bind);
 
-		binds[bind.n] = curBind;
+            binds[bind.n] = curBind;
 
-		self._listeners = binds;
-	}
+            self._listeners = binds;
+        },
 
-	var findBinds = function (binds, event, fn, context, mode) {
-		var result = [], a, b, bind = makeBind(event, fn, context);
-		if(!mode) {
-			mode = 'filter';
-		}
+        compare = function (request, target) {
+            var compared = (!request.fn || request.fn === target.fn)
+                && (!request.n || request.n === target.n)
+                && (!request.c || request.c === target.c), ns2;
+            //сравнивает пространсва имен
+            if (compared && request.ns.length) {
+                ns2 = target.ns;
+                compared = !_.any(request.ns, function (val) {
+                    return ns2.indexOf(val);
+                });
+            }
+            return compared;
+        },
 
-		for(a in binds) {
 
-			for(b = binds[a].length - 1; b >= 0; b--) {
-				if(compareBinds(bind, binds[a][b])) {
-					if(mode == 'filter') {
-						result.push(binds[a][b]);
-					} else {
-						if(mode == 'any') {
-							return true;
-						}
-					}
-				} else {
-					if(mode == 'invert') {
-						result.push(binds[a][b]);
-					}
-				}
+        findBinds = function (binds, event, fn, context, mode) {
+            var result = mode === 'any' ? false : [],
+                bind = makeBind(event, fn, context),
+                bindsArray,
+                l,
+                i, bindObject, compared, ns2;
+            if (!mode) {
+                mode = 'filter';
+            }
+            if (!binds[bind.n]) {
+                return result;
+            }
 
-			}
-		}
-		if(mode != 'any') {
-			return result;
-		} else {
-			return false;
-		}
-	}
+            bindsArray = binds[bind.n];
 
-	var remove=function (event, fn, context) {
-		var bind, binds, i;
-		if(!this._listeners) {
-			return;
-		}
-		if(!event && !fn && !context) {
-			delete this._listeners;
-			return;
-		}
+            for (i = 0, l = bindsArray.length; i < l; i++) {
+                bindObject = bindsArray[i];
 
-		bind = makeBind(event, fn, context);
+                if (compare(bind, bindObject)) {
+                    if (mode === 'filter') {
+                        result.push(bindObject);
+                    } else if (mode === 'any') {
+                        result = true;
+                        break;
+                    }
+                }
+            }
 
-		if(!bind.ns.length && !fn && !context) {
-			delete this._listeners[bind.n];
-			return;
-		}
+            return result;
+        },
 
-		binds = findBinds(this._listeners, event, fn, context, 'invert');
+        remove = function (me, event, fn, context) {
+            var bind, i, l;
+            if (!me._listeners) {
+                return;
+            }
+            if (!event && !fn && !context) {
+                delete me._listeners;
+                return;
+            }
 
-		delete this._listeners;
-		for(i = binds.length - 1; i >= 0; i--) {
-			add(this, binds[i])
-		}
-	}
-	
-	var Events=Class.extend({
-		on: function(events, fn, context){
-			var aEvents = events.split(eventSplitter), i, bind;
-			if(typeof fn != 'function') {
-				throw TypeError('function expected');
-			}
+            bind = makeBind(event, fn, context);
 
-			if(!context) {
-				context = this;
-			}
-			for(i = aEvents.length - 1; i >= 0; i--) {
-				bind = makeBind(aEvents[i], fn, context);
-				add(this, bind);
-			}
-			return this;
-		},
-		off: function(events, fn, context) {
-			if(!events) {
-				remove.call(this, '', fn, context);
-				return this;
-			}
-			var aEvents = events.split(eventSplitter), i, l;
-			for(i = 0, l = aEvents.length; i < l; i++) {
-				remove.call(this, aEvents[i], fn, context)
-			}
-			return this;
-		},
-		fire: function(events) {
-			if(!this._listeners) 
-				return this;
-			var args = Array.prototype.slice.call(arguments,1);
-			
-			var aEvents,i,j,l,binds,bind,type;
-			aEvents=typeof events == 'string'? events.split(eventSplitter): [events];
-		
-			for(i=0,l=aEvents.length;i<l;i++)
-			{
-				type=typeof aEvents[i] == 'string'? aEvents[i]: aEvents[i].type;
-			
-				binds=findBinds(this._listeners,type,false,false);
-				
-				for(j=binds.length-1;j>=0;j--)
-				{
-					bind=binds[j];
-					if(bind.s)
-						this.off(undefined, bind.fn)
-					//args.unshift(aEvents[i]);
-					bind.fn.apply(bind.c, args);
-				//args.shift();
-				}
-			}
+            if (!bind.ns.length && !fn && !context) {
+                delete me._listeners[bind.n];
+                return;
+            }
 
-			return this;
-		},
-		one: function(events, fn, context) {
-			var aEvents = events.split(eventSplitter), i, bind;
-			if(typeof fn != 'function') {
-				throw TypeError('function expected');
-			}
+            if (bind.n && !me._listeners[bind.n]) {
+                return;
+            }
 
-			if(!context) {
-				context = this;
-			}
-			for(i = aEvents.length - 1; i >= 0; i--) {
-				bind = makeBind(aEvents[i], fn, context,true);
-				add(this, bind);
-			}
-			return this;
-		},
-		hasListener : function(event) {
-			if(!this._listeners) {
-				return false;
-			}
-			return findBinds(this._listeners, event, false, false, 'any');
-		}
-	});
-	Events.prototype.trigger = Events.prototype.fire;
-	this.Events=Events;
-})();
+            var listeners = {};
+            if (bind.n) {
+                listeners[bind.n] = me._listeners[bind.n];
+            } else {
+                listeners = me._listeners;
+            }
+
+            _.each(listeners, function (binds) {
+                for (i = 0; i < binds.length; i++) {
+                    if (compare(bind, binds[i])) {
+                        binds.splice(i, 1);
+                        i--;
+                    }
+                }
+            });
+
+        },
+        Events = Class.extend({
+            on: function (events, fn, context, callOnce) {
+                var self = this,
+                    ctx,
+                    eventNames,
+                    i,
+                    l,
+                    event_name,
+                    bind,
+                    binds,
+                    curBind;
+
+                if (_.isObject(events)) {
+                    ctx = fn || self;
+                    for (event_name in events) {
+                        self.on(event_name, events[event_name], ctx, callOnce);
+                    }
+                    return this;
+                }
+
+                if (typeof fn !== 'function') {
+                    throw TypeError('function expected');
+                }
+
+                if (!context) {
+                    context = this;
+                }
+
+                eventNames = events.split(eventSplitter);
+                for (i = 0, l = eventNames.length; i < l; i++) {
+                    bind = makeBind(eventNames[i], fn, context, callOnce);
+
+                    binds = self._listeners || {};
+
+                    curBind = binds[bind.n] || [];
+
+                    curBind.push(bind);
+
+                    binds[bind.n] = curBind;
+
+                    self._listeners = binds;
+
+
+                }
+                return self;
+            },
+            off: function (events, fn, context) {
+                var me = this, i, l, eventNames;
+                if (!events) {
+                    remove(me, '', fn, context);
+                    return me;
+                }
+
+
+                eventNames = events.split(eventSplitter);
+                for (i = 0, l = eventNames.length; i < l; i++) {
+                    remove(me, eventNames[i], fn, context);
+                }
+                return me;
+            },
+            fire: function (events) {
+                if (!this._listeners) {
+                    return this;
+                }
+                //все кроме events передается аргументами в каждый колбек
+                var args = _.rest(arguments, 1),
+                    me = this,
+                    i,
+                    l,
+                    eventNames,
+                    bind,
+                    bindsArray,
+                    j,
+                    bindObject;
+
+                eventNames = events.split(eventSplitter);
+                for (i = 0, l = eventNames.length; i < l; i++) {
+
+                    bind = makeBind(eventNames[i], false, false);
+
+                    if (bind.n) {
+                        bindsArray = me._listeners[bind.n];
+                        if (!bindsArray) {
+                            return me;
+                        }
+
+                        for (j = 0; j < bindsArray.length; j++) {
+                            bindObject = bindsArray[j];
+
+                            if (compare(bind, bindObject)) {
+                                //если забинден через one  удаляем
+                                if (bindObject.s) {
+                                    bindsArray.splice(j, 1);
+                                    j--;
+                                }
+
+                                bindObject.fn.apply(bindObject.c, args);
+                            }
+                        }
+                    } else {
+                        throw 'not implemented';
+                    }
+
+
+                }
+                return me;
+            },
+            one: function (events, fn, context) {
+                return this.on(events, fn, context, true);
+            },
+            hasListener: function (event) {
+                if (!this._listeners) {
+                    return false;
+                }
+                return findBinds(this._listeners, event, false, false, 'any');
+            }
+        });
+    Events.prototype.trigger = Events.prototype.fire;
+    window.Events = Events;
+}(this));

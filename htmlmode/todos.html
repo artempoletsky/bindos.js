@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html data-bind="app">
+<head>
+    <title>TO DO</title>
+    <script type="text/javascript" src="../lib/jquery-1.9.1.js"></script>
+    <script type="text/javascript" src="../lib/lodash.min.js"></script>
+    <script type="text/javascript" src="../bin/frontbone.js"></script>
+    <script type="text/javascript" src="htmlmode.js"></script>
+
+    <style type="text/css">
+        .complete {
+            text-decoration: line-through;
+        }
+    </style>
+</head>
+<body>
+<!-- описание структуры модели Task -->
+<script type="text/json" data-bind="model: Task">
+    {
+    "name": "",
+    "complete": false
+    }
+</script>
+<!-- созданиие коллекции модели Task, с одной моделью. Можно выводить сюда данные с сервера -->
+<script type="text/json" data-bind="collection: todos,Task">
+    [{
+    "name": "nothing",
+    "complete": true
+    }]
+</script>
+<h1>TO DO</h1>
+<!-- вывод коллекции todos -->
+<ul data-bind="eachModel: {
+        collection: todos,
+        innerBinds: true
+    }">
+    <li>
+        <input type="checkbox" data-bind="checked: complete"/>
+        <span data-bind="css: {complete: complete}; html: name"></span>
+    </li>
+</ul>
+<!-- создание новой модели
+model: класс модели для создания
+submit: объект содержищий директивы что делать после сабмита
+add: добавить новую модель в заданную коллекцию
+-->
+
+<form data-bind="form: {
+        model: Task,
+        submit: {
+            add: todos | todos.length
+        }
+    }">
+    <input type="text" name="name" autocomplete="off"/>
+    <input type="submit" value="Add one"/>
+</form>
+<h2>Also <input type="checkbox" data-bind="observer,checked: also"/></h2>
+
+<div data-bind="display: also">
+    <h2>Add to begin of list</h2>
+    <!-- а вот эта форма такая же как предыдущая, но добавляет модель вначало списка,
+    0 - агрумент для вызова функции collection.add(model, index, silent)
+    -->
+    <form data-bind="form: {
+        model: Task,
+        submit: {
+            add: todos | 0
+        }
+    }">
+        <input type="text" name="name" autocomplete="off"/>
+        <input type="submit" value="Add one"/>
+    </form>
+    <h2>Add to center of list</h2>
+    <!-- а вот это вообще пиздец-->
+    <form data-bind="form: {
+        model: Task,
+        submit: {
+            add: todos | Math.floor(todos.length/2)
+        }
+    }">
+        <input type="text" name="name" autocomplete="off"/>
+        <input type="submit" value="Add one"/>
+    </form>
+</div>
+</body>
+</html>

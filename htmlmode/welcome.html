@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html data-bind="app">
+<head>
+    <script type="text/javascript" src="../lib/jquery-1.9.1.js"></script>
+    <script type="text/javascript" src="../lib/lodash.min.js"></script>
+    <script type="text/javascript" src="../bin/frontbone.js"></script>
+    <script type="text/javascript" src="htmlmode.js"></script>
+
+    <title data-bind="observer: yourName(''); html: 'Welcome '+yourName()+'!'"></title>
+</head>
+<body>
+<input type="" data-bind="keyUpChange: yourName"/>
+<h1>Welcome <span data-bind="html: yourName"></span>!</h1>
+</body>
+</html>
