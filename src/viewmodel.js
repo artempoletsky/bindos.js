@@ -116,7 +116,7 @@
                         throw TypeError(fnName + ' is not a function');
                     }
                     eventsPath = name.split(eventSplitter);
-                    eventName = eventsPath.shift().replace(',', ' ');
+                    eventName = eventsPath.shift().replace(/,/g, ' ');
 
 
                     me._delegatedEvents = me._delegatedEvents.concat(

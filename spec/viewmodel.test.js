@@ -164,31 +164,52 @@ describe('ViewModel', function () {
     });
 
     it('has extended events behavior', function () {
-        var spy = jasmine.createSpy('spy');
+        var spy1 = jasmine.createSpy('spy');
+        var spy2 = jasmine.createSpy('spy');
+        var spy3 = jasmine.createSpy('spy');
+        var spy4 = jasmine.createSpy('spy');
 
         var element = $.make('div');
         element.innerHTML = '<div><div class="trigger"></div><div class="trigger1"></div></div>';
 
         var vm = ViewModel.create({
             events: {
-                'simpleFunction .trigger': spy,
-                'click,anotherEvents': spy,
-                'click,anotherEvents .trigger,div .trigger1': spy,
-                'click,anotherEvents,onceMore': spy
+                'event1 .trigger': spy1,
+                'click,event2': spy2,
+                'click,event2 .trigger,div .trigger1': spy3,
+                'click,event2,event3': spy4
             },
             el: element
         });
-        vm.$('.trigger').fire('simpleFunction');
-        expect(spy.calls.length).toBe(1);
+
+        vm.$('.trigger').fire('event1');
+
+        expect(spy1.calls.length).toBe(1, 'spy 1, assert1');
+        expect(spy2.calls.length).toBe(0, 'spy 2, assert1');
+        expect(spy3.calls.length).toBe(0, 'spy 3, assert1');
+        expect(spy4.calls.length).toBe(0, 'spy 4, assert1');
+
         vm.el.fire('click');
-        expect(spy.calls.length).toBe(3);
-        vm.$('.trigger1').fire('anotherEvents');
-        expect(spy.calls.length).toBe(6);
-        vm.el.fire('onceMore');
-        expect(spy.calls.length).toBe(7);
-        vm.undelegateEvents();
-        vm.el.fire('onceMore');
-        expect(spy.calls.length).toBe(7);
+
+        expect(spy1.calls.length).toBe(1, 'spy 1, assert2');
+        expect(spy2.calls.length).toBe(1, 'spy 2, assert2');
+        expect(spy3.calls.length).toBe(0, 'spy 3, assert2');
+        expect(spy4.calls.length).toBe(1, 'spy 4, assert2');
+
+        vm.$('.trigger1').fire('event2');
+
+        expect(spy1.calls.length).toBe(1, 'spy 1, assert3');
+        expect(spy2.calls.length).toBe(2, 'spy 2, assert3');
+        expect(spy3.calls.length).toBe(1, 'spy 3, assert3');
+        expect(spy4.calls.length).toBe(2, 'spy 4, assert3');
+
+
+        vm.el.fire('event3');
+
+        expect(spy1.calls.length).toBe(1, 'spy 1, assert4');
+        expect(spy2.calls.length).toBe(2, 'spy 2, assert4');
+        expect(spy3.calls.length).toBe(1, 'spy 3, assert4');
+        expect(spy4.calls.length).toBe(3, 'spy 4, assert4');
     });
 
 
