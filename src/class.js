@@ -1,6 +1,5 @@
 (function (window) {
     "use strict";
-    /*globals _*/
     let ctor = function () {
         },
         Class = function () {
@@ -93,5 +92,5 @@
 
         return instance;
     };
-    window.Class = Class;
+    bindos.Class = Class;
 }(this));

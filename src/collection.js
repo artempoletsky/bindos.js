@@ -1,6 +1,7 @@
 (function (window) {
     "use strict";
-    /*globals _,$, Model*/
+
+    let Model=bindos.Model;
     var itself = function (self) {
             this.self = self;
         },
@@ -276,5 +277,5 @@
             };
         });
     }
-    window.Collection = Collection;
+    bindos.Collection = Collection;
 }(this));

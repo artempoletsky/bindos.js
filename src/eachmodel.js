@@ -1,6 +1,6 @@
 (function () {
     "use strict";
-    /*globals ViewModel, Observable, Computed, _, $*/
+    let ViewModel = bindos.ViewModel;
 
     ViewModel.binds.withModel = function ($el, name, viewModel) {
 
@@ -53,13 +53,12 @@
     }, 5 * 60 * 1000);
 
 
-    ViewModel.binds.eachModel = function ($el, value, model) {
+    ViewModel.binds.each = function (elem, value, model) {
         var
             values,
             collectionName,
             templateName,
-            elem = $el[0],
-        //заглушка чтобы быстро делать off
+            //заглушка чтобы быстро делать off
             ctx = {},
             oldCollection,
             rawTemplate,
@@ -72,16 +71,19 @@
         templateName = values[1];
 
 
-        rawTemplate = templateName ? '' : $el.html();
+        rawTemplate = templateName ? '' : elem.innerHTML;
 
 
-        compiledTemplateName = templateName ? templateName : _.uniqueId('nkEachModelTemplate');
+        compiledTemplateName = templateName ? templateName : $.uniqueId('nkEachModelTemplate');
 
+        if (!collectionName) {
+            collectionName = 'collection';
+        }
         bufferViews[compiledTemplateName] = [];
 
 
-        this.applyFilters(collectionName, model, function(collection){
-            $el.empty();
+        this.applyFilters(collectionName, model, function (collection) {
+            elem.empty();
             var tempChildrenLen,
                 templateConstructor,
                 template,
@@ -97,21 +99,26 @@
 
 
             templateConstructor = function (rawTemplate) {
-                var $tmplEl = $(rawTemplate);
+                var tmplEl = $.parse(rawTemplate)
+
+                if (!tmplEl.length) {
+                    tmplEl = [tmplEl];
+                }
+
                 return function (model, $index, $parent) {
 
                     var $children = getCompiledRow(compiledTemplateName, model, $index);
-
-
+                    let clone = [];
                     if (!$children) {
-                        $children = $tmplEl.clone();
-                        $children.each(function(){
-                            ViewModel.findBinds(this, model);
-                        });
+                        for (let el of tmplEl) {
+                            el = el.cloneNode(true);
+                            ViewModel.findBinds(el, model);
+                            clone.push(el);
+                        }
                     }
 
-                    tempChildrenLen = $children.length;
-                    return $children;
+                    tempChildrenLen = clone.length;
+                    return clone;
                 };
             };
 
@@ -121,17 +128,23 @@
             template = templateName ? ViewModel.tmpl.get(templateName, templateConstructor) : templateConstructor(rawTemplate);
 
 
-            var html = $(document.createElement(elName)),
-                i = 0;
-            //$el.children().clearBinds();
-            $el.empty();
+            var i = 0;
 
+            elem.empty();
 
-            collection.each(function (model) {
-                html.append(template(model, i++, collection));
+            let frag = document.createDocumentFragment();
+
+            function appendChildren(container, children) {
+                for (let ch of children) {
+                    container.appendChild(ch);
+                }
+            }
+
+            collection.each((model) => {
+                appendChildren(frag, template(model, i++, collection));
             });
 
-            $el.append(html.children());
+            elem.appendChild(frag);
 
 
 
@@ -142,26 +155,23 @@
 
 
                 //console.log(newModels);
+                let frag = document.createDocumentFragment();
 
-                html = $(document.createElement(elName));
-
-
-                _.each(newModels, function (model) {
-
-
-                    html.append(template(model, _index + i++, collection));
-                });
-
-
-                html = html.children();
+                for (let model of newModels) {
+                    appendChildren(frag, template(model, _index + i++, collection));
+                }
 
                 if (index === 0) {
+                    if (!elem.firstChild) {
+                        elem.appendChild(frag);
+                    } else {
+                        elem.insertBefore(elem.firstChild, frag);
+                    }
 
-                    $el.prepend(html);
                 } else if (!index || index === collection.length - newModels.length) {
-                    $el.append(html);
+                    elem.appendChild(frag);
                 } else {
-                    $el.children().eq(index * tempChildrenLen).before(html);
+                    elem.insertBefore(elem.children[index * tempChildrenLen], frag);
                 }
 
             }, ctx);
@@ -169,21 +179,20 @@
             //collection.on('reset', onReset, ctx);
             collection.on('cut', function (rejectedModels) {
 
-                var index, model, $slice, $cutEl;
+                var index, model, slice;
 
-                var $children = $el.children();
+                var children = Array.from(elem.children);
                 for (index in rejectedModels) {
                     index *= 1;
                     model = rejectedModels[index];
                     model.off(0, 0, ctx);
 
-                    $slice = $children.slice(index, index + tempChildrenLen);
+                    slice = children.slice(index, index + tempChildrenLen);
 
-                    bufferViews[compiledTemplateName].push($slice);
-
-                    $slice.detach();
-
-
+                    bufferViews[compiledTemplateName].push(slice);
+                    for (let el of slice) {
+                        elem.removeChild(el);
+                    }
                 }
 
             }, ctx);
@@ -198,7 +207,7 @@
             }, ctx);
 
 
-        }, function(oldCollection){
+        }, function (oldCollection) {
             oldCollection.off(0, 0, ctx);
 
             oldCollection.each(function (model) {

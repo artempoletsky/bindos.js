@@ -4,7 +4,7 @@
 
     let modelsMap = {},
 
-        Model = window.Events.extend({
+        Model = bindos.EventDispatcher.extend({
 
             setComputeds(names) {
                 let self = this;
@@ -29,7 +29,7 @@
             useDefineProperty: true,
             mapping: false,
             computeds: {},
-            defaults: {},
+            fields: {},
             idAttribute: 'id',
             constructor(data = {}) {
 
@@ -40,7 +40,7 @@
 
                 this._computeds = {};
 
-                self.attributes = $.extend({}, self.defaults, self.parse(data));
+                self.attributes = $.extend({}, self.fields, self.parse(data));
 
 
                 for (let compName in self.computeds) {
@@ -103,7 +103,8 @@
 
 
             prop(key, value) {
-                var self = this, comp;
+                var self = this,
+                    comp;
 
                 //if get
                 if (arguments.length === 1 && typeof key === 'string') {
@@ -117,7 +118,8 @@
                 }
 
                 //if set
-                var values = {}, changed = {};
+                var values = {},
+                    changed = {};
                 if (typeof key === 'string') {
                     values[key] = value;
                 } else {
@@ -201,7 +203,7 @@
                 }
                 if (this.id) {
 
-                    if (Object.keys(me._changed).length === 0) {//нечего сохранять
+                    if (Object.keys(me._changed).length === 0) { //нечего сохранять
                         return this;
                     }
                     Model.sync('update', url, {
@@ -236,7 +238,8 @@
         return modelsMap[name][id];
     };
     Model.createOrUpdate = function (constuctor, json) {
-        var proto = constuctor.prototype, fromStorage, idAttr, parsed;
+        var proto = constuctor.prototype,
+            fromStorage, idAttr, parsed;
         if (proto.mapping) {
             idAttr = proto.idAttribute;
             parsed = proto.parse(json);
@@ -261,7 +264,8 @@
     };
 
     Model.parseFilters = function (string) {
-        var filters = string.split(filtersSplitter), value = filters.shift();
+        var filters = string.split(filtersSplitter),
+            value = filters.shift();
         return {
             value: value,
             filters: filters.reduce(function (result, string) {
@@ -320,10 +324,11 @@
         }
 
         get() {
-            var self = this, vals = self.deps.reduce(function (array, name) {
-                array.push(self.model.prop(name));
-                return array;
-            }, []);
+            var self = this,
+                vals = self.deps.reduce(function (array, name) {
+                    array.push(self.model.prop(name));
+                    return array;
+                }, []);
             //var lastValue = self.value;
 
             var value = self.getter.apply(self.model, vals);
@@ -349,5 +354,5 @@
     }
 
     Model.Computed = Computed;
-    window.Model = Model;
+    bindos.Model = Model;
 }(this));

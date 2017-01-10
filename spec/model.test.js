@@ -93,7 +93,7 @@ describe('Model', function () {
         }
 
         var m = Model.create({
-            defaults: {
+            fields: {
                 id: undefined
             },
             mapping: 'foo'
@@ -185,7 +185,7 @@ describe('Model', function () {
 
     it('supports computed properties', function () {
         var m = Model.create({
-            defaults: {
+            fields: {
                 x: 10,
                 y: 0
             },
@@ -250,7 +250,7 @@ describe('Model', function () {
 
         var model = Model.create({
             useDefineProperty: true,
-            defaults: {
+            fields: {
                 foo: 'bar',
                 a: 1
             },
@@ -276,7 +276,7 @@ describe('Model', function () {
 
         var ModelWithId = Model.extend({
             useDefineProperty: true,
-            defaults: {
+            fields: {
                 id: 0
             }
         });
@@ -329,7 +329,7 @@ describe('Model', function () {
 
         it('can be used without deps', function () {
             var model = Model.create({
-                defaults: {
+                fields: {
                     calls: 0
                 },
                 _x: 0,
@@ -406,7 +406,7 @@ describe('Model', function () {
             expect(Model.filters.sumFilter).toBeDefined();
             expect(Model.filters.squareFilter).toBeDefined();
             var vm = ViewModel.create({
-                defaults: {
+                fields: {
                     value: 5
                 }
             });

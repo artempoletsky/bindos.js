@@ -103,7 +103,7 @@
 
         };
 
-    let Events = Class.extend({
+    let EventDispatcher = bindos.Class.extend({
         on(events, fn, context, callOnce) {
             let self = this,
                 ctx,
@@ -223,6 +223,6 @@
             return findBinds(this._listeners, event, false, false, 'any');
         }
     });
-    Events.prototype.trigger = Events.prototype.fire;
-    window.Events = Events;
+    EventDispatcher.prototype.trigger = EventDispatcher.prototype.fire;
+    bindos.EventDispatcher = EventDispatcher;
 }(this));

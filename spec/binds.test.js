@@ -12,7 +12,7 @@ describe('ViewModel.binds', function () {
                 var vm = ViewModel.create({
                     el: '<div nk="html: value"></div>',
                     autoParseBinds: true,
-                    defaults: {
+                    fields: {
                         value: '<span>Hello</span>'
                     }
                 });
@@ -38,7 +38,7 @@ describe('ViewModel.binds', function () {
                 var vm = ViewModel.create({
                     el: '<div nk="html: value | sumFilter:\'321\'"></div>',
                     autoParseBinds: true,
-                    defaults: {
+                    fields: {
                         value: 123
                     }
                 });
@@ -55,7 +55,7 @@ describe('ViewModel.binds', function () {
                 var vm = ViewModel.create({
                     el: '<input nk="value: value"/>',
                     autoParseBinds: true,
-                    defaults: {
+                    fields: {
                         value: 'Hello'
                     }
                 });
@@ -86,7 +86,7 @@ describe('ViewModel.binds', function () {
             it('draws model', function () {
 
                 var Hero = Model.extend({
-                    defaults: {
+                    fields: {
                         name: ''
                     },
                     computeds: {
@@ -106,7 +106,7 @@ describe('ViewModel.binds', function () {
                 var vm = ViewModel.create({
                     el: '<div><ul nk="withModel: hero"><li>{{name}} {{greet}}</li></ul></div>',
                     autoParseBinds: true,
-                    defaults: {
+                    fields: {
                         hero: superman
                     },
                     computeds: {
@@ -145,7 +145,7 @@ describe('ViewModel.binds', function () {
                 var vm = ViewModel.create({
                     el: '<div><ul nk="eachModel: collection"><li>{{name}}</li></ul></div>',
                     autoParseBinds: true,
-                    defaults: {
+                    fields: {
                         collection: collection
                     }
                 });
@@ -161,7 +161,7 @@ describe('ViewModel.binds', function () {
                 var vm = ViewModel.create({
                     el: '<table nk="eachModel: collection"><tr><td>{{value}}</td></tr></table>',
                     autoParseBinds: true,
-                    defaults: {
+                    fields: {
                         collection:  new Collection([
                             {value: "foo"}
                         ])
@@ -183,7 +183,7 @@ describe('ViewModel.binds', function () {
                 var vm = ViewModel.create({
                     el: '<div>Hello{{name}}! {{value}}<div>asd</div></div>',
                     autoParseBinds: true,
-                    defaults: {
+                    fields: {
                         name: '<span style="color: green;">Moe</span>',
                         value: ''
                     }
@@ -203,7 +203,7 @@ describe('ViewModel.binds', function () {
                 var vm = ViewModel.create({
                     el: '<div>{{value | sumFilter:"321"}}</div>',
                     autoParseBinds: true,
-                    defaults: {
+                    fields: {
                         value: 123
                     }
                 });
@@ -221,7 +221,7 @@ describe('ViewModel.binds', function () {
                 var vm = ViewModel.create({
                     el: '<div>Hello ${name}! ${value}<div>asd</div></div>',
                     autoParseBinds: true,
-                    defaults: {
+                    fields: {
                         name: '<span style="color: green;">Moe</span>',
                         value: ''
                     }
@@ -239,7 +239,7 @@ describe('ViewModel.binds', function () {
                 var vm = ViewModel.create({
                     el: '<div>{{name}}</div>',
                     autoParseBinds: true,
-                    defaults: {
+                    fields: {
                         name: '<span style="color: green;">Moe</span>'
                     }
                 });
@@ -257,7 +257,7 @@ describe('ViewModel.binds', function () {
                 var vm = ViewModel.create({
                     el: '<div>{{value}}</div>',
                     autoParseBinds: true,
-                    defaults: {
+                    fields: {
                         value: 0
                     }
                 });
@@ -276,7 +276,7 @@ describe('ViewModel.binds', function () {
         {{name}} \n\
             </div>',
                     autoParseBinds: true,
-                    defaults: {
+                    fields: {
                         name: 'foo'
                     }
                 });
@@ -311,7 +311,7 @@ describe('ViewModel.binds', function () {
 
         var vm = ViewModel.create({
             el: '<div><smartinput value="name"></smartinput></div>',
-            defaults: {
+            fields: {
                 name: 'Moe'
             },
             autoParseBinds: true

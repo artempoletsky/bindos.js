@@ -263,7 +263,7 @@ describe('ViewModel', function () {
             ViewModel.create({
                 el: div,
                 autoParseBinds: true,
-                defaults: {
+                fields: {
                     name: 'Moe'
                 }
             });
@@ -313,7 +313,7 @@ describe('ViewModel', function () {
             var vm = ViewModel.create({
                 el: $.parse('<input data-bind="value: value"/>'),
                 autoParseBinds: true,
-                defaults: {
+                fields: {
                     value: 3
                 }
             });

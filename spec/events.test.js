@@ -1,11 +1,11 @@
-describe('Events', function () {
+describe('EventDispatcher', function () {
 
 
     it('should be able to bind event', function () {
         var spyHandler = jasmine.createSpy('handler');
         var spyHandler2 = jasmine.createSpy('handler');
 
-        var disp = new Events();
+        var disp = new EventDispatcher();
         expect(disp.hasListener('foo')).toBeFalsy();
         disp.on('foo', spyHandler);
         disp.on('bar', spyHandler2);
@@ -13,7 +13,7 @@ describe('Events', function () {
         expect(hasListener).not.toBeFalsy();
     })
     it('and should be able to trigger event', function () {
-        var disp = new Events();
+        var disp = new EventDispatcher();
         var spyHandler = jasmine.createSpy('handler');
         disp.on('foo', spyHandler);
         disp.fire('foo');
@@ -22,7 +22,7 @@ describe('Events', function () {
     })
 
     it('and should be able to trigger multiple handlers', function () {
-        var disp = new Events();
+        var disp = new EventDispatcher();
         var context = new Object(),
             event = 'baz';
         var obj = {
@@ -55,7 +55,7 @@ describe('Events', function () {
     })
 
     it('and should be able to unbind event', function () {
-        var disp = new Events();
+        var disp = new EventDispatcher();
         var spyHandler = jasmine.createSpy('handler');
         var spyHandler2 = jasmine.createSpy('handler');
         disp.on('foo', spyHandler);
@@ -70,7 +70,7 @@ describe('Events', function () {
     })
 
     it('and should be able to unbind all handlers with some context', function () {
-        var disp = new Events();
+        var disp = new EventDispatcher();
         var context1 = new Object();
         var spy1 = jasmine.createSpy('spy1');
         var spy2 = jasmine.createSpy('spy2');
@@ -89,7 +89,7 @@ describe('Events', function () {
     })
 
     it('and should be able to unbind all same handlers', function () {
-        var disp = new Events();
+        var disp = new EventDispatcher();
         var spy1 = jasmine.createSpy('spy1');
         var spy2 = jasmine.createSpy('spy2');
 
@@ -104,7 +104,7 @@ describe('Events', function () {
     });
 
     it('support signals', function () {
-        var ev = new Events();
+        var ev = new EventDispatcher();
         var cb = jasmine.createSpy('cb');
         ev.one('click', cb);
         expect(cb.calls.length).toEqual(0);
@@ -118,7 +118,7 @@ describe('Events', function () {
         expect(cb.calls.length).toEqual(1);
     });
 
-    var disp = new Events();
+    var disp = new EventDispatcher();
     it('and should trigger by namespace', function () {
         var spy1 = jasmine.createSpy('spy1');
         var spy2 = jasmine.createSpy('spy2');
@@ -171,7 +171,7 @@ describe('Events', function () {
     })
 
     it('should bind events from object', function () {
-        var disp = new Events();
+        var disp = new EventDispatcher();
         var foo = jasmine.createSpy();
         var bar = jasmine.createSpy();
         var baz = jasmine.createSpy();
@@ -210,7 +210,7 @@ describe('Events', function () {
     });
 
     it('should give arguments by trigger', function () {
-        var test = new Events(), one, two;
+        var test = new EventDispatcher(), one, two;
         test.on('foo', (_one, _two) => {
             one = _one;
             two = _two;

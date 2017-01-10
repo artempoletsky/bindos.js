@@ -1,8 +1,8 @@
-/*globals ViewModel, $, _, Computed, Observable, ObjectObservable*/
 (function () {
     "use strict";
 
-
+    let ViewModel = bindos.ViewModel;
+    let Model = bindos.Model;
     var zeroEmpty = function (value) {
         return value || (value === 0 ? '0' : '');
     };
@@ -75,6 +75,26 @@
                 $el.text(zeroEmpty(val));
             });
         },
+        prop(el, value, model) {
+            let options = this.parseOptionsObject(value);
+            for (let key in options) {
+                ((key) => {
+                    value = options[key];
+                    this.applyFilters(value, model, (val) => {
+                        el[key] = val;
+                    });
+                })(key)
+            }
+        },
+        checked(el, value, model) {
+            let name=this.applyFilters(value, model, (val) => {
+                el.checked = val;
+            });
+
+            el.on('change', ()=>{
+                model.prop(name, el.checked);
+            })
+        },
         value: function (el, value, model) {
             var name = this.applyFilters(value, model, function (val) {
                 el.value = zeroEmpty(val);
@@ -99,21 +119,16 @@
             });
         },
         style: function ($el, value, context) {
-            _.each(this.parseOptionsObject(value), function (condition, style) {
+            $.forIn(this.parseOptionsObject(value), function (condition, style) {
                 ViewModel.applyFilters(condition, context, function (val) {
                     $el.css(style, val);
                 });
             });
         },
-        css: function ($el, value, context, addArgs) {
-            _.each(this.parseOptionsObject(value), function (condition, className) {
-                ViewModel.applyFilters(condition, context, function (val) {
-                    if (val) {
-                        $el.addClass(className);
-                    }
-                    else {
-                        $el.removeClass(className);
-                    }
+        css: function (el, value, model) {
+            $.forIn(this.parseOptionsObject(value), function (condition, className) {
+                ViewModel.applyFilters(condition, model, function (val) {
+                    el.classList.toggle(className, val);
                 });
             });
         },
@@ -121,8 +136,7 @@
             ViewModel.applyFilters(value, context, function (val) {
                 if (val) {
                     $el.show();
-                }
-                else {
+                } else {
                     $el.hide();
                 }
             });
@@ -204,7 +218,8 @@
             if (value) {
                 let binds = value.split(bindSplitter);
                 for (let cBind of binds) {
-                    var arr = cBind.match(firstColonRegex), bindName, bindVal, bindFn;
+                    var arr = cBind.match(firstColonRegex),
+                        bindName, bindVal, bindFn;
                     if (!arr) {
                         bindName = cBind;
                         bindVal = '';
@@ -265,7 +280,9 @@
 
             if (breakersRegex.test(str)) {
 
-                var parts = str.split(breakersRegex), deps = [], code = "return ";
+                var parts = str.split(breakersRegex),
+                    deps = [],
+                    code = "return ";
 
                 _.each(parts, function (word, index) {
                     if (index % 2) {
@@ -297,59 +314,60 @@
 
 
                 var insertFunction = parent.childNodes.length === 1 ? function (value) {
-                        //if this is the only child
+                    //if this is the only child
+                    try {
+                        parent.innerHTML = value;
+                    } catch (e) {
+                        console.log(e);
+                    }
+
+                } : function (value) {
+
+                    docFragment = document.createDocumentFragment();
+
+                    try {
+                        div.innerHTML = value;
+                    } catch (e) {
+                        console.log(e);
+                    }
+
+
+                    var newNodeList = _.toArray(div.childNodes),
+                        firstNode;
+
+
+                    firstNode = nodeList[0];
+
+                    while (nodeList[1]) {
+                        parent.removeChild(nodeList[1]);
+                        nodeList.splice(1, 1);
+                    }
+
+
+                    if (!newNodeList.length) {
+                        firstNode.nodeValue = '';
+                        nodeList = [firstNode];
+                        return;
+                    }
+
+
+                    while (div.childNodes[0]) {
+                        docFragment.appendChild(div.childNodes[0]);
+                    }
+
+
+                    if (docFragment.childNodes.length) {
                         try {
-                            parent.innerHTML = value;
-                        } catch (e) {
-                            console.log(e);
+                            parent.insertBefore(docFragment, firstNode);
+                        } catch (er) {
+                            throw er;
                         }
+                    }
 
-                    } : function (value) {
+                    parent.removeChild(firstNode);
+                    nodeList = newNodeList;
 
-                        docFragment = document.createDocumentFragment();
-
-                        try {
-                            div.innerHTML = value;
-                        } catch (e) {
-                            console.log(e);
-                        }
-
-
-                        var newNodeList = _.toArray(div.childNodes), firstNode;
-
-
-                        firstNode = nodeList[0];
-
-                        while (nodeList[1]) {
-                            parent.removeChild(nodeList[1]);
-                            nodeList.splice(1, 1);
-                        }
-
-
-                        if (!newNodeList.length) {
-                            firstNode.nodeValue = '';
-                            nodeList = [firstNode];
-                            return;
-                        }
-
-
-                        while (div.childNodes[0]) {
-                            docFragment.appendChild(div.childNodes[0]);
-                        }
-
-
-                        if (docFragment.childNodes.length) {
-                            try {
-                                parent.insertBefore(docFragment, firstNode);
-                            } catch (er) {
-                                throw  er;
-                            }
-                        }
-
-                        parent.removeChild(firstNode);
-                        nodeList = newNodeList;
-
-                    };
+                };
                 var name;
                 ViewModel.replaceable(context, function (newModel) {
 

@@ -3,6 +3,7 @@
 
 
     var $ = window.$,
+        Model = bindos.Model,
         eventSplitter = /\s+/,
 
         simpleTagRegex = /^[a-z]+$/,
@@ -83,10 +84,6 @@
                     ctor();
                 }
 
-            },
-            remove: function () {
-                this.$el.remove();
-                return this;
             },
             parseBinds: function () {
                 ViewModel.findBinds(this.el, this);
@@ -227,5 +224,9 @@
         return result;
     };
 
-    window.ViewModel = ViewModel;
+    bindos.ViewModel = ViewModel;
+    bindos.Widget = ViewModel.extend({
+        autoParseBinds: true,
+        wrapReady: true
+    });
 }(this));
