@@ -35,9 +35,6 @@
 
                 me.options = options;
                 me._delegatedEvents = [];
-                if (options.collection) {
-                    me.collection = options.collection;
-                }
                 me.model = options.model;
                 if (options.el) {
                     me.el = options.el;
@@ -90,14 +87,14 @@
                 return this;
             },
             autoParseBinds: false,
-            initialize: function () {
-            },
+            initialize: function () {},
             delegateEvents: function (events) {
                 events = events || this.events;
                 this.undelegateEvents();
                 var eventsPath, eventName, me = this;
                 for (let name in events) {
-                    let fnName = events[name], fn, proxy;
+                    let fnName = events[name],
+                        fn, proxy;
 
                     if (typeof fnName === 'function') {
                         fn = fnName;
@@ -121,7 +118,7 @@
                             eventName,
                             proxy,
                             eventsPath.length ?
-                                eventsPath.join(' ') : false
+                            eventsPath.join(' ') : false
                         )
                     );
 
@@ -143,9 +140,6 @@
 
 
     ViewModel.findBinds = function (elem, model) {
-        var
-            breakContextIsSent = false,
-            self = this;
 
         if (typeof elem == 'string') {
             elem = $(elem);
@@ -154,24 +148,21 @@
             throw new Error('Element not exists');
         }
 
+        let context = model;
         for (let selector in ViewModel.bindSelectors) {
             let fn = ViewModel.bindSelectors[selector];
-            let elements = Array.from(elem.$$(selector));
+
             if (elem.matches(selector)) {
-                elements.unshift(elem);
-            }
-            for (let el of elements) {
-                let newctx = fn.call(self, el, model);
-                if (newctx === false) {
-                    breakContextIsSent = true;
-                    break;
-                } else if (newctx) {
-                    model = newctx;
+                context = fn.call(self, elem, model);
+                if (context === false) {
+                    return;
+                }
+                if (!context) {
+                    context = model;
                 }
             }
-            if (breakContextIsSent) {
-                break;
-            }
+
+            Array.from(elem.children).forEach((el) => ViewModel.findBinds(el, context));
         }
     };
 
