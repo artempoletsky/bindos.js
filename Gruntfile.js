@@ -12,10 +12,7 @@ module.exports = function (grunt) {
                     , 'src/collection.js'
                     , 'src/viewmodel.js'
                     , 'src/binds_bank.js'
-                    , 'src/templates.js'
                     , 'src/eachmodel.js'
-                    , 'src/router.js'
-                    , 'src/history.js'
                 ],
                 dest: 'bin/<%= pkg.name %>.js'
             }

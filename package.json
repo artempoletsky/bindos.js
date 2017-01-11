@@ -1,5 +1,5 @@
 {
-  "name": "frontbone",
+  "name": "bindos",
   "version": "1.0.0",
   "description": "MVVM javascript framework",
   "main": "Gruntfile.js",
