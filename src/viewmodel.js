@@ -1,4 +1,4 @@
-(function (window) {
+(function () {
     "use strict";
 
 
@@ -220,4 +220,4 @@
         autoParseBinds: true,
         wrapReady: true
     });
-}(this));
+}());

@@ -1,4 +1,4 @@
-(function (window) {
+(function () {
     "use strict";
 
 
@@ -334,7 +334,7 @@
             var value = self.getter.apply(self.model, vals);
             let result = value;
             for (let filterName in this.filters) {
-                let options = this.filters[key];
+                let options = this.filters[filterName];
                 result = Model.filters[filterName].format(result, options);
             }
             this.value = result;
@@ -355,4 +355,4 @@
 
     Model.Computed = Computed;
     bindos.Model = Model;
-}(this));
+}());

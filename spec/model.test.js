@@ -84,8 +84,7 @@ describe('Model', function () {
             attributes = options;
             if (hasId) {
                 options.success({});
-            }
-            else {
+            } else {
                 options.success({
                     id: 123
                 });
@@ -365,7 +364,7 @@ describe('Model', function () {
         });
 
 
-        xit('can parse filters', function () {
+        it('can parse filters', function () {
             var f = Model.parseFilters('x | filter1 | filter2: "8"');
             expect(f.filters.filter2).toBe('8');
 
@@ -392,7 +391,7 @@ describe('Model', function () {
     };
 
 
-    xdescribe('filters', function () {
+    describe('filters', function () {
 
         it('can create reusable filter', function () {
             expect(sumFilter.format(123, '2')).toBe(125);
@@ -416,6 +415,19 @@ describe('Model', function () {
                 name: 'tempComputedName1'
             });
 
+            var comp2 = new Model.Computed({
+                model: vm,
+                name: 'tempComputedName2'
+            });
+
+            comp2.parseFilters("value | sumFilter:'2'");
+
+            expect(comp2.get()).toBe(7);
+
+            comp.set(10);
+            expect(vm.value).toBe(8);
+            return;
+            vm.value = 5;
 
             comp.parseFilters("value | sumFilter:'2' | squareFilter");
 

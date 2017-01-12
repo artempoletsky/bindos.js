@@ -5,7 +5,7 @@ module.exports = function (grunt) {
         pkg: grunt.file.readJSON('package.json'),
         concat: {
             dist: {
-                src: ['src/observable.js'
+                src: ['src/domlib.js'
                     , 'src/class.js'
                     , 'src/events.js'
                     , 'src/model.js'

@@ -1,4 +1,4 @@
-(function (window) {
+(function () {
 
     var bindos = window.bindos = {
         extract() {
@@ -210,4 +210,4 @@
         });
     }
 
-}(this));
+}());

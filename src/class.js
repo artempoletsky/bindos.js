@@ -1,4 +1,4 @@
-(function (window) {
+(function () {
     "use strict";
     let ctor = function () {
         },
@@ -93,4 +93,4 @@
         return instance;
     };
     bindos.Class = Class;
-}(this));
+}());

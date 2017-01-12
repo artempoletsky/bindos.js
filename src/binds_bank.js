@@ -59,11 +59,8 @@
                 console.log(model, '.', value, '=', val);
             });
         },
-        src: function ($el, value, context, addArgs) {
-            var elem = $el[0];
-            this.findCallAndSubscribe(value, context, addArgs, function (val) {
-                elem.src = val || '';
-            }, $el);
+        src: function (elem, value, model) {
+            this.applyFilters(value, model, (val) => elem.src = val || '');
         },
         html: function (el, value, model) {
             this.applyFilters(value, model, function (val) {
@@ -87,11 +84,11 @@
             }
         },
         checked(el, value, model) {
-            let name=this.applyFilters(value, model, (val) => {
+            let name = this.applyFilters(value, model, (val) => {
                 el.checked = val;
             });
 
-            el.on('change', ()=>{
+            el.on('change', () => {
                 model.prop(name, el.checked);
             })
         },
@@ -132,13 +129,11 @@
                 });
             });
         },
-        display: function ($el, value, context) {
+        display: function (el, value, context) {
             ViewModel.applyFilters(value, context, function (val) {
-                if (val) {
-                    $el.show();
-                } else {
-                    $el.hide();
-                }
+                //todo: implement for non block elements
+                let visibleDisplay = 'block';
+                el.style.display = val ? visibleDisplay : 'none';
             });
         },
         click: function ($el, value, context, addArgs) {
@@ -147,15 +142,15 @@
                 fn.apply(context, arguments);
             });
         },
-        className: function ($el, value, context) {
+        className: function (el, value, context) {
             var oldClassName;
 
             ViewModel.applyFilters(value, context, function (className) {
                 if (oldClassName) {
-                    $el.removeClass(oldClassName);
+                    el.classList.remove(oldClassName);
                 }
                 if (className) {
-                    $el.addClass(className);
+                    el.classList.add(className);
                 }
                 oldClassName = className;
             });

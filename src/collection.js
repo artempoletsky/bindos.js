@@ -1,4 +1,4 @@
-(function (window) {
+(function () {
     "use strict";
 
     let Model=bindos.Model;
@@ -278,4 +278,4 @@
         });
     }
     bindos.Collection = Collection;
-}(this));
+}());

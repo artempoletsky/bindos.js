@@ -7,43 +7,42 @@ describe('ViewModel.binds', function () {
 
         describe('.html', function () {
 
-            it('replaces innerHTML of HTMLElement the value of the concerned observable', function () {
+            it('replaces innerHTML of HTMLElement the value of the bound model field', function () {
 
-                var vm = ViewModel.create({
-                    el: '<div nk="html: value"></div>',
-                    autoParseBinds: true,
+                var vm = Widget.create({
+                    el: $.parse('<div data-bind="html: value"></div>'),
                     fields: {
                         value: '<span>Hello</span>'
                     }
                 });
 
 
-                expect(vm.$el.html().toLowerCase()).toBe('<span>hello</span>');
+                expect(vm.el.innerHTML.toLowerCase()).toBe('<span>hello</span>');
 
                 vm.prop('value', undefined);
-                expect(vm.$el.html()).toBe('');
+                expect(vm.el.innerHTML).toBe('');
 
                 vm.prop('value', false);
-                expect(vm.$el.html()).toBe('');
+                expect(vm.el.innerHTML).toBe('');
 
                 vm.prop('value', null);
-                expect(vm.$el.html()).toBe('');
+                expect(vm.el.innerHTML).toBe('');
 
                 vm.prop('value', 0);
-                expect(vm.$el.html()).toBe('0');
+                expect(vm.el.innerHTML).toBe('0');
             });
 
 
             it('supports filters', function () {
-                var vm = ViewModel.create({
-                    el: '<div nk="html: value | sumFilter:\'321\'"></div>',
-                    autoParseBinds: true,
+
+                var vm = Widget.create({
+                    el: $.parse('<div data-bind="html: value | sumFilter:\'321\'"></div>'),
                     fields: {
                         value: 123
                     }
                 });
 
-                expect(vm.$el.html()).toBe('444');
+                expect(vm.el.innerHTML).toBe('444');
             });
         });
 
@@ -53,7 +52,7 @@ describe('ViewModel.binds', function () {
             it('binds observable to input value', function () {
 
                 var vm = ViewModel.create({
-                    el: '<input nk="value: value"/>',
+                    el: '<input data-bind="value: value"/>',
                     autoParseBinds: true,
                     fields: {
                         value: 'Hello'
@@ -104,7 +103,7 @@ describe('ViewModel.binds', function () {
                 });
 
                 var vm = ViewModel.create({
-                    el: '<div><ul nk="withModel: hero"><li>{{name}} {{greet}}</li></ul></div>',
+                    el: '<div><ul data-bind="withModel: hero"><li>{{name}} {{greet}}</li></ul></div>',
                     autoParseBinds: true,
                     fields: {
                         hero: superman
@@ -143,7 +142,7 @@ describe('ViewModel.binds', function () {
 
 
                 var vm = ViewModel.create({
-                    el: '<div><ul nk="eachModel: collection"><li>{{name}}</li></ul></div>',
+                    el: '<div><ul data-bind="eachModel: collection"><li>{{name}}</li></ul></div>',
                     autoParseBinds: true,
                     fields: {
                         collection: collection
@@ -159,7 +158,7 @@ describe('ViewModel.binds', function () {
             it('supports table', function () {
 
                 var vm = ViewModel.create({
-                    el: '<table nk="eachModel: collection"><tr><td>{{value}}</td></tr></table>',
+                    el: '<table data-bind="eachModel: collection"><tr><td>{{value}}</td></tr></table>',
                     autoParseBinds: true,
                     fields: {
                         collection:  new Collection([
@@ -168,7 +167,7 @@ describe('ViewModel.binds', function () {
                     }
                 });
 
-                expect(vm.$el.html().toLowerCase().replace(/\s+/g, '')).toBe('<tbody><tr><td>foo</td></tr></tbody>')
+                expect(vm.el.innerHTML.toLowerCase().replace(/\s+/g, '')).toBe('<tbody><tr><td>foo</td></tr></tbody>')
             });
         });
     });
@@ -209,7 +208,7 @@ describe('ViewModel.binds', function () {
                 });
 
 
-                expect(vm.$el.html()).toBe('444');
+                expect(vm.el.innerHTML).toBe('444');
             });
 
             it('supports custom regex', function () {
@@ -263,10 +262,10 @@ describe('ViewModel.binds', function () {
                 });
 
 
-                expect(vm.$el.html()).toBe('0');
+                expect(vm.el.innerHTML).toBe('0');
 
                 vm.prop('value', null);
-                expect(vm.$el.html()).toBe('');
+                expect(vm.el.innerHTML).toBe('');
             });
 
             it('supports line breaks', function () {
@@ -343,7 +342,7 @@ describe('ViewModel.binds', function () {
         });
 
 
-        expect(vm.$el.html()).toBe('Hello friend!');
+        expect(vm.el.innerHTML).toBe('Hello friend!');
 
         //change locale to fr
         lang.prop({
@@ -351,7 +350,7 @@ describe('ViewModel.binds', function () {
             bye: 'Au revoir ami!'
         });
 
-        expect(vm.$el.html()).toBe('Bonjour ami!');
+        expect(vm.el.innerHTML).toBe('Bonjour ami!');
 
     });
 

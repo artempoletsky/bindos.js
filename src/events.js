@@ -1,4 +1,4 @@
-(function (window) {
+(function () {
     "use strict";
 
     const eventSplitter = /\s+/,
@@ -225,4 +225,4 @@
     });
     EventDispatcher.prototype.trigger = EventDispatcher.prototype.fire;
     bindos.EventDispatcher = EventDispatcher;
-}(this));
+}());

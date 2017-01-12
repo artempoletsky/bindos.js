@@ -39,7 +39,7 @@
 
         return $row;
     };
-
+/*
     setInterval(function () {
 
         _.each(bufferViews, function (arr, key) {
@@ -51,7 +51,7 @@
         });
 
     }, 5 * 60 * 1000);
-
+*/
 
     ViewModel.binds.each = function (elem, value, model) {
         var
