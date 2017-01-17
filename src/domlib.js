@@ -220,7 +220,15 @@
                 xhr.onreadystatechange = function () {
                     //console.log(xhr);
                     if (xhr.readyState == 4) {
-                        var data = JSON.parse(xhr.responseText);
+                        var data = '';
+                        if (xhr.responseText) {
+                            try {
+                                data = JSON.parse(xhr.responseText);
+                            } catch (e) {
+
+                            }
+                        }
+
                         if (promise) {
                             promise(data);
                         }
