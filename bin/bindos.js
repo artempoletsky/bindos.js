@@ -935,14 +935,20 @@
 (function () {
     "use strict";
 
-    let Model=bindos.Model;
+    let Model = bindos.Model;
     var itself = function (self) {
             this.self = self;
         },
         Collection = Model.extend({
             constructor: function (models, attributes) {
-                this._super();
+                this._super(attributes);
 
+                if (typeof this.model != 'function') {
+                    this.model = Model.extend({
+                        fields: this.model
+                    });
+                }
+                
                 this.itself = new itself(this);
                 this.models = [];
                 this.length = 0;
@@ -1069,7 +1075,8 @@
                     index = this.models.length - 1;
                 }
 
-                var model = this.models.splice(index, 1)[0], cutted;
+                var model = this.models.splice(index, 1)[0],
+                    cutted;
 
 
                 this.length = this.models.length;
@@ -1106,7 +1113,8 @@
         methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'foldl', 'foldr',
             'include', 'contains', 'invoke', 'sortedIndex',
             'toArray', 'size', 'without', 'indexOf',
-            'shuffle', 'lastIndexOf', 'isEmpty'],
+            'shuffle', 'lastIndexOf', 'isEmpty'
+        ],
         filterMethods = ['filter', 'reject'],
         sortMethods = ['sortBy', 'sortByDesc', 'shuffle'],
         vanillaMethods = ['forEach'];
@@ -1330,8 +1338,7 @@
                     }
 
                     proxy = function (event, delegate) {
-                        //console.log(fn);
-                        //window.FN=fn;
+                        
                         let args = [me, event, delegate];
                         let l = fn.length,
                             listItem, index, model;

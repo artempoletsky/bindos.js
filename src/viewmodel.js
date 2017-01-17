@@ -114,8 +114,7 @@
                     }
 
                     proxy = function (event, delegate) {
-                        //console.log(fn);
-                        //window.FN=fn;
+                        
                         let args = [me, event, delegate];
                         let l = fn.length,
                             listItem, index, model;

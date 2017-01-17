@@ -119,15 +119,12 @@ describe('ViewModel', function () {
     });
 
     it('can provide additional arguments to event handlers', function () {
-        var M = Model.extend({
-            feilds: {
+    
+        var C = Collection.extend({
+            model: {
                 complete: false,
                 name: ''
             }
-        });
-
-        var C = Collection.extend({
-            model: M
         });
 
         var c = new C([{
