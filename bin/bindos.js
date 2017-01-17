@@ -205,7 +205,7 @@
                         urlParams = '?';
                         for (let key in options.data) {
                             let value = options.data[key];
-                            urlParams = key + '=' + value + '&';
+                            urlParams += key + '=' + encodeURIComponent(value) + '&';
                         }
                         urlParams = urlParams.slice(0, -1);
                     }
