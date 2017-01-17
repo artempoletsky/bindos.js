@@ -32,6 +32,15 @@
 
 
     $.extend(HTMLElement.prototype, {
+        findParent(selector) {
+            var el = this;
+            while (el) {
+                if (el.matches(selector)) {
+                    return el;
+                }
+                el = el.parentNode;
+            }
+        },
         empty() {
             while (this.firstChild) {
                 this.removeChild(this.firstChild);

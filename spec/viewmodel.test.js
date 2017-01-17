@@ -41,8 +41,7 @@ describe('ViewModel', function () {
         var vm;
         var obj = {
             el: 'div',
-            initialize: function () {
-            },
+            initialize: function () {},
             events: {
                 'click': 'onClick'
             },
@@ -119,6 +118,66 @@ describe('ViewModel', function () {
         expect(spy.calls.length).toBe(2);
     });
 
+    it('can provide additional arguments to event handlers', function () {
+        var M = Model.extend({
+            feilds: {
+                complete: false,
+                name: ''
+            }
+        });
+
+        var C = Collection.extend({
+            model: M
+        });
+
+        var c = new C([{
+            name: '1'
+        }, {
+            name: '2'
+        }, {
+            name: '3'
+        }, {
+            name: '4'
+        }, {
+            name: '5'
+        }, ]);
+
+        var label, li, i, m, input;
+
+        var w = Widget.create({
+            el: $.parse('<ul data-bind="each"><li><input data-bind="checked: complete"/><label data-bind="html: name"></label></li></ul>'),
+            listItem: 'li',
+            fields: {
+                collection: c
+            },
+            events: {
+                'click label': (me, e, delegate, listItem, index, model) => {
+                    expect(me).toBe(w);
+                    expect(delegate).toBe(label);
+                    expect(listItem).toBe(li);
+                    expect(index).toBe(i);
+                    expect(model).toBe(m);
+                },
+                'click input': 'onInputClick'
+            },
+            onInputClick(e, delegate, listItem, index, model){
+                expect(this).toBe(w);
+                expect(delegate).toBe(input);
+                expect(listItem).toBe(li);
+                expect(index).toBe(i);
+                expect(model).toBe(m);
+            }
+        });
+        i = 3;
+        li = w.el.$$('li')[i];
+        label = li.$('label');
+        m = w.collection.at(i);
+        expect(label.innerHTML).toBe('4');
+        label.fire('click');
+        input=li.$('input');
+        input.fire('click');
+    });
+
 
     xit('each method must return this', function () {
         var vm = new ViewModel();
@@ -137,11 +196,9 @@ describe('ViewModel', function () {
             }
         });
 
-        me = vm.on('click', function () {
-        });
+        me = vm.on('click', function () {});
         expect(me).toBe(vm);
-        me = vm.one('click', function () {
-        });
+        me = vm.one('click', function () {});
         expect(me).toBe(vm);
         me = vm.setElement(document.createElement('div'));
         expect(me).toBe(vm);

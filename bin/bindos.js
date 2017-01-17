@@ -32,6 +32,15 @@
 
 
     $.extend(HTMLElement.prototype, {
+        findParent(selector) {
+            var el = this;
+            while (el) {
+                if (el.matches(selector)) {
+                    return el;
+                }
+                el = el.parentNode;
+            }
+        },
         empty() {
             while (this.firstChild) {
                 this.removeChild(this.firstChild);
@@ -1228,6 +1237,7 @@
                 return this;
             },
             wrapReady: false,
+            warnIfElementNotExists: true,
             $: function (selector) {
                 return this.el.querySelector(selector);
             },
@@ -1260,12 +1270,19 @@
 
 
                 var ctor = function () {
-                    if (typeof me.el === 'string') {
-                        if (simpleTagRegex.test(me.el) && me.el !== 'html' && me.el !== 'body') {
-                            me.el = document.createElement(me.el);
+                    let elSelector = me.el;
+                    if (typeof elSelector === 'string') {
+                        if (simpleTagRegex.test(elSelector) && elSelector !== 'html' && elSelector !== 'body') {
+                            me.el = document.createElement(elSelector);
                         } else {
-                            me.el = $(me.el);
+                            me.el = $(elSelector);
                         }
+                    }
+                    if (!me.el) {
+                        if (me.warnIfElementNotExists) {
+                            console.warn('Element ' + elSelector + ' not exists. ViewModel: ', me);
+                        }
+                        return;
                     }
 
                     for (let name in me.shortcuts) {
@@ -1295,6 +1312,7 @@
             },
             autoParseBinds: false,
             initialize: function () {},
+            listItem: undefined,
             delegateEvents: function (events) {
                 events = events || this.events;
                 this.undelegateEvents();
@@ -1303,19 +1321,46 @@
                     let fnName = events[name],
                         fn, proxy;
 
-                    if (typeof fnName === 'function') {
-                        fn = fnName;
-                        proxy = function (event, delegate) {
-                            fn(me, event, delegate);
-                        };
-                    } else {
-                        fn = me[fnName];
-                        proxy = fn.bind(me);
-                    }
+                    let useSelfMethod = typeof fnName !== 'function'
+
+                    fn = useSelfMethod ? me[fnName] : fnName;
 
                     if (typeof fn !== 'function') {
-                        throw TypeError(fnName + ' is not a function');
+                        throw TypeError(fnName + ' is not a function, but ' + (typeof fn));
                     }
+
+                    proxy = function (event, delegate) {
+                        //console.log(fn);
+                        //window.FN=fn;
+                        let args = [me, event, delegate];
+                        let l = fn.length,
+                            listItem, index, model;
+
+                        if (useSelfMethod) {
+                            l += 1;
+                        }
+
+                        if (l > 3) {
+                            listItem = delegate.findParent(me.listItem);
+                            args.push(listItem)
+                        }
+                        if (l > 4) {
+                            index = listItem.index();
+                            args.push(index);
+                        }
+                        if (l > 5) {
+                            model = me.collection.at(index);
+                            args.push(model);
+                        }
+
+
+                        if (useSelfMethod) {
+                            args.shift();
+                        }
+
+                        fn.apply(me, args);
+                    };
+
                     eventsPath = name.split(eventSplitter);
                     eventName = eventsPath.shift().replace(/,/g, ' ');
 
