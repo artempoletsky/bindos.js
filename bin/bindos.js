@@ -98,7 +98,7 @@
 
     let uniq = {};
     $.extend($, {
-        forIn(object, callback, context){
+        forIn(object, callback, context) {
             for (var key in object) {
                 if (object.hasOwnProperty(key)) {
                     callback.call(context, object[key], key, object);
@@ -182,7 +182,27 @@
                 if (!options.method) options.method = 'GET';
                 if (options.async === undefined) options.async = true;
 
-                xhr.open(options.method, options.url, options.async);
+                let urlParams = '';
+                let formData;
+
+                if (options.data) {
+                    if (options.method == 'POST') {
+                        formData = new FormData();
+                        for (let key in options.data) {
+                            let value = options.data[key];
+                            formData.append(key, value);
+                        }
+                    } else {
+                        urlParams = '?';
+                        for (let key in options.data) {
+                            let value = options.data[key];
+                            urlParams = key + '=' + value + '&';
+                        }
+                        urlParams = urlParams.slice(0, -1);
+                    }
+                }
+
+                xhr.open(options.method, options.url + urlParams, options.async);
                 for (let key in options.headers) {
                     xhr.setRequestHeader(key, options.headers[key]);
                 }
@@ -200,7 +220,13 @@
                         }
                     }
                 };
-                xhr.send();
+
+
+
+
+                xhr.send(formData);
+
+
                 return {
                     then: function (success) {
                         promise = success;
@@ -210,7 +236,7 @@
         });
     }
 
-}());
+}(this));
 
 (function () {
     "use strict";
