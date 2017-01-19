@@ -11,7 +11,6 @@
 
     var $ = window.$;
     var $$ = window.$$;
-    console.log($);
     var hasNoDomlib = !$;
 
     bindos.hasJquery = !!window.jQuery;
@@ -22,7 +21,6 @@
     if (hasNoDomlib) {
         $ = window.$ = bindos.$;
         $$ = window.$$ = bindos.$$;
-        console.log($ === bindos.$, $, bindos.$);
     }
 
 
@@ -132,7 +130,6 @@
         },
     });
 
-    console.log($ === bindos.$);
 
     bindos.$.extend($, {
         forIn(object, callback, context) {
@@ -234,7 +231,6 @@
 
                 var promise;
                 xhr.onreadystatechange = function () {
-                    //console.log(xhr);
                     if (xhr.readyState == 4) {
                         var data = '';
                         if (xhr.responseText) {
