@@ -1557,7 +1557,7 @@
     }
 
     ViewModel.binds = {
-        log: function ($el, value, model) {
+        log: function (el, value, model) {
             this.applyFilters(value, model, function (val) {
                 console.log(model, '.', value, '=', val);
             });
@@ -1570,9 +1570,9 @@
                 el.innerHTML = zeroEmpty(val);
             });
         },
-        text: function ($el, value, model) {
+        text: function (el, value, model) {
             this.applyFilters(value, model, function (val) {
-                $el.text(zeroEmpty(val));
+                el.innerText = zeroEmpty(val);
             });
         },
         prop(el, value, model) {
@@ -1606,22 +1606,21 @@
             });
 
         },
-        attr: function ($el, value, context) {
-            var elem = $el[0];
-            _.each(this.parseOptionsObject(value), function (condition, attrName) {
+        attr: function (el, value, context) {
+            $.forIn(this.parseOptionsObject(value), function (condition, attrName) {
                 ViewModel.applyFilters(condition, context, function (val) {
                     if (val !== false && val !== undefined && val !== null) {
-                        elem.setAttribute(attrName, val);
+                        el.setAttribute(attrName, val);
                     } else {
-                        elem.removeAttribute(attrName);
+                        el.removeAttribute(attrName);
                     }
                 });
             });
         },
-        style: function ($el, value, context) {
+        style: function (el, value, context) {
             $.forIn(this.parseOptionsObject(value), function (condition, style) {
                 ViewModel.applyFilters(condition, context, function (val) {
-                    $el.css(style, val);
+                    el.style[style] = val;
                 });
             });
         },
@@ -1639,12 +1638,6 @@
                 el.style.display = val ? visibleDisplay : 'none';
             });
         },
-        click: function ($el, value, context, addArgs) {
-            var fn = this.evil(value, context, addArgs, $el)();
-            $el.click(function () {
-                fn.apply(context, arguments);
-            });
-        },
         className: function (el, value, context) {
             var oldClassName;
 
@@ -1658,16 +1651,7 @@
                 oldClassName = className;
             });
         },
-        events: function ($el, value, context, addArgs) {
-            var self = this;
-            _.each(this.parseOptionsObject(value), function (expr, eventName) {
-                var callback = self.evil(expr, context, addArgs)();
-                $el.bind(eventName, function (e) {
-                    callback.call(context, e);
-                });
-            });
-        },
-        view: function ($el, value, context, addArgs) {
+        view: function (el, value, context, addArgs) {
             var options, ViewModelClass, args, vm, values;
             try {
                 options = this.parseOptionsObject(value);
@@ -1687,10 +1671,10 @@
                 });
             }
             args = {
-                el: $el
+                el: el
             };
             if (options.options) {
-                _.forOwn(options.options, function (value, key) {
+                $.forIn(options.options, function (value, key) {
                     args[key] = ViewModel.evil(value, context, addArgs)();
                 });
             }
@@ -1700,10 +1684,6 @@
                 context[options.name] = vm;
             }
 
-            return false;
-        },
-        $click: function ($el, value, context, addArgs) {
-            $el.click(this.evil(value, context, addArgs));
             return false;
         }
     };
@@ -1807,7 +1787,6 @@
 
 
                 parent = textNode.parentNode;
-                //$el = $(parent);
                 div = document.createElement('div');
 
 
