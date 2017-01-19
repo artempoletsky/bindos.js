@@ -59,7 +59,7 @@
                         if (simpleTagRegex.test(elSelector) && elSelector !== 'html' && elSelector !== 'body') {
                             me.el = document.createElement(elSelector);
                         } else {
-                            me.el = $(elSelector);
+                            me.el = bindos.$(elSelector);
                         }
                     }
                     if (!me.el) {
@@ -84,7 +84,7 @@
                 };
 
                 if (me.wrapReady) {
-                    $.ready(ctor);
+                    bindos.$.ready(ctor);
                 } else {
                     ctor();
                 }
@@ -114,7 +114,7 @@
                     }
 
                     proxy = function (event, delegate) {
-                        
+
                         let args = [me, event, delegate];
                         let l = fn.length,
                             listItem, index, model;
@@ -177,7 +177,7 @@
     ViewModel.findBinds = function (elem, model) {
 
         if (typeof elem == 'string') {
-            elem = $(elem);
+            elem = bindos.$(elem);
         }
         if (!elem) {
             throw new Error('Element not exists');

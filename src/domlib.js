@@ -9,29 +9,36 @@
         }
     };
 
-    var hasNoJquery = !window.$;
+    var $ = window.$;
+    var $$ = window.$$;
+    console.log($);
+    var hasNoDomlib = !$;
 
-    bindos.hasJquery = !hasNoJquery;
-    if (hasNoJquery) {
-        var $ = window.$ = document.querySelector.bind(document);
-        var $$ = window.$$ = document.querySelectorAll.bind(document);
+    bindos.hasJquery = !!window.jQuery;
 
-        $.extend = function (o1, ...objects) {
-            for (let obj of objects) {
-                for (let key in obj) {
-                    o1[key] = obj[key];
-                }
-            }
-            return o1;
-        };
+    bindos.$ = document.querySelector.bind(document);
+    bindos.$$ = document.querySelectorAll.bind(document);
 
+    if (hasNoDomlib) {
+        $ = window.$ = bindos.$;
+        $$ = window.$$ = bindos.$$;
+        console.log($ === bindos.$, $, bindos.$);
     }
 
+
+    bindos.$.extend = function (o1, ...objects) {
+        for (let obj of objects) {
+            for (let key in obj) {
+                o1[key] = obj[key];
+            }
+        }
+        return o1;
+    };
 
     const eventSplitter = /\s+/;
 
 
-    $.extend(HTMLElement.prototype, {
+    bindos.$.extend(HTMLElement.prototype, {
         findParent(selector) {
             var el = this;
             while (el) {
@@ -106,7 +113,28 @@
 
 
     let uniq = {};
-    $.extend($, {
+
+    let isReady = false;
+    let readyCallbacks = [];
+    document.addEventListener('DOMContentLoaded', () => {
+        isReady = true;
+        readyCallbacks.forEach((cb) => cb());
+        readyCallbacks = undefined;
+    });
+
+    bindos.$.extend(bindos.$, {
+        ready(cb) {
+            if (isReady) {
+                cb();
+            } else {
+                readyCallbacks.push(cb);
+            }
+        },
+    });
+
+    console.log($ === bindos.$);
+
+    bindos.$.extend($, {
         forIn(object, callback, context) {
             for (var key in object) {
                 if (object.hasOwnProperty(key)) {
@@ -168,23 +196,11 @@
         make: document.createElement.bind(document)
     });
 
-    if (hasNoJquery) {
+    if (hasNoDomlib) {
 
-        let isReady = false;
-        let readyCallbacks = [];
-        document.addEventListener('DOMContentLoaded', () => {
-            isReady = true;
-            readyCallbacks.forEach((cb) => cb());
-            readyCallbacks = undefined;
-        })
+
         $.extend($, {
-            ready(cb) {
-                if (isReady) {
-                    cb();
-                } else {
-                    readyCallbacks.push(cb);
-                }
-            },
+
             ajax(options) {
                 var xhr = new XMLHttpRequest();
 
