@@ -1,3 +1,3 @@
 # bindos.js docs
 
-[EventDispatcer](./EventDisparcher.md)
+[EventDispatcher](./EventDispatcher.md)
