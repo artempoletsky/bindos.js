@@ -1,6 +1,6 @@
 # EventDispatcher 
 
-Extends from Class
+Extends from [Class](./Class.md)
 
 Basic usage:
 
@@ -106,7 +106,9 @@ e.off(0, callback);
 ### fire(events, ...rest)
 
 Triggers events.
+
 `events` - string of event names separated by spaces
+
 `...rest` - if is set arguments will be given to callback defined in `on` method
 
 ```javaScript
