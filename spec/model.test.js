@@ -369,6 +369,42 @@ describe('Model', function () {
             expect(f.filters.filter2).toBe('8');
 
         });
+
+        it('can get function parameters', function () {
+            let fn1 = function fn1(a, b, c, d) {};
+            let obj = {
+                fn2(a,
+                    /*b,c,*/
+                    //e,
+                    d) {}
+            }
+            let fn3 = function () {};
+
+            expect(Model.Computed.getFnParams(fn1)).toEqual(['a', 'b', 'c', 'd']);
+            expect(Model.Computed.getFnParams(obj.fn2)).toEqual(['a', 'd']);
+            expect(Model.Computed.getFnParams(fn3)).toEqual([]);
+
+
+            let m = Model.create({
+                fields: {
+                    value: 'foo',
+                    value2(value) {
+                        return value + 'bar';
+                    },
+                    value3(value2) {
+                        return '(' + value2 + ')'
+                    }
+                }
+            });
+
+            expect(m.value2).toBe('foobar');
+            expect(m.value3).toBe('(foobar)');
+            m.value = 'baz';
+            expect(m.value2).toBe('bazbar');
+
+            //TODO: implement
+            //expect(m.value3).toBe('(bazbar)');
+        });
     });
 
 

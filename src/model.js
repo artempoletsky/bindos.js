@@ -12,6 +12,11 @@
             },
 
             addComputed(name, options) {
+                if (typeof options == 'function') {
+                    options = {
+                        get: options
+                    };
+                }
                 options.name = name;
                 options.model = this;
                 this._computeds[name] = new Model.Computed(options);
@@ -40,7 +45,17 @@
 
                 this._computeds = {};
 
+                for (let key in self.fields) {
+                    let val = self.fields[key];
+                    if (typeof val == 'function') {
+                        delete self.fields[key];
+                        self.computeds[key] = val;
+                    }
+                }
+
                 self.attributes = $.extend({}, self.fields, self.parse(data));
+
+
 
 
                 for (let compName in self.computeds) {
@@ -278,6 +293,9 @@
         }
     };
 
+    const STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
+    const ARGUMENT_NAMES = /([^\s,]+)/g;
+
     class Computed {
 
         constructor(options) {
@@ -290,6 +308,7 @@
                 this.parseFilters(options.filtersString);
             }
             if (options.get) {
+                this.deps = Computed.getFnParams(options.get);
                 this.getter = options.get;
             }
             if (options.set) {
@@ -308,6 +327,13 @@
             });
         }
 
+        static getFnParams(func) {
+            var fnStr = func.toString().replace(STRIP_COMMENTS, '');
+            var result = fnStr.slice(fnStr.indexOf('(') + 1, fnStr.indexOf(')')).match(ARGUMENT_NAMES);
+            if (result === null)
+                result = [];
+            return result;
+        }
 
         getter(value) {
             return value;
