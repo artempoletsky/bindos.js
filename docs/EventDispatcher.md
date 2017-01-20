@@ -3,6 +3,7 @@
 Extends from Class
 
 Basic usage:
+
 ```javaScript
 let e = new EventDisplatcher();
 let callback = ()=>console.log('triggered!');
@@ -17,6 +18,7 @@ e.fire('myEvent'); //triggered!
 Subscribe to event. 
 
 `events` - string that contains event names separated with spaces 
+
 ```javaScript
 e.on('event1 event2', ()=>console.log('triggered!'));
 e.fire('event1'); //triggered!
@@ -24,6 +26,7 @@ e.fire('event2'); //triggered! once again
 ```
 
 If `events` is plain object you can subscribe on multiple events at once
+
 ```javaScript
 e.on({
     event1(){console.log('event1')},
@@ -59,6 +62,7 @@ e.fire('event1');
 ```
 
 if `callOnce` is set and truthy callback will be called only once regardless of number of `fire` method calls.
+
 ```javaScript
 e.on('event1', ()=>{console.log('triggered!')}, e, true);
 e.fire('event1');//triggered!
@@ -66,6 +70,7 @@ e.fire('event1');//nothing happens
 ```
 
 You can define namespace for events and bind, unbind and trigger events by namespace. 
+
 ```javaScript
 e.on('event1.foo', ()=>{console.log('event1')});
 e.on('event2.foo', ()=>{console.log('event2')});
