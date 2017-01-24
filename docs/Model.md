@@ -117,14 +117,54 @@ let example2 = Model.createOrUpdate(User, { id: 10, name: 'John' });
 
 console.log(example === collection.at(0) === example2);//true
 console.log(example.name);//'John'
-
-
 ```
 
 
-### idAttribute `string`
+### idAttribute `string` = `'id'`
 
+Used mainly for `mapping` behavior, see above. 
 
+```javaScript
+
+let User = Model.extend({
+    fields: {
+        user_id: 0,
+        name: ''
+    },
+    idAttribute: 'user_id',
+    mapping: 'users'
+});
+
+let me = Model.createOrUpdate(User, { user_id: 10, name: 'Artem' });
+console.log(me.id);//10
+console.log(me.user_id);//10
+console.log(me.name);//'Artem'
+
+Model.createOrUpdate(User, { user_id: 10, name: 'John' });
+console.log(me.name);//'John'
+
+```
+
+### useDefineProperty `boolean` = `true`
+
+If set to `false` model will not create short propeties.  Used for supporting old browsers. 
+
+```javaScript
+
+let User = Model.extend({
+    fields: {
+        id: 0,
+        name: ''
+    },
+    useDefineProperty: false
+});
+
+let me = new User({ id: 10, name: 'Artem' });
+
+console.log(me.name);//undefined
+console.log(me.prop('name'));//'Artem'
+
+```
 
 ## Public methods
 
