@@ -298,3 +298,47 @@ me.update({status: 200, body:{...}}); //works same
 ### update(raw_data)
 
 Used to update model's fields same as `prop(key_values_obj)`, but raw data usead as argument. And it goes through `parse` method.
+
+## Static methods
+
+### createOrUpdate
+
+See `mapping` property. 
+
+## Events
+
+### change, change:[property_name]
+
+When you change model's properties, it fires both this events. 
+
+```javaScript
+let User = Model.extend({
+    fields: {
+        firstName: '',
+        lastName: ''    
+    }
+});
+
+let me = new User({
+    firstName: 'Artem',
+    lastName: 'Poletsky'
+});
+
+me.on('change', (changed) =>{
+    console.log(changed); // {firstName: 'Foo', lastName: 'Bar'}
+});
+
+me.on('change:firstName', (firstName) =>{
+    console.log(firstName); //'Foo'
+});
+
+me.on('change:lastName', (lastName) =>{
+    console.log(lastName); //'Bar'
+});
+
+me.prop({
+    firstName: 'Foo',
+    lastName: 'Bar'
+});
+
+```
