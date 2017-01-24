@@ -83,6 +83,48 @@ test.x5 = 5;
 console.log(test.x);//1
 ```
 
+### mapping `string`
+
+If defined, models will be stored in global hash object. Adding new model to collection, or using Model.createOrUpdate() with same `mapping` and `id` will update existing model instead of creating new one. 
+
+
+```javaScript
+
+let User = Model.extend({
+    fields: {
+        id: 0,
+        name: ''
+    },
+    mapping: 'users'
+});
+
+let UsersCollection = Collection.extend({
+    model: User
+});
+
+let collection = new UsersCollection();
+
+let example = new User({ id: 10 });
+
+console.log(example.name);//''
+
+collection.push({ id: 10, name: 'Artem' }); //addind raw data. Not model. 
+
+console.log(example === collection.at(0));//true
+console.log(example.name);//'Artem'
+
+let example2 = Model.createOrUpdate(User, { id: 10, name: 'John' });
+
+console.log(example === collection.at(0) === example2);//true
+console.log(example.name);//'John'
+
+
+```
+
+
+### idAttribute `string`
+
+
 
 ## Public methods
 
