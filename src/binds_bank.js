@@ -94,7 +94,10 @@
         },
         value: function (el, value, model) {
             var name = this.applyFilters(value, model, function (val) {
-                el.value = zeroEmpty(val);
+                if(el.value !=val){
+                    el.value = zeroEmpty(val);    
+                }
+
             });
             ['change', 'keyup', 'keydown'].forEach(function (event) {
                 el.on(event, function () {
