@@ -1623,8 +1623,8 @@
         },
         value: function (el, value, model) {
             var name = this.applyFilters(value, model, function (val) {
-                if(el.value !=val){
-                    el.value = zeroEmpty(val);    
+                if(el.value !== val){
+                    el.value = zeroEmpty(val);
                 }
 
             });

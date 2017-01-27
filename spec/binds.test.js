@@ -52,30 +52,30 @@ describe('ViewModel.binds', function () {
             it('binds observable to input value', function () {
 
                 var vm = ViewModel.create({
-                    el: '<input data-bind="value: value"/>',
+                    el: $.parse('<input data-bind="value: value"/>'),
                     autoParseBinds: true,
                     fields: {
                         value: 'Hello'
                     }
                 });
-                expect(vm.$el.val()).toBe('Hello');
+                expect(vm.el.value).toBe('Hello');
 
 
                 vm.prop('value', undefined);
-                expect(vm.$el.val()).toBe('');
+                expect(vm.el.value).toBe('');
 
                 vm.prop('value', false);
-                expect(vm.$el.val()).toBe('');
+                expect(vm.el.value).toBe('');
 
                 vm.prop('value', null);
-                expect(vm.$el.val()).toBe('');
+                expect(vm.el.value).toBe('');
 
                 vm.prop('value', 0);
-                expect(vm.$el.val()).toBe('0');
+                expect(vm.el.value).toBe('0');
 
 
-                vm.$el.val('abc');
-                vm.$el.trigger('keyup');
+                vm.el.value = 'abc';
+                vm.el.fire('keyup');
                 expect(vm.prop('value')).toBe('abc');
             });
         });
@@ -86,14 +86,9 @@ describe('ViewModel.binds', function () {
 
                 var Hero = Model.extend({
                     fields: {
-                        name: ''
-                    },
-                    computeds: {
-                        greet: {
-                            deps: ['name'],
-                            get: function (name) {
-                                return 'My name is ' + name;
-                            }
+                        name: '',
+                        greet(name) {
+                            return 'My name is ' + name;
                         }
                     }
                 });
@@ -102,68 +97,68 @@ describe('ViewModel.binds', function () {
                     name: 'Superman'
                 });
 
-                var vm = ViewModel.create({
-                    el: '<div><ul data-bind="withModel: hero"><li>{{name}} {{greet}}</li></ul></div>',
-                    autoParseBinds: true,
+                var vm = Widget.create({
+                    el: $.parse('<ul data-bind="withModel: hero"><li data-bind="html: greet"></li></ul>'),
                     fields: {
-                        hero: superman
-                    },
-                    computeds: {
+                        hero: new Hero()
                     }
                 });
 
+                vm.hero = superman;
 
-                expect(vm.$el.find('li').html()).toBe('Superman My name is Superman');
+
+                expect(vm.el.$('li').innerHTML).toBe('My name is Superman');
 
                 var batman = new Hero({
                     name: 'Batman'
                 });
 
-                vm.prop('hero', batman);
+                vm.hero = batman;
 
-                expect(vm.$el.find('li').html()).toBe('Batman My name is Batman');
+                expect(vm.el.$('li').innerHTML).toBe('My name is Batman');
 
             });
 
 
         });
 
-        describe('.eachModel', function () {
+        describe('.each', function () {
             it('draws collection', function () {
 
 
-                var collection = new Collection([
-                    {name: 'Vasya'},
-                    {name: 'Petya'}
+                var collection = new Collection([{
+                        name: 'Vasya'
+                    },
+                    {
+                        name: 'Petya'
+                    }
                 ]);
 
 
                 expect(collection.length).toBe(2);
 
 
-                var vm = ViewModel.create({
-                    el: '<div><ul data-bind="eachModel: collection"><li>{{name}}</li></ul></div>',
-                    autoParseBinds: true,
+                var vm = Widget.create({
+                    el: $.parse('<div><ul data-bind="each"><li data-bind="html: name"></li></ul></div>'),
                     fields: {
                         collection: collection
                     }
                 });
 
-                expect(vm.$('li:eq(0)').html()).toBe('Vasya');
-                expect(vm.$('li:eq(1)').html()).toBe('Petya');
+                expect(vm.$$('li')[0].innerHTML).toBe('Vasya');
+                expect(vm.$$('li')[1].innerHTML).toBe('Petya');
                 collection.at(0).prop('name', 'Sasha');
-                expect(vm.$('li:eq(0)').html()).toBe('Sasha');
+                expect(vm.$$('li')[0].innerHTML).toBe('Sasha');
             });
 
             it('supports table', function () {
 
-                var vm = ViewModel.create({
-                    el: '<table data-bind="eachModel: collection"><tr><td>{{value}}</td></tr></table>',
-                    autoParseBinds: true,
+                var vm = Widget.create({
+                    el: $.parse('<table data-bind="each"><tr><td data-bind="html: value"></td></tr></table>'),
                     fields: {
-                        collection:  new Collection([
-                            {value: "foo"}
-                        ])
+                        collection: new Collection([{
+                            value: "foo"
+                        }])
                     }
                 });
 
@@ -173,7 +168,7 @@ describe('ViewModel.binds', function () {
     });
 
 
-    describe('inline modificators', function () {
+    xdescribe('inline modificators', function () {
 
         describe('{{}}', function () {
             it('inserts value of observable', function () {
@@ -290,7 +285,7 @@ describe('ViewModel.binds', function () {
     });
 
 
-    it('support custom tags', function () {
+    xit('support custom tags', function () {
         //add custom tag
         ViewModel.tag('smartinput', function ($el, context) {
             //template
@@ -319,7 +314,7 @@ describe('ViewModel.binds', function () {
     });
 
 
-    it('support custom attributes', function () {
+    xit('support custom attributes', function () {
         //en locale
         var lang = new Model({
             hello: 'Hello friend!',
