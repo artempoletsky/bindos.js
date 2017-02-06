@@ -212,16 +212,11 @@
 
     filterMethods.forEach((method) => {
         Collection.prototype[method] = function (iterator) {
-            return filter(this, iterator, method == 'reject').models;
-        };
-
-        itself.prototype[method] = function (iterator) {
-            let collection = this.self;
-            let res = filter(collection, iterator, method == 'reject');
-            collection.models = res.models;
-            collection.length = res.models.length;
-            collection.fire('cut', res.rejected);
-            return collection;
+            let res = filter(this, iterator, method == 'reject');
+            this.models = res.models;
+            this.length = res.models.length;
+            this.fire('cut', res.rejected);
+            return this;
         };
     });
 

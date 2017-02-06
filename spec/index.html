@@ -98,7 +98,7 @@
                 this.collection.cutAt(index);
             },
             clear(){
-                this.collection.itself.filter((model)=>!model.completed);
+                this.collection.reject((model)=>model.completed);
             }
         });
     </script>
