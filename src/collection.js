@@ -14,7 +14,7 @@
                         fields: this.model
                     });
                 }
-                
+
                 this.itself = new itself(this);
                 this.models = [];
                 this.length = 0;
@@ -175,7 +175,7 @@
                 return found;
             }
         }),
-        whereMethods = ['detect', 'filter', 'select', 'reject', 'find', 'every', 'all', 'some', 'any', 'max', 'min', 'sortBy', 'sortByDesc', 'first', 'initial', 'rest', 'last', 'groupBy'],
+        whereMethods = ['detect', 'select', 'find', 'every', 'all', 'some', 'any', 'max', 'min', 'sortBy', 'sortByDesc', 'first', 'initial', 'rest', 'last', 'groupBy'],
         methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'foldl', 'foldr',
             'include', 'contains', 'invoke', 'sortedIndex',
             'toArray', 'size', 'without', 'indexOf',
@@ -191,7 +191,39 @@
         };
     });
 
+    let filter = function (collection, iteraror, reject) {
+        let models = [],
+            rejected = {};
+        collection.models.forEach((model, index) => {
+            let res = iteraror.call(collection, model, index, collection);
+            if (reject && !res || !reject && res) {
+                models.push(model);
+            } else {
+                rejected[index] = model;
+            }
+        });
+        return {
+            models: models,
+            rejected: rejected
+        }
+    }
+
     Collection.prototype.each = Collection.prototype.forEach;
+
+    filterMethods.forEach((method) => {
+        Collection.prototype[method] = function (iterator) {
+            return filter(this, iterator, method == 'reject').models;
+        };
+
+        itself.prototype[method] = function (iterator) {
+            let collection = this.self;
+            let res = filter(collection, iterator, method == 'reject');
+            collection.models = res.models;
+            collection.length = res.models.length;
+            collection.fire('cut', res.rejected);
+            return collection;
+        };
+    });
 
     if (window._) {
 
@@ -251,24 +283,6 @@
             };
         });
 
-
-        _.each(filterMethods, function (method) {
-            itself.prototype[method] = function () {
-                var antonym = method === 'filter' ? 'reject' : 'filter',
-                    self = this.self,
-                    args = _.toArray(arguments),
-                    newModels = self[method].apply(self, arguments),
-                    rejectedModels = self[antonym].apply(self, arguments),
-                    indexes = {};
-                _.each(rejectedModels, function (model) {
-                    indexes[self.indexOf(model)] = model;
-                });
-                self.models = newModels;
-                self.length = newModels.length;
-                self.fire('cut', indexes);
-                return self;
-            };
-        });
 
         _.each(sortMethods, function (method) {
             itself.prototype[method] = function () {

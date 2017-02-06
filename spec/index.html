@@ -62,8 +62,7 @@
 
 <body>
     <script>
-    /*
-        let ToDo=Model.extend({
+        let ToDo = Model.extend({
             fields: {
                 name: '',
                 completed: false
@@ -76,6 +75,7 @@
 
         Widget.create({
             el: '#todos',
+            listItem: 'li',
             fields: {
                 addValue: 'Nothing...',
                 collection: new TodosCollection()
@@ -83,25 +83,24 @@
             events: {
                 'click .add': 'add',
                 'change .cb': 'check',
+                'click .clear': 'clear',
                 'click .remove': 'remove'
             },
-            check(e, delegate){
-                this.collection.at(this.getIndex(delegate)).completed=delegate.checked;
+            check(e, delegate, li, index, model) {
+                model.completed = delegate.checked;
             },
             add() {
-                this.collection.push(
-                    new ToDo({
-                        name: this.addValue
-                    })
-                )
+                this.collection.push({
+                    name: this.addValue
+                });
             },
-            getIndex(delegate){
-                return delegate.parentNode.index();
+            remove(ev, delegate, li, index) {
+                this.collection.cutAt(index);
             },
-            remove(ev, delegate) {
-                this.collection.cutAt(this.getIndex(delegate));
+            clear(){
+                this.collection.itself.filter((model)=>!model.completed);
             }
-        });*/
+        });
     </script>
     <style media="screen">
         .completed {
@@ -112,11 +111,12 @@
         <input type="text" data-bind="value: addValue" /> <button class="add">Add</button>
         <ul data-bind="each">
             <li data-bind="css:{completed: completed}">
-                <input class="cb" type="checkbox"/>
+                <input class="cb" type="checkbox" />
                 <span data-bind="html: name"></span>
                 <span class="remove">Remove</span>
             </li>
         </ul>
+        <button class="clear">Clear completed</button>
     </div>
 </body>
 
