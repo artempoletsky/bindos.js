@@ -119,7 +119,7 @@ describe('ViewModel', function () {
     });
 
     it('can provide additional arguments to event handlers', function () {
-    
+
         var C = Collection.extend({
             model: {
                 complete: false,
@@ -157,7 +157,7 @@ describe('ViewModel', function () {
                 },
                 'click input': 'onInputClick'
             },
-            onInputClick(e, delegate, listItem, index, model){
+            onInputClick(e, delegate, listItem, index, model) {
                 expect(this).toBe(w);
                 expect(delegate).toBe(input);
                 expect(listItem).toBe(li);
@@ -171,7 +171,7 @@ describe('ViewModel', function () {
         m = w.collection.at(i);
         expect(label.innerHTML).toBe('4');
         label.fire('click');
-        input=li.$('input');
+        input = li.$('input');
         input.fire('click');
     });
 
@@ -306,6 +306,60 @@ describe('ViewModel', function () {
             }
         });
         expect(view.$foo).toBe(div.$('.foo'));
+    });
+
+    it('can copy fields from model', function () {
+        var Person = Model.extend({
+            foo: 'bar'
+        });
+        var Hero = Person.extend({
+            fields: {
+                firstName: '',
+                lastName: '',
+                fullName(firstName, lastName) {
+                    return firstName + ' ' + lastName;
+                }
+            }
+        });
+        var Test = ViewModel.extend({
+            modelClass: Hero,
+            autoParseBinds: true,
+            fields: {
+                reverseFullName(firstName, lastName) {
+                    return lastName + ' ' + firstName;
+                }
+            }
+        });
+        var superman = new Hero({
+            firstName: 'Clark',
+            lastName: 'Kent'
+        });
+
+        expect(superman.foo).toBe('bar');
+
+        var test = new Test({
+            el: $.parse('<div data-bind="html: fullName"></div>'),
+            model: superman
+        });
+
+        expect(Test.prototype.autoParseBinds).toBe(true);
+
+        expect(superman.reverseFullName).toBeUndefined();
+
+        expect(test.fullName).toBe('Clark Kent');
+
+        expect(test.el.innerHTML).toBe('Clark Kent');
+
+        var batman = new Hero({
+            firstName: 'Bruce',
+            lastName: 'Wayne'
+        });
+
+        expect(batman.reverseFullName).toBeUndefined();
+
+        test.setModel(batman);
+
+        expect(test.el.innerHTML).toBe('Bruce Wayne');
     });
 
 

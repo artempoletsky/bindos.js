@@ -45,13 +45,7 @@
 
                 this._computeds = {};
 
-                for (let key in self.fields) {
-                    let val = self.fields[key];
-                    if (typeof val == 'function') {
-                        delete self.fields[key];
-                        self.computeds[key] = val;
-                    }
-                }
+
 
                 self.attributes = $.extend({}, self.fields, self.parse(data));
 
@@ -247,6 +241,19 @@
             }
         });
 
+    Model.extend = function(proto){
+        if(!proto.computeds){
+            proto.computeds={};
+        }
+        for (let key in proto.fields) {
+            let val = proto.fields[key];
+            if (typeof val == 'function') {
+                delete proto.fields[key];
+                proto.computeds[key] = val;
+            }
+        }
+        return bindos.Class.extend.call(this, proto);
+    };
 
     Model.fromStorage = function (name, id) {
         modelsMap[name] = modelsMap[name] || {};

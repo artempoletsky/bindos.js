@@ -28,6 +28,9 @@
             $$: function (selector) {
                 return this.el.querySelectorAll(selector);
             },
+            setModel(model) {
+                this.prop(model.attributes);
+            },
             constructor: function (options) {
                 options = options || {};
 
@@ -36,7 +39,8 @@
 
                 me.options = options;
                 me._delegatedEvents = [];
-                me.model = options.model;
+
+                //console.log(me.model.fields);
                 if (options.el) {
                     me.el = options.el;
                 }
@@ -52,6 +56,9 @@
 
                 me._super();
 
+                if (options.model) {
+                    me.setModel(options.model);
+                }
 
                 var ctor = function () {
                     let elSelector = me.el;
@@ -173,6 +180,27 @@
         };
     ViewModel = Model.extend(ViewModel);
 
+
+    ViewModel.extend = function (proto) {
+        if(proto.modelClass){
+            let modelProto = proto.modelClass.prototype;
+            if(modelProto.fields){
+                if (!proto.fields) {
+                    proto.fields= {};
+                }
+                $.defaults(proto.fields, modelProto.fields);
+            }
+
+            //console.log(modelProto.computeds);
+            if(modelProto.computeds){
+                if (!proto.computeds) {
+                    proto.computeds= {};
+                }
+                $.defaults(proto.computeds, modelProto.computeds);
+            }
+        }
+        return Model.extend.call(this, proto);
+    };
 
     ViewModel.findBinds = function (elem, model) {
 

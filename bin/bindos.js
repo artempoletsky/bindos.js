@@ -640,13 +640,7 @@
 
                 this._computeds = {};
 
-                for (let key in self.fields) {
-                    let val = self.fields[key];
-                    if (typeof val == 'function') {
-                        delete self.fields[key];
-                        self.computeds[key] = val;
-                    }
-                }
+
 
                 self.attributes = $.extend({}, self.fields, self.parse(data));
 
@@ -842,6 +836,19 @@
             }
         });
 
+    Model.extend = function(proto){
+        if(!proto.computeds){
+            proto.computeds={};
+        }
+        for (let key in proto.fields) {
+            let val = proto.fields[key];
+            if (typeof val == 'function') {
+                delete proto.fields[key];
+                proto.computeds[key] = val;
+            }
+        }
+        return bindos.Class.extend.call(this, proto);
+    };
 
     Model.fromStorage = function (name, id) {
         modelsMap[name] = modelsMap[name] || {};
@@ -994,7 +1001,7 @@
                         fields: this.model
                     });
                 }
-                
+
                 this.itself = new itself(this);
                 this.models = [];
                 this.length = 0;
@@ -1155,7 +1162,7 @@
                 return found;
             }
         }),
-        whereMethods = ['detect', 'filter', 'select', 'reject', 'find', 'every', 'all', 'some', 'any', 'max', 'min', 'sortBy', 'sortByDesc', 'first', 'initial', 'rest', 'last', 'groupBy'],
+        whereMethods = ['detect', 'select', 'find', 'every', 'all', 'some', 'any', 'max', 'min', 'sortBy', 'sortByDesc', 'first', 'initial', 'rest', 'last', 'groupBy'],
         methods = ['forEach', 'each', 'map', 'reduce', 'reduceRight', 'foldl', 'foldr',
             'include', 'contains', 'invoke', 'sortedIndex',
             'toArray', 'size', 'without', 'indexOf',
@@ -1171,7 +1178,34 @@
         };
     });
 
+    let filter = function (collection, iteraror, reject) {
+        let models = [],
+            rejected = {};
+        collection.models.forEach((model, index) => {
+            let res = iteraror.call(collection, model, index, collection);
+            if (reject && !res || !reject && res) {
+                models.push(model);
+            } else {
+                rejected[index] = model;
+            }
+        });
+        return {
+            models: models,
+            rejected: rejected
+        }
+    }
+
     Collection.prototype.each = Collection.prototype.forEach;
+
+    filterMethods.forEach((method) => {
+        Collection.prototype[method] = function (iterator) {
+            let res = filter(this, iterator, method == 'reject');
+            this.models = res.models;
+            this.length = res.models.length;
+            this.fire('cut', res.rejected);
+            return this;
+        };
+    });
 
     if (window._) {
 
@@ -1232,24 +1266,6 @@
         });
 
 
-        _.each(filterMethods, function (method) {
-            itself.prototype[method] = function () {
-                var antonym = method === 'filter' ? 'reject' : 'filter',
-                    self = this.self,
-                    args = _.toArray(arguments),
-                    newModels = self[method].apply(self, arguments),
-                    rejectedModels = self[antonym].apply(self, arguments),
-                    indexes = {};
-                _.each(rejectedModels, function (model) {
-                    indexes[self.indexOf(model)] = model;
-                });
-                self.models = newModels;
-                self.length = newModels.length;
-                self.fire('cut', indexes);
-                return self;
-            };
-        });
-
         _.each(sortMethods, function (method) {
             itself.prototype[method] = function () {
                 var self = this.self,
@@ -1298,6 +1314,9 @@
             $$: function (selector) {
                 return this.el.querySelectorAll(selector);
             },
+            setModel(model) {
+                this.prop(model.attributes);
+            },
             constructor: function (options) {
                 options = options || {};
 
@@ -1306,7 +1325,8 @@
 
                 me.options = options;
                 me._delegatedEvents = [];
-                me.model = options.model;
+
+                //console.log(me.model.fields);
                 if (options.el) {
                     me.el = options.el;
                 }
@@ -1322,6 +1342,9 @@
 
                 me._super();
 
+                if (options.model) {
+                    me.setModel(options.model);
+                }
 
                 var ctor = function () {
                     let elSelector = me.el;
@@ -1443,6 +1466,27 @@
         };
     ViewModel = Model.extend(ViewModel);
 
+
+    ViewModel.extend = function (proto) {
+        if(proto.modelClass){
+            let modelProto = proto.modelClass.prototype;
+            if(modelProto.fields){
+                if (!proto.fields) {
+                    proto.fields= {};
+                }
+                $.defaults(proto.fields, modelProto.fields);
+            }
+
+            //console.log(modelProto.computeds);
+            if(modelProto.computeds){
+                if (!proto.computeds) {
+                    proto.computeds= {};
+                }
+                $.defaults(proto.computeds, modelProto.computeds);
+            }
+        }
+        return Model.extend.call(this, proto);
+    };
 
     ViewModel.findBinds = function (elem, model) {
 
