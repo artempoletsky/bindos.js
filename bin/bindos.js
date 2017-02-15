@@ -603,7 +603,15 @@
 
             setComputeds(names) {
                 let self = this;
-                names.forEach((name) => self.fire('change:' + name, self._computeds[name].get()));
+                names.forEach(
+                    (name) => {
+                        let computed= self._computeds[name];
+                        self.fire('change:' + name, computed.get());
+                        if(self.reverseComputedDeps[name]){
+                            self.setComputeds(self.reverseComputedDeps[name]);
+                        }
+                    }
+                );
             },
 
             addComputed(name, options) {
@@ -836,9 +844,9 @@
             }
         });
 
-    Model.extend = function(proto){
-        if(!proto.computeds){
-            proto.computeds={};
+    Model.extend = function (proto) {
+        if (!proto.computeds) {
+            proto.computeds = {};
         }
         for (let key in proto.fields) {
             let val = proto.fields[key];

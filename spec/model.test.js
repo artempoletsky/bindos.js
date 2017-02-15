@@ -307,6 +307,41 @@ describe('Model', function () {
         //console.log(model.toJSON());
     });
 
+    it('exel dependencies', function () {
+        let m = Model.create({
+            fields: {
+                a: 'a',
+                b(a) {
+                    return a + 'b'
+                },
+                c(b) {
+                    return b + 'c';
+                },
+                d(b, c) {
+                    return b + c;
+                }
+            }
+        });
+
+        let spy = jasmine.createSpy('d change spy');
+
+        m.on('change:d', spy);
+
+        expect(m.a).toBe('a');
+        expect(m.b).toBe('ab');
+        expect(m.c).toBe('abc');
+        expect(m.d).toBe('ababc');
+
+        m.a = '';
+
+        expect(spy).toHaveBeenCalled();
+
+        expect(m.a).toBe('');
+        expect(m.b).toBe('b');
+        expect(m.c).toBe('bc');
+        expect(m.d).toBe('bbc');
+    });
+
 
     describe('Model.Computed', function () {
         it('can construct', function () {
