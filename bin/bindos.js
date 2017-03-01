@@ -39,7 +39,7 @@
     bindos.$.extend(HTMLElement.prototype, {
         findParent(selector) {
             var el = this;
-            while (el) {
+            while (el && el.matches) {
                 if (el.matches(selector)) {
                     return el;
                 }
