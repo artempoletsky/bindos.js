@@ -36,7 +36,7 @@
     const eventSplitter = /\s+/;
 
 
-    bindos.$.extend(HTMLElement.prototype, {
+    bindos.$.extend(Element.prototype, {
         findParent(selector) {
             var el = this;
             while (el && el.matches) {
