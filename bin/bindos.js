@@ -1863,10 +1863,17 @@
                 return false;
             }
 
-            let vm = new cls();
+            let options = el.getAttribute('options');
+            if(options){
+                options = ViewModel.parseOptionsObject(options);
+            }
+
+
+            let vm = new cls(options);
             if (propName) {
                 context[propName] = vm;
             }
+
             let parent = el.parentNode;
             parent.insertBefore(vm.el, el);
             parent.removeChild(el);

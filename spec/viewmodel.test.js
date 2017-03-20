@@ -479,13 +479,14 @@ describe('ViewModel', function () {
         });
 
         it('can create ViewModel with binding handler', function(){
-            let dom = $.parse('<div><vm class:foo="VM" /></div>');
+            let dom = $.parse('<div><vm class:foo="VM" options="{foo: bar}" /></div>');
             let w = Widget.create({
                 el: dom
             });
             expect(w.foo instanceof VM).toBe(true);
             w.foo.value = 'foo';
             expect(dom.innerText).toBe('foo');
+            expect(w.foo.options.foo).toBe('bar');
         });
 
     });
