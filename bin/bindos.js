@@ -1687,7 +1687,7 @@
         },
         value: function (el, value, model) {
             var name = this.applyFilters(value, model, function (val) {
-                if(el.value !== val){
+                if (el.value !== val) {
                     el.value = zeroEmpty(val);
                 }
 
@@ -1831,6 +1831,46 @@
     ViewModel.bindSelectors = {
         '[data-bind]': function (el, context) {
             return dataBind('data-bind', el, el.getAttribute('data-bind'), context);
+        },
+        template(el, context) {
+            let name = el.getAttribute('name');
+            if (!name) {
+                console.error('Name attribute for template is not defined', el);
+                return false;
+            }
+            ViewModel.templates[name] = $.parse(el.innerHTML);
+            return false;
+        },
+        vm(el, context) {
+            let clsName, propName;
+            let exp = /^class:?([a-zA-Z_\d]*)$/;
+            for (let i = 0, l = el.attributes.length, attr, matches; i < l; i++) {
+                attr = el.attributes[i];
+                matches = exp.exec(attr.name);
+                if (matches) {
+                    propName = matches[1];
+                    clsName = attr.value;
+                }
+            }
+
+            if (!clsName) {
+                console.error('Class attribute for vm tag is not defined', el);
+                return false;
+            }
+            let cls = context && context[clsName] || window[clsName];
+            if (!cls) {
+                console.error(`ViewModel class ${clsName} is not defined`, el);
+                return false;
+            }
+
+            let vm = new cls();
+            if (propName) {
+                context[propName] = vm;
+            }
+            let parent = el.parentNode;
+            parent.insertBefore(vm.el, el);
+            parent.removeChild(el);
+            return false;
         }
     };
 
