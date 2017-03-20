@@ -20,6 +20,7 @@
                 this.parseBinds().delegateEvents();
                 return this;
             },
+            template: undefined,
             wrapReady: false,
             warnIfElementNotExists: true,
             $: function (selector) {
@@ -40,6 +41,8 @@
                 me.options = options;
                 me._delegatedEvents = [];
 
+
+
                 //console.log(me.model.fields);
                 if (options.el) {
                     me.el = options.el;
@@ -51,6 +54,14 @@
                 }
                 if (!me.el) {
                     me.el = 'div';
+                }
+
+                if(me.template) {
+                    let template = ViewModel.templates[me.template];
+                    if(!template){
+                        throw new Error(`Template ${me.template} is not defined`);
+                    }
+                    me.el = template.cloneNode(true);
                 }
 
 
@@ -216,7 +227,7 @@
             let fn = ViewModel.bindSelectors[selector];
 
             if (elem.matches(selector)) {
-                context = fn.call(self, elem, model);
+                context = fn(elem, model);
                 if (context === false) {
                     return;
                 }
@@ -224,9 +235,8 @@
                     context = model;
                 }
             }
-
-            Array.from(elem.children).forEach((el) => ViewModel.findBinds(el, context));
         }
+        Array.from(elem.children).forEach((el) => ViewModel.findBinds(el, context));
     };
 
     /*var anotherBreakersRegEx = /\{[\s\S]*\}/;
@@ -277,6 +287,8 @@
         }
         return result;
     };
+
+    ViewModel.templates = {};
 
     bindos.ViewModel = ViewModel;
     bindos.Widget = ViewModel.extend({

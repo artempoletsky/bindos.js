@@ -438,4 +438,56 @@ describe('ViewModel', function () {
         });
     });
 
+
+    describe('templates', function () {
+
+        window.VM = ViewModel.extend({
+            template: 'foo',
+            autoParseBinds: true,
+            fields: {
+                value: ''
+            }
+        });
+
+        it('supports templates', function () {
+            ViewModel.templates.foo = $.parse('<div data-bind="html: value"></div>');
+
+
+            let vm1 = new VM();
+
+
+            expect(vm1.el.innerHTML).toBe('');
+            vm1.value = 'foo';
+
+            expect(vm1.el.innerHTML).toBe('foo');
+
+            let vm2 = new VM();
+            expect(vm2.el.innerHTML).toBe('');
+            expect(vm1.el.innerHTML).toBe('foo');
+
+            vm2.value = 'bar';
+            expect(vm1.el.innerHTML).toBe('foo');
+            expect(vm2.el.innerHTML).toBe('bar');
+        });
+
+        it('can take template from html', function(){
+            ViewModel.findBinds($.parse('<template name="foo"><i data-bind="html: value"></i></template>'));
+            let vm1 = new VM();
+            vm1.value = 'foo';
+            expect(vm1.el.tagName.toLowerCase()).toBe('i');
+            expect(vm1.el.innerHTML).toBe('foo');
+        });
+
+        it('can create ViewModel with binding handler', function(){
+            let dom = $.parse('<div><vm class:foo="VM" /></div>');
+            let w = Widget.create({
+                el: dom
+            });
+            expect(w.foo instanceof VM).toBe(true);
+            w.foo.value = 'foo';
+            expect(dom.innerText).toBe('foo');
+        });
+
+    });
+
 });
