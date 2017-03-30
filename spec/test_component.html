@@ -1,0 +1,48 @@
+<template>
+    <div :id="attr_test" .passed="class_test">
+        <a @click="event_test">{{content_test}}</a>
+    </div>
+</template>
+
+<style>
+    .passed {
+        background-color: #0f0;
+    }
+</style>
+
+<script type="text/javascript">
+    {
+        fields: {
+            attr_test: 'id_passed',
+            class_test: true,
+            content_test: 'content_test_passed'
+        },
+        eventTest(e) {
+            this.eventTestPassed = true;
+        }
+    }
+</script>
+
+<script type="text/javascript" test>
+    it('attr test', ($el, model) => {
+        assert($el.attr('id') == model.attr_test);
+        assert($el.attr('id') == 'id_passed');
+        model.attr_test = 'foo';
+        assert($el.attr('id') == 'foo');
+    });
+
+    it('class test', ($el, model) => {
+        assert($el.hasClass('passed'));
+    });
+
+
+    it('can render content', ($el, model) => {
+        assert($el.text() == model.content_test);
+    });
+
+    it('event test', ($el, model) => {
+        assert(!model.eventTestPassed);
+        $el.click();
+        assert(model.eventTestPassed);
+    });
+</script>

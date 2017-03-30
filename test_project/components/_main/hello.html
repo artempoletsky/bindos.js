@@ -1,0 +1,20 @@
+<template>
+    <h1 @click="say">{{msg}}</h1>
+</template>
+<style>
+    h1 {
+        font-family: sans-serif;
+        font-size: 40px;
+        text-align: center;
+    }
+</style>
+<script>
+{
+    fields: {
+        msg: 'Hello world'
+    },
+    say(){
+        alert(this.msg);
+    }
+}
+</script>
